@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Copy file này vào lib/ và import nơi bạn muốn dùng:
-/// Navigator.push(context, MaterialPageRoute(builder: (_) => const GetStartedScreen()));
-///
-/// Thay link ảnh ở hằng số [kIllustrationUrl] bên dưới.
+
 class GetStartedScreen extends StatelessWidget {
   const GetStartedScreen({super.key});
 
-  /// TODO: Thay bằng link ảnh minh hoạ của bạn.
   static const String kIllustrationUrl = 'lib/images/get1.png';
 
 

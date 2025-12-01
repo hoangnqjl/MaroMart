@@ -1,11 +1,139 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/services/auth_service.dart';
+import 'package:maromart/services/socket_service.dart';
 
-class SignInScreen extends StatelessWidget {
+class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
-  // TODO: thay bằng asset thật nếu bạn có
-  static const String kLogoAsset = '';        // ví dụ: 'assets/images/logo.png'
-  static const String kGoogleAsset = 'lib/images/logogg.png';      // ví dụ: 'assets/images/google.png'
+  @override
+  State<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  static const String kLogoAsset = '';
+  static const String kGoogleAsset = 'lib/images/logogg.png';
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+  bool _isGoogleLoading = false;
+
+  final _authService = AuthService();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSignIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      _showError('Email không hợp lệ');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.login(email: email, password: password);
+
+      if (!mounted) return;
+
+      SocketService().connect();
+
+      _showSuccess('Đăng nhập thành công!');
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
+
+    } catch (e) {
+      if (!mounted) return;
+
+      _showError(e.toString()
+          .replaceAll('Exception: ', '')
+          .replaceAll('Đăng nhập thất bại: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      print('Bắt đầu Google Sign In...');
+
+      final response = await _authService.signInWithGoogle();
+
+      print('Google Sign In thành công: $response');
+
+      if (!mounted) return;
+
+      // Kết nối socket sau khi đăng nhập thành công
+      SocketService().connect();
+
+      _showSuccess('Đăng nhập Google thành công!');
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
+
+    } catch (e) {
+      print('Google Sign In Error: $e');
+
+      if (!mounted) return;
+
+      _showError(e.toString()
+          .replaceAll('Exception: ', '')
+          .replaceAll('Đăng nhập Google thất bại: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,14 +145,13 @@ class SignInScreen extends StatelessWidget {
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          // gradient pastel như ảnh
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color.fromARGB(255, 212, 187, 249), // tím cực nhạt
-              Color.fromARGB(255, 242, 204, 196), // cam/hồng rất nhạt
-              Color.fromARGB(255, 195, 219, 245), // xanh lam nhạt
+              Color.fromARGB(255, 212, 187, 249),
+              Color.fromARGB(255, 242, 204, 196),
+              Color.fromARGB(255, 195, 219, 245),
             ],
           ),
         ),
@@ -34,15 +161,13 @@ class SignInScreen extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 480),
               child: Stack(
                 children: [
-                  // Nội dung chính – đặt gần đáy màn (giống screenshot)
                   Align(
-                    alignment: Alignment.bottomCenter,
+                    alignment: Alignment.center,
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Hàng logo tròn bên trái + nút đóng bên phải
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -50,9 +175,9 @@ class SignInScreen extends StatelessWidget {
                                 radius: 26,
                                 backgroundColor: Colors.white.withOpacity(.9),
                                 child: _maybeAsset(
-                                      kLogoAsset,
-                                      const Icon(Icons.local_mall_outlined),
-                                    ),
+                                  kLogoAsset,
+                                  const Icon(Icons.local_mall_sharp, color: Colors.black),
+                                ),
                               ),
                               InkWell(
                                 onTap: () => Navigator.maybePop(context),
@@ -66,7 +191,6 @@ class SignInScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 20),
-
                           Text(
                             'MaroMart',
                             style: theme.textTheme.headlineSmall?.copyWith(
@@ -84,25 +208,26 @@ class SignInScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 18),
 
-                          // Email
                           _RoundedField(
+                            controller: _emailController,
                             hint: 'Email...',
                             keyboardType: TextInputType.emailAddress,
+                            enabled: !_isLoading && !_isGoogleLoading,
                           ),
                           const SizedBox(height: 14),
 
-                          // Password
-                          const _RoundedField(
+                          _RoundedField(
+                            controller: _passwordController,
                             hint: 'Password...',
                             obscure: true,
+                            enabled: !_isLoading && !_isGoogleLoading,
                           ),
                           const SizedBox(height: 20),
 
-                          // Button Sign in
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {Navigator.pushNamed(context, '/signup'); /* TODO: handle sign in */},
+                              onPressed: (_isLoading || _isGoogleLoading) ? null : _handleSignIn,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
                                 foregroundColor: Colors.white,
@@ -114,28 +239,66 @@ class SignInScreen extends StatelessWidget {
                                   fontSize: 16,
                                 ),
                               ),
-                              child: const Text('Sign in'),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                                  : const Text('Sign in'),
                             ),
                           ),
                           const SizedBox(height: 28),
 
-                          // Sign in with Google
                           Center(
-                            child: TextButton.icon(
-                              onPressed: () {/* TODO: sign in with Google */},
-                              icon: SizedBox(
-                               
-                                child: Image.asset(kGoogleAsset, fit: BoxFit.contain,errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.image_not_supported)),),
-                              ),
-                              label: const Text(
-                                'Sign up with google',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
+                            child: ElevatedButton.icon(
+                              onPressed: (_isLoading || _isGoogleLoading)
+                                  ? null
+                                  : _handleGoogleSignIn,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
                                 ),
                               ),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.black,
+                              icon: _isGoogleLoading
+                                  ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
+                                  : SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Image.asset(
+                                  kGoogleAsset,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.g_mobiledata,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              label: Text(
+                                _isGoogleLoading
+                                    ? 'Signing in...'
+                                    : 'Sign in with Google',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
                               ),
                             ),
                           ),
@@ -152,7 +315,6 @@ class SignInScreen extends StatelessWidget {
     );
   }
 
-  /// Hiển thị Image.asset nếu có path; nếu rỗng thì hiện widget thay thế.
   static Widget _maybeAsset(String assetPath, Widget fallback) {
     if (assetPath.isEmpty) return fallback;
     return Image.asset(assetPath, fit: BoxFit.contain);
@@ -160,13 +322,18 @@ class SignInScreen extends StatelessWidget {
 }
 
 class _RoundedField extends StatefulWidget {
+  final TextEditingController? controller;
   final String hint;
   final bool obscure;
   final TextInputType? keyboardType;
+  final bool enabled;
+
   const _RoundedField({
+    this.controller,
     required this.hint,
     this.obscure = false,
     this.keyboardType,
+    this.enabled = true,
   });
 
   @override
@@ -185,8 +352,10 @@ class _RoundedFieldState extends State<_RoundedField> {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: widget.controller,
       obscureText: _obscure,
       keyboardType: widget.keyboardType,
+      enabled: widget.enabled,
       decoration: InputDecoration(
         hintText: widget.hint,
         filled: true,
@@ -194,14 +363,15 @@ class _RoundedFieldState extends State<_RoundedField> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         enabledBorder: _border(),
         focusedBorder: _border(),
+        disabledBorder: _border(),
         prefixIcon: widget.obscure
             ? const Icon(Icons.lock_outline, size: 20)
             : const Icon(Icons.email_outlined, size: 20),
         suffixIcon: widget.obscure
             ? IconButton(
-                onPressed: () => setState(() => _obscure = !_obscure),
-                icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, size: 18),
-              )
+          onPressed: () => setState(() => _obscure = !_obscure),
+          icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, size: 18),
+        )
             : null,
       ),
     );

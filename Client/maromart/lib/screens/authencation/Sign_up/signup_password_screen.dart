@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:maromart/services/auth_service.dart';
 
 class SignUpPasswordScreen extends StatefulWidget {
   const SignUpPasswordScreen({super.key});
 
-  // TODO: đổi sang ảnh nền của bạn
   static const String kBackgroundAsset = 'lib/images/signup1.png';
 
   @override
@@ -13,11 +13,44 @@ class SignUpPasswordScreen extends StatefulWidget {
 
 class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
+
   final _pw = TextEditingController();
   final _pw2 = TextEditingController();
 
   bool _ob1 = true;
   bool _ob2 = true;
+  bool _isProcessing = false;
+
+  String _fullName = '';
+  String _email = '';
+  int? _phoneNumber;
+  String _gender = '';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    if (args != null && args is Map<String, dynamic>) {
+      _fullName = args['fullName'] ?? '';
+      _email = args['email'] ?? '';
+      final phone = args['phoneNumber'];
+      if (phone != null) {
+        if (phone is int) {
+          _phoneNumber = phone;
+        } else if (phone is String && phone.isNotEmpty) {
+          _phoneNumber = int.tryParse(phone);
+        }
+      }
+      _gender = args['gender'] ?? '';
+
+      setState(() {});
+    } else {
+      print('⚠WARNING: No arguments received!');
+    }
+  }
 
   @override
   void dispose() {
@@ -26,12 +59,79 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: handle create account
+  void _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    if (_fullName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created!')),
+        const SnackBar(
+          content: Text('Full name is missing! Please go back and enter your name.'),
+          backgroundColor: Colors.red,
+        ),
       );
+      return;
+    }
+
+    if (_email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email is missing! Please go back and enter your email.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final response = await _authService.register(
+        fullName: _fullName,
+        email: _email,
+        phoneNumber: _phoneNumber,
+        password: _pw.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (response['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Đăng ký thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate về sign in
+        Navigator.popUntil(context, (route) => route.isFirst);
+        Navigator.pushReplacementNamed(context, '/signin');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Đăng ký thất bại'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString()
+                .replaceAll('Exception: ', '')
+                .replaceAll('Đăng ký thất bại: ', ''),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -44,13 +144,14 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Ảnh nền
-          Image.asset(SignUpPasswordScreen.kBackgroundAsset, fit: BoxFit.cover),
-
-          // Lớp tối nhẹ để chữ rõ hơn
+          Image.asset(
+            SignUpPasswordScreen.kBackgroundAsset,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: Colors.blue.shade900,
+            ),
+          ),
           Container(color: Colors.black.withOpacity(0.35)),
-
-          // Card kính mờ
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -74,15 +175,16 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Logo + Close
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               CircleAvatar(
                                 radius: 26,
                                 backgroundColor: Colors.white.withOpacity(0.9),
-                                child: const Icon(Icons.rocket_launch_outlined,
-                                    color: Colors.black),
+                                child: const Icon(
+                                  Icons.rocket_launch_outlined,
+                                  color: Colors.black,
+                                ),
                               ),
                               InkWell(
                                 onTap: () => Navigator.maybePop(context),
@@ -90,8 +192,11 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                                 child: CircleAvatar(
                                   radius: 18,
                                   backgroundColor: Colors.white.withOpacity(0.9),
-                                  child:
-                                      const Icon(Icons.close, color: Colors.black, size: 18),
+                                  child: const Icon(
+                                    Icons.arrow_back,
+                                    color: Colors.black,
+                                    size: 18,
+                                  ),
                                 ),
                               ),
                             ],
@@ -107,7 +212,7 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'MaroMart, the easy way for people to buy, sell, and connect with each other.',
+                            'Create your password for $_fullName',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.white.withOpacity(0.85),
                               height: 1.5,
@@ -115,12 +220,17 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Password
+                          // Password field
                           _GlassField(
                             controller: _pw,
                             hint: 'Password...',
                             obscure: _ob1,
-                            prefix: const Icon(Icons.lock_outline, size: 20, color: Colors.white),
+                            enabled: !_isProcessing,
+                            prefix: const Icon(
+                              Icons.lock_outline,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                             suffix: IconButton(
                               onPressed: () => setState(() => _ob1 = !_ob1),
                               icon: Icon(
@@ -143,7 +253,12 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                             controller: _pw2,
                             hint: 'Re-type password...',
                             obscure: _ob2,
-                            prefix: const Icon(Icons.lock_reset, size: 20, color: Colors.white),
+                            enabled: !_isProcessing,
+                            prefix: const Icon(
+                              Icons.lock_reset,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                             suffix: IconButton(
                               onPressed: () => setState(() => _ob2 = !_ob2),
                               icon: Icon(
@@ -155,17 +270,19 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                             validator: (v) {
                               final val = v?.trim() ?? '';
                               if (val.isEmpty) return 'Please re-enter password';
-                              if (val != _pw.text.trim()) return 'Passwords do not match';
+                              if (val != _pw.text.trim()) {
+                                return 'Passwords do not match';
+                              }
                               return null;
                             },
                           ),
                           const SizedBox(height: 24),
 
-                          // Button Create
+                          // Create button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _submit,
+                              onPressed: _isProcessing ? null : _submit,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
                                 foregroundColor: Colors.white,
@@ -177,7 +294,18 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                                   fontSize: 16,
                                 ),
                               ),
-                              child: const Text('Create'),
+                              child: _isProcessing
+                                  ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                                  : const Text('Create Account'),
                             ),
                           ),
                         ],
@@ -194,10 +322,10 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
   }
 }
 
-// TextField kiểu kính mờ, bo tròn
 class _GlassField extends StatelessWidget {
   final String hint;
   final bool obscure;
+  final bool enabled;
   final Widget? prefix;
   final Widget? suffix;
   final TextEditingController? controller;
@@ -206,6 +334,7 @@ class _GlassField extends StatelessWidget {
   const _GlassField({
     required this.hint,
     this.obscure = false,
+    this.enabled = true,
     this.prefix,
     this.suffix,
     this.controller,
@@ -217,6 +346,7 @@ class _GlassField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
+      enabled: enabled,
       validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
@@ -224,25 +354,31 @@ class _GlassField extends StatelessWidget {
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.75)),
         filled: true,
         fillColor: Colors.white.withOpacity(0.25),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         enabledBorder: _border(),
         focusedBorder: _border(),
         errorBorder: _border(),
         focusedErrorBorder: _border(),
+        disabledBorder: _border(),
         prefixIcon: prefix == null
             ? null
             : Padding(
-                padding: const EdgeInsetsDirectional.only(start: 12, end: 6),
-                child: prefix,
-              ),
+          padding: const EdgeInsetsDirectional.only(start: 12, end: 6),
+          child: prefix,
+        ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: suffix,
+        errorStyle: const TextStyle(
+          color: Colors.yellowAccent,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
 
   OutlineInputBorder _border() => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(28),
-        borderSide: BorderSide.none,
-      );
+    borderRadius: BorderRadius.circular(28),
+    borderSide: BorderSide.none,
+  );
 }

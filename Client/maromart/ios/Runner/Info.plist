@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+        <string>MaroMart cần truy cập thư viện ảnh để bạn chọn ảnh sản phẩm.</string>
+
+        <key>NSCameraUsageDescription</key>
+        <string>MaroMart cần truy cập camera để bạn chụp ảnh sản phẩm.</string>
+
+        <key>NSMicrophoneUsageDescription</key>
+        <string>MaroMart cần truy cập microphone để quay video sản phẩm.</string>
 </dict>
 </plist>
