@@ -9,6 +9,7 @@ import 'package:maromart/screens/Message/ChatScreen.dart';
 import 'package:maromart/services/chat_service.dart';
 import 'package:maromart/services/user_service.dart';
 import 'package:maromart/utils/storage.dart';
+import 'package:maromart/utils/constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MessageScreen extends StatefulWidget {
@@ -22,16 +23,26 @@ class _MessageScreenState extends State<MessageScreen> {
   final ChatService _chatService = ChatService();
   final UserService _userService = UserService();
 
-  int _selectedTab = 0; // 0: All, 1: New
+  int _selectedTab = 0;
   List<Conversation> _conversations = [];
   bool _isLoading = true;
   String? _currentUserId;
+
+  // SELECTION MODE
+  bool _isSelectionMode = false;
+  Set<String> _selectedConversations = {};
 
   @override
   void initState() {
     super.initState();
     _currentUserId = StorageHelper.getUserId();
     _fetchConversations();
+  }
+
+  String _getFullUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '${ApiConstants.baseUrl}$path';
   }
 
   Future<void> _fetchConversations() async {
@@ -51,14 +62,70 @@ class _MessageScreenState extends State<MessageScreen> {
     }
   }
 
-  Future<User> _getPartnerInfo(Conversation conversation) async {
-    String partnerId = conversation.userId1 == _currentUserId
-        ? conversation.userId2
-        : conversation.userId1;
-    return await _userService.getUserById(partnerId);
+  // DELETE CONVERSATIONS
+  Future<void> _deleteSelectedConversations() async {
+    if (_selectedConversations.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Conversations'),
+        content: Text('Delete ${_selectedConversations.length} conversation(s)?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              setState(() => _isLoading = true);
+
+              try {
+                for (String conId in _selectedConversations) {
+                  await _chatService.deleteConversation(conId);
+                }
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Deleted successfully')),
+                  );
+                }
+
+                await _fetchConversations();
+
+                setState(() {
+                  _isSelectionMode = false;
+                  _selectedConversations.clear();
+                });
+
+              } catch (e) {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
-  // ---  LỌC DANH SÁCH ---
+  void _toggleSelection(String conId) {
+    setState(() {
+      if (_selectedConversations.contains(conId)) {
+        _selectedConversations.remove(conId);
+      } else {
+        _selectedConversations.add(conId);
+      }
+    });
+  }
+
   List<Conversation> get _filteredConversations {
     if (_selectedTab == 0) {
       return _conversations;
@@ -87,29 +154,86 @@ class _MessageScreenState extends State<MessageScreen> {
           children: [
             const SizedBox(height: 16),
 
+            // HEADER
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.E2Color,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Row(
+                  // TABS hoặc CANCEL
+                  if (_isSelectionMode)
+                    Row(
                       children: [
-                        _buildTabButton(0, "All"),
-                        _buildTabButton(1, "New", hasDot: _hasNewMessages),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            setState(() {
+                              _isSelectionMode = false;
+                              _selectedConversations.clear();
+                            });
+                          },
+                        ),
+                        Text(
+                          '${_selectedConversations.length} selected',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.E2Color,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildTabButton(0, "All"),
+                          _buildTabButton(1, "New", hasDot: _hasNewMessages),
+                        ],
+                      ),
                     ),
-                  ),
-                  _buildCircleButton(HeroiconsOutline.trash, isTransparent: false),
+
+                  // DELETE BUTTON
+                  if (_isSelectionMode && _selectedConversations.isNotEmpty)
+                    GestureDetector(
+                      onTap: _deleteSelectedConversations,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isSelectionMode = !_isSelectionMode;
+                          _selectedConversations.clear();
+                        });
+                      },
+                      child: _buildCircleButton(
+                        HeroiconsOutline.trash,
+                        isTransparent: false,
+                      ),
+                    ),
                 ],
               ),
             ),
 
+            // CONVERSATION LIST
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -129,16 +253,12 @@ class _MessageScreenState extends State<MessageScreen> {
                   itemCount: displayList.length,
                   itemBuilder: (context, index) {
                     final conv = displayList[index];
-                    return FutureBuilder<User>(
-                      future: _getPartnerInfo(conv),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return _buildLoadingItem();
-                        }
-                        final partner = snapshot.data!;
-                        return _buildConversationItem(conv, partner);
-                      },
-                    );
+
+                    if (conv.partnerInfo == null) {
+                      return _buildLoadingItem();
+                    }
+
+                    return _buildConversationItem(conv);
                   },
                 ),
               ),
@@ -149,21 +269,41 @@ class _MessageScreenState extends State<MessageScreen> {
     );
   }
 
-
   Widget _buildLoadingItem() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Container(width: 52, height: 52, decoration: BoxDecoration(color: Colors.grey[300], shape: BoxShape.circle)),
+          Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  shape: BoxShape.circle
+              )
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 120, height: 14, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4))),
+                Container(
+                    width: 120,
+                    height: 14,
+                    decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(4)
+                    )
+                ),
                 const SizedBox(height: 8),
-                Container(width: 200, height: 12, decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4))),
+                Container(
+                    width: 200,
+                    height: 12,
+                    decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4)
+                    )
+                ),
               ],
             ),
           ),
@@ -174,7 +314,8 @@ class _MessageScreenState extends State<MessageScreen> {
 
   Widget _buildCircleButton(IconData icon, {bool isTransparent = true}) {
     return Container(
-      width: 44, height: 44,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: isTransparent ? AppColors.E2Color : Colors.white,
         shape: BoxShape.circle,
@@ -207,8 +348,12 @@ class _MessageScreenState extends State<MessageScreen> {
             if (hasDot && !isSelected)
               Container(
                 margin: const EdgeInsets.only(left: 4),
-                width: 6, height: 6,
-                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle
+                ),
               )
           ],
         ),
@@ -216,10 +361,15 @@ class _MessageScreenState extends State<MessageScreen> {
     );
   }
 
-  Widget _buildConversationItem(Conversation item, User partner) {
+  Widget _buildConversationItem(Conversation item) {
     String lastMsg = "Start a conversation";
     String time = "";
     bool isNew = false;
+
+    final partner = item.partnerInfo;
+    if (partner == null) {
+      return const SizedBox();
+    }
 
     if (item.latestMessage != null) {
       final msgContent = item.latestMessage!.content;
@@ -240,25 +390,63 @@ class _MessageScreenState extends State<MessageScreen> {
       }
     }
 
+    final isSelected = _selectedConversations.contains(item.conId);
+
     return GestureDetector(
       onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-              conversationId: item.conId,
-              partnerUser: ChatPartner.fromUser(partner),
+        if (_isSelectionMode) {
+          _toggleSelection(item.conId);
+        } else {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatScreen(
+                conversationId: item.conId,
+                partnerUser: ChatPartner.fromUser(partner),
+              ),
             ),
-          ),
-        );
-        _fetchConversations();
+          );
+          _fetchConversations();
+        }
+      },
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedConversations.add(item.conId);
+          });
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        color: Colors.transparent,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.E2Color : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Row(
           children: [
-            _buildAvatar(partner.avatarUrl),
+            // CHECKBOX (if selection mode)
+            if (_isSelectionMode)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? Colors.blue : Colors.grey,
+                      width: 2,
+                    ),
+                    color: isSelected ? Colors.blue : Colors.transparent,
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
+                ),
+              ),
+
+            _buildAvatar(partner.avatarUrl, partner.fullName),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -266,7 +454,10 @@ class _MessageScreenState extends State<MessageScreen> {
                 children: [
                   Text(
                     partner.fullName,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -282,47 +473,86 @@ class _MessageScreenState extends State<MessageScreen> {
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                    time,
-                    style: TextStyle(
-                        color: isNew ? Colors.black : Colors.grey,
-                        fontWeight: isNew ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 11
+
+            if (!_isSelectionMode)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                      time,
+                      style: TextStyle(
+                          color: isNew ? Colors.black : Colors.grey,
+                          fontWeight: isNew ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 11
+                      )
+                  ),
+                  if (isNew)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
                     )
-                ),
-                if (isNew)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    width: 8, height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                  )
-              ],
-            )
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAvatar(String? avatarUrl) {
+  Widget _buildAvatar(String? avatarUrl, String name) {
+    final fullUrl = _getFullUrl(avatarUrl);
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: Container(
-        width: 52, height: 52,
-        decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle),
-        child: avatarUrl != null && avatarUrl.isNotEmpty
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+            color: Colors.grey[200],
+            shape: BoxShape.circle
+        ),
+        child: fullUrl.isNotEmpty
             ? CachedNetworkImage(
-          imageUrl: avatarUrl,
+          imageUrl: fullUrl,
           fit: BoxFit.cover,
-          errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.grey, size: 28),
+          placeholder: (context, url) => const Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+          errorWidget: (context, url, error) => _buildLetterAvatar(name),
         )
-            : const Icon(Icons.person, color: Colors.grey, size: 28),
+            : _buildLetterAvatar(name),
+      ),
+    );
+  }
+
+  Widget _buildLetterAvatar(String name) {
+    String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: const BoxDecoration(
+        color: Colors.blueAccent,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        firstLetter,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'QuickSand',
+        ),
       ),
     );
   }

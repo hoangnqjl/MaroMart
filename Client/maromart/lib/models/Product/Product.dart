@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 
 class ProductAddress {
@@ -16,8 +17,10 @@ class ProductAddress {
 
     if (json is String) {
       try {
-        final Map<String, dynamic> map = jsonDecode(json);
-        return ProductAddress.fromMap(map);
+        final decoded = jsonDecode(json);
+        if (decoded is Map<String, dynamic>) {
+          return ProductAddress.fromMap(decoded);
+        }
       } catch (e) {
         return ProductAddress();
       }
@@ -33,7 +36,8 @@ class ProductAddress {
   factory ProductAddress.fromMap(Map<String, dynamic> map) {
     return ProductAddress(
       province: map['province']?.toString() ?? '',
-      commute: map['commute']?.toString() ?? '',
+      // Map 'commune' or 'ward' to 'commute' field
+      commute: map['commune']?.toString() ?? map['ward']?.toString() ?? map['commute']?.toString() ?? '',
       detail: map['detail']?.toString() ?? '',
     );
   }
@@ -46,7 +50,6 @@ class ProductAddress {
     };
   }
 
-  // Helper để hiển thị full địa chỉ
   String get fullAddress {
     List<String> parts = [];
     if (detail.isNotEmpty) parts.add(detail);
@@ -56,14 +59,20 @@ class ProductAddress {
   }
 }
 
-// --- Class ProductAttribute (Giữ nguyên) ---
 class ProductAttribute {
   final String? ram;
   final String? cpu;
   final String? storage;
   final String? screen;
+  final Map<String, dynamic> otherAttributes;
 
-  ProductAttribute({this.ram, this.cpu, this.storage, this.screen});
+  ProductAttribute({
+    this.ram,
+    this.cpu,
+    this.storage,
+    this.screen,
+    this.otherAttributes = const {},
+  });
 
   factory ProductAttribute.fromJson(dynamic json) {
     if (json == null) return ProductAttribute();
@@ -82,16 +91,26 @@ class ProductAttribute {
   }
 
   factory ProductAttribute.fromMap(Map<String, dynamic> map) {
+    final ram = map['RAM'] ?? map['ram'];
+    final cpu = map['CPU'] ?? map['cpu'];
+    final storage = map['Storage'] ?? map['storage'];
+    final screen = map['Screen'] ?? map['screen'];
+
+    final otherAttrs = Map<String, dynamic>.from(map);
+    otherAttrs.removeWhere((key, value) =>
+        ['RAM', 'ram', 'CPU', 'cpu', 'Storage', 'storage', 'Screen', 'screen'].contains(key)
+    );
+
     return ProductAttribute(
-      ram: map['RAM'] ?? map['ram'],
-      cpu: map['CPU'] ?? map['cpu'],
-      storage: map['Storage'] ?? map['storage'],
-      screen: map['Screen'] ?? map['screen'],
+      ram: ram?.toString(),
+      cpu: cpu?.toString(),
+      storage: storage?.toString(),
+      screen: screen?.toString(),
+      otherAttributes: otherAttrs,
     );
   }
 }
 
-// --- Class UserInfo (Giữ nguyên) ---
 class UserInfo {
   final String userId;
   final String fullName;
@@ -113,6 +132,7 @@ class UserInfo {
       fullName: json['fullName']?.toString() ?? 'Người dùng ẩn danh',
       email: json['email']?.toString() ?? '',
       avatarUrl: json['avatarUrl']?.toString() ?? '',
+      // Handle both string and int for phone number
       phoneNumber: json['phoneNumber']?.toString() ?? '',
     );
   }
@@ -128,7 +148,7 @@ class UserInfo {
   }
 }
 
-// --- 2. Cập nhật Class Product ---
+// --- 4. Main Class Product ---
 class Product {
   final String id;
   final String productId;
@@ -144,8 +164,8 @@ class Product {
   final String productOrigin;
   final String productCategory;
 
-  final ProductAttribute? productAttribute;
-  final ProductAddress? productAddress; // <--- THÊM TRƯỜNG NÀY
+  final dynamic productAttribute;
+  final ProductAddress? productAddress;
 
   final List<String> productMedia;
   final String createdAt;
@@ -167,7 +187,7 @@ class Product {
     required this.productOrigin,
     required this.productCategory,
     required this.productAttribute,
-    this.productAddress, // <--- Add to constructor
+    this.productAddress,
     required this.productMedia,
     required this.createdAt,
     required this.updatedAt,
@@ -194,12 +214,11 @@ class Product {
       productOrigin: json['productOrigin']?.toString() ?? '',
       productCategory: json['productCategory']?.toString() ?? '',
 
-      // Attribute
-      productAttribute: json['productAttribute'] != null
-          ? ProductAttribute.fromJson(json['productAttribute'])
-          : null,
+      // Attribute: Keep raw value or parse if needed.
+      // Using 'dynamic' here allows flexibility in UI parsing.
+      productAttribute: json['productAttribute'],
 
-      // --- 3. Parse Address ---
+      // Address Parsing
       productAddress: json['productAddress'] != null
           ? ProductAddress.fromJson(json['productAddress'])
           : null,
@@ -236,6 +255,7 @@ class Product {
       'productMedia': productMedia,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'userInfo': userInfo?.toJson(),
     };
   }
 }

@@ -53,6 +53,10 @@ class _PostState extends State<Post> {
     return '${formatter.format(price)} đ';
   }
 
+  void _toggleExpanded() {
+    setState(() => isExpanded = !isExpanded);
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -63,6 +67,7 @@ class _PostState extends State<Post> {
     final currentUserId = StorageHelper.getUserId();
     final sellerId = product.userInfo?.userId;
     final bool isOwner = currentUserId != null && sellerId != null && currentUserId == sellerId;
+
     return Container(
       height: screenWidth * 1.2,
       width: double.infinity,
@@ -76,12 +81,24 @@ class _PostState extends State<Post> {
         clipBehavior: Clip.none,
         alignment: Alignment.centerRight,
         children: [
+          // MEDIA VIEWER
           GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProductDetail(productId: product.productId)),
+                MaterialPageRoute(builder: (context) => ProductDetail(
+                    productId: product.productId,
+                )
+                ),
               );
+            },
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity! < -500) {
+                if (!isExpanded) _toggleExpanded();
+              }
+              else if (details.primaryVelocity! > 500) {
+                if (isExpanded) _toggleExpanded();
+              }
             },
             child: PageView.builder(
               controller: _pageController,
@@ -90,6 +107,7 @@ class _PostState extends State<Post> {
             ),
           ),
 
+          // PRICE TAG
           Positioned(
             top: 20,
             left: 20,
@@ -115,79 +133,102 @@ class _PostState extends State<Post> {
             ),
           ),
 
+          // ACTION MENU SIDEBAR
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             top: screenWidth * 0.20,
-            right: isExpanded ? 0 : -46,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  topLeft: Radius.circular(30)
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                child: Container(
-                  width: 80,
-                  height: screenWidth * 0.8,
-                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
-                  padding: const EdgeInsets.only(right: 0, top: 14, bottom: 14, left: 10),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => setState(() => isExpanded = !isExpanded),
-                        child: Container(
-                            width: 6,
-                            height: 30,
+            right: isExpanded ? 0 : -60,
+            child: GestureDetector(
+              onHorizontalDragEnd: (details) {
+                if (details.primaryVelocity! > 300) {
+                  if (isExpanded) _toggleExpanded();
+                } else if (details.primaryVelocity! < -300) {
+                  if (!isExpanded) _toggleExpanded();
+                }
+              },
+              onTap: () {
+                if (!isExpanded) _toggleExpanded();
+              },
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    topLeft: Radius.circular(30)
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                  child: Container(
+                    width: 90,
+                    height: screenWidth * 0.8,
+                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
+                    padding: const EdgeInsets.only(right: 10, top: 14, bottom: 14, left: 10),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _toggleExpanded,
+                          child: Container(
+                            width: 10,
+                            height: 50,
                             decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withOpacity(0.9),
                                 borderRadius: BorderRadius.circular(10)
-                            )
+                            ),
+                            // Thêm icon để rõ ràng hơn
+                            // child: Center(
+                            //   child: Icon(
+                            //     isExpanded ? Icons.chevron_right : Icons.chevron_left,
+                            //     color: Colors.black54,
+                            //     size: 16,
+                            //   ),
+                            // ),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildActionButton(HeroiconsSolid.heart, "Like"),
-                            if (!isOwner)
-                              _buildActionButton(
-                                HeroiconsSolid.chatBubbleOvalLeftEllipsis,
-                                "Chat",
-                                onTap: () {
-                                  if (widget.product.userInfo != null) {
-                                    final partner = ChatPartner(
-                                      userId: widget.product.userInfo!.userId,
-                                      fullName: widget.product.userInfo!.fullName,
-                                      avatarUrl: widget.product.userInfo!.avatarUrl,
-                                      email: widget.product.userInfo!.email,
-                                    );
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ChatScreen(
-                                          conversationId: "",
-                                          partnerUser: partner,
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildActionButton(HeroiconsSolid.heart, "Like"),
+                              if (!isOwner)
+                                _buildActionButton(
+                                  HeroiconsSolid.chatBubbleOvalLeftEllipsis,
+                                  "Chat",
+                                  onTap: () {
+                                    if (widget.product.userInfo != null) {
+                                      final partner = ChatPartner(
+                                        userId: widget.product.userInfo!.userId,
+                                        fullName: widget.product.userInfo!.fullName,
+                                        avatarUrl: widget.product.userInfo!.avatarUrl,
+                                        email: widget.product.userInfo!.email,
+                                      );
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ChatScreen(
+                                            conversationId: "",
+                                            partnerUser: partner,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            if (!isOwner)
-                            _buildActionButton(HeroiconsSolid.phone, "Call"),
+                                      );
+                                    }
+                                  },
+                                ),
+                              if (!isOwner)
+                                _buildActionButton(HeroiconsSolid.phone, "Call"),
 
-                            _buildActionButton(HeroiconsSolid.ellipsisHorizontal, "More"),
-                          ],
+                              _buildActionButton(HeroiconsSolid.ellipsisHorizontal, "More"),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
 
+          // PRODUCT INFO OVERLAY
           Positioned(
             bottom: 0,
             left: 0,
@@ -288,28 +329,32 @@ class _PostState extends State<Post> {
     }
   }
 
-  // Thêm tham số {VoidCallback? onTap}
   Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 38,
-          height: 38,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.25),
             shape: BoxShape.circle,
           ),
           child: IconButton(
             padding: EdgeInsets.zero,
-            icon: Icon(icon, color: Colors.white, size: 20),
+            icon: Icon(icon, color: Colors.white, size: 22),
             onPressed: onTap ?? () {},
           ),
         ),
         const SizedBox(height: 4),
         Text(
             label,
-            style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)
+            style: const TextStyle(
+                fontSize: 10,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                shadows: [Shadow(blurRadius: 2, color: Colors.black)]
+            )
         ),
       ],
     );

@@ -5,10 +5,10 @@ import 'package:maromart/components/ButtonWithIcon.dart';
 import 'package:maromart/components/Filter.dart';
 import 'package:maromart/components/ModalInAvt.dart';
 import 'package:maromart/models/User/User.dart';
+import 'package:maromart/services/user_service.dart';
 
 class TopBar extends StatefulWidget implements PreferredSizeWidget {
   final User? user;
-
   final Function(String? categoryId, String? province, String? ward)? onFilterSelected;
 
   const TopBar({Key? key, this.user, this.onFilterSelected}) : super(key: key);
@@ -22,8 +22,9 @@ class TopBar extends StatefulWidget implements PreferredSizeWidget {
 
 class _TopBarState extends State<TopBar> {
   final GlobalKey<ModalInAvtState> _modalKey = GlobalKey<ModalInAvtState>();
-
   late FilterOverlay _filterOverlay;
+
+  final UserService _userService = UserService();
 
   @override
   void initState() {
@@ -37,99 +38,103 @@ class _TopBarState extends State<TopBar> {
     );
   }
 
-  String get _displayName {
-    if (widget.user?.fullName != null && widget.user!.fullName.isNotEmpty) {
-      return widget.user!.fullName;
+  String _getDisplayName(User? userToCheck) {
+    if (userToCheck?.fullName != null && userToCheck!.fullName!.isNotEmpty) {
+      return userToCheck.fullName!;
     }
-    return widget.user?.email ?? 'Khách';
+    return userToCheck?.email ?? 'Khách';
   }
 
   @override
   Widget build(BuildContext context) {
-    final String avatarUrl = widget.user?.avatarUrl ?? '';
+    return ValueListenableBuilder<User?>(
+      valueListenable: _userService.userNotifier,
+      builder: (context, currentUser, child) {
 
-    return Stack(
-      children: [
-        Container(
-          color: Colors.white,
-          width: MediaQuery.of(context).size.width,
-          padding: const EdgeInsets.only(top: 16, bottom: 4, left: 18, right: 18),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+        final userToDisplay = currentUser ?? widget.user;
+        final String avatarUrl = userToDisplay?.avatarUrl ?? '';
+        final String displayName = _getDisplayName(userToDisplay);
+
+        return Stack(
+          children: [
+            Container(
+              color: Colors.white,
+              width: MediaQuery.of(context).size.width,
+              padding: const EdgeInsets.only(top: 16, bottom: 4, left: 18, right: 18),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      _modalKey.currentState?.show(context);
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        color: Colors.grey.shade200,
-                        child: _buildSafeAvatar(avatarUrl),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          _modalKey.currentState?.show(context);
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            color: Colors.grey.shade200,
+                            child: _buildSafeAvatar(avatarUrl, displayName),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontFamily: 'QuickSand',
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _displayName,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'QuickSand',
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+
+                  Row(
+                    children: [
+                      CompositedTransformTarget(
+                        link: _filterOverlay.layerLink,
+                        child: ButtonWithIcon(
+                          icon: HeroiconsOutline.adjustmentsHorizontal,
+                          onPressed: () {
+                            _filterOverlay.toggle(context);
+                          },
+                          size: 38,
+                          backgroundColor: AppColors.E2Color,
+                          iconColor: Colors.black,
+                          isSelected: true,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ButtonWithIcon(
+                        icon: HeroiconsOutline.plus,
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/add_product');
+                        },
+                        size: 38,
+                        backgroundColor: AppColors.E2Color,
+                        iconColor: Colors.black,
+                        isSelected: false,
+                      )
+                    ],
                   )
                 ],
               ),
-
-              Row(
-                children: [
-                  CompositedTransformTarget(
-                    link: _filterOverlay.layerLink,
-                    child: ButtonWithIcon(
-                      icon: HeroiconsOutline.adjustmentsHorizontal,
-                      onPressed: () {
-                        _filterOverlay.toggle(context);
-                      },
-                      size: 38,
-                      backgroundColor: AppColors.E2Color,
-                      iconColor: Colors.black,
-                      isSelected: true,
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  ButtonWithIcon(
-                    icon: HeroiconsOutline.plus,
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/add_product');
-                    },
-                    size: 38,
-                    backgroundColor: AppColors.E2Color,
-                    iconColor: Colors.black,
-                    isSelected: false,
-                  )
-                ],
-              )
-            ],
-          ),
-        ),
-
-        ModalInAvt(key: _modalKey),
-      ],
+            ),
+            ModalInAvt(key: _modalKey),
+          ],
+        );
+      },
     );
   }
 
-  // --- CÁC HÀM HỖ TRỢ (GIỮ NGUYÊN) ---
-  Widget _buildLetterAvatar() {
-    String name = _displayName;
+
+  Widget _buildLetterAvatar(String name) {
     String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return Container(
@@ -152,15 +157,15 @@ class _TopBarState extends State<TopBar> {
     );
   }
 
-  Widget _buildSafeAvatar(String url) {
+  Widget _buildSafeAvatar(String url, String name) {
     if (url.isEmpty) {
-      return _buildLetterAvatar();
+      return _buildLetterAvatar(name);
     }
     return Image.network(
       url,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-        return _buildLetterAvatar();
+        return _buildLetterAvatar(name);
       },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;

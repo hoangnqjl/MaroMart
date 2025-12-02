@@ -3,9 +3,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/ButtonWithIcon.dart';
-import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/models/Message/Message.dart';
 import 'package:maromart/models/User/ChatPartner.dart';
 import 'package:maromart/services/chat_service.dart';
@@ -33,7 +32,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final ImagePicker _picker = ImagePicker();
 
   List<Message> _messages = [];
-
   List<XFile> _selectedImages = [];
   List<XFile> _selectedVideos = [];
   List<XFile> _selectedAudios = [];
@@ -56,9 +54,9 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  String _getFullUrl(String path) {
+  String _getFullUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-
     return '${ApiConstants.baseUrl}$path';
   }
 
@@ -88,7 +86,176 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // LOGIC CHỌN FILE
+  // --- MENU OPTION (Modal Bottom Sheet) ---
+
+  void _showChatOptions(BuildContext context) {
+    // Chỉ hiện option nếu đã có cuộc hội thoại (có ID)
+    if (_currentConId.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext ctx) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(25),
+              topRight: Radius.circular(25),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Nút Block (Ví dụ thêm tính năng này sau)
+              // _buildOptionButton(
+              //   icon: HeroiconsOutline.noSymbol, // Icon cấm
+              //   label: 'Block user',
+              //   iconColor: Colors.black87,
+              //   bgColor: const Color(0xFFF5F5F5),
+              //   onTap: () {
+              //     Navigator.pop(ctx);
+              //     // TODO: Implement Block logic
+              //     ScaffoldMessenger.of(context).showSnackBar(
+              //       const SnackBar(content: Text("Block feature coming soon")),
+              //     );
+              //   },
+              // ),
+
+              // const SizedBox(height: 12),
+
+              // Nút Delete Conversation (Màu đỏ nhạt)
+              _buildOptionButton(
+                icon: HeroiconsOutline.trash,
+                label: 'Delete conversation',
+                iconColor: Colors.red,
+                bgColor: const Color(0xFFFCEEEB),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteConversation();
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionButton({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- XỬ LÝ XÓA ---
+
+  void _confirmDeleteConversation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Conversation"),
+        content: const Text("Are you sure you want to delete this conversation? This action cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteConversation();
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteConversation() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await _chatService.deleteConversation(_currentConId);
+
+      if (mounted) {
+        Navigator.pop(context); // Tắt loading
+        Navigator.pop(context); // Thoát khỏi màn hình Chat
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Conversation deleted"), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Tắt loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to delete: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // --- CÁC HÀM CHỌN FILE & GỬI TIN NHẮN (GIỮ NGUYÊN) ---
   Future<void> _showAttachmentOptions() async {
     showModalBottomSheet(
       context: context,
@@ -99,17 +266,17 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library, color: Colors.blue),
-              title: const Text('Chọn Ảnh'),
+              title: const Text('Image'),
               onTap: () { Navigator.pop(context); _pickImages(); },
             ),
             ListTile(
               leading: const Icon(Icons.video_library, color: Colors.red),
-              title: const Text('Chọn Video'),
+              title: const Text('Video'),
               onTap: () { Navigator.pop(context); _pickVideo(); },
             ),
             ListTile(
               leading: const Icon(Icons.audiotrack, color: Colors.purple),
-              title: const Text('Chọn Audio'),
+              title: const Text('Audio'),
               onTap: () { Navigator.pop(context); _pickAudio(); },
             ),
           ],
@@ -129,11 +296,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickAudio() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      allowMultiple: true,
-    );
-
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.audio, allowMultiple: true);
     if (result != null) {
       setState(() {
         _selectedAudios.addAll(result.paths.map((path) => XFile(path!)).toList());
@@ -151,7 +314,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _handleSend() async {
     final text = _messageController.text.trim();
-
     if ((text.isEmpty && _selectedImages.isEmpty && _selectedVideos.isEmpty && _selectedAudios.isEmpty) || _isSending) return;
 
     setState(() => _isSending = true);
@@ -197,7 +359,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSending = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gửi thất bại: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to send: $e')));
       }
     }
   }
@@ -213,7 +375,59 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: TopBarSecond(title: widget.partnerUser.fullName),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                color: Colors.grey[200],
+                child: widget.partnerUser.avatarUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                  imageUrl: _getFullUrl(widget.partnerUser.avatarUrl),
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.grey),
+                )
+                    : const Icon(Icons.person, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.partnerUser.fullName,
+                    style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    widget.partnerUser.email ?? 'No email',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          // Nút 3 chấm để mở Modal
+          if (_currentConId.isNotEmpty)
+            IconButton(
+              icon: const Icon(HeroiconsOutline.ellipsisVertical, color: Colors.black),
+              onPressed: () => _showChatOptions(context),
+            )
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -241,6 +455,8 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+
+  // --- UI WIDGETS ---
 
   Widget _buildAttachmentPreview() {
     return Container(
@@ -313,12 +529,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 runSpacing: 4,
                 alignment: isMe ? WrapAlignment.end : WrapAlignment.start,
                 children: media.map((m) {
-
                   if (m.type == 'image') {
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
-                        _getFullUrl(m.url), // <--- SỬA Ở ĐÂY
+                        _getFullUrl(m.url),
                         width: 150,
                         height: 150,
                         fit: BoxFit.cover,
@@ -420,37 +635,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-  Widget _topbarChhat(){
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              ButtonWithIcon(
-                icon: HeroiconsOutline.chevronLeft,
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                size: 38,
-                backgroundColor: Colors.white,
-                iconColor: Colors.black,
-                isSelected: false,
-              ),
-              Container(
-                child: Row(
-
-                ),
-              )
-
-            ],
-          )
         ],
       ),
     );

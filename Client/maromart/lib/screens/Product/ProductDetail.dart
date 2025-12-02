@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/ButtonWithIcon.dart';
 import 'package:maromart/components/VideoPlayerWidget.dart';
 import 'package:maromart/models/Media/MediaItem.dart';
 import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/services/product_service.dart'; // Import ProductService
+import 'package:maromart/services/product_service.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../models/User/ChatPartner.dart';
+import '../Message/ChatScreen.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -76,6 +78,135 @@ class ProductDetailState extends State<ProductDetail> {
   String _formatPrice(int price) {
     final formatter = NumberFormat('#,###', 'vi_VN');
     return '${formatter.format(price)} VND';
+  }
+
+  void _showCallDialog() {
+    final phoneNumber = _product?.userInfo?.phoneNumber.toString() ?? '';
+    final sellerName = _product?.userInfo?.fullName ?? 'Người bán';
+
+    if (phoneNumber.isEmpty || phoneNumber == '0') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Người bán chưa cập nhật số điện thoại')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  HeroiconsSolid.phone,
+                  size: 30,
+                  color: Colors.green.shade600,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Text(
+                sellerName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'QuickSand',
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                phoneNumber,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade700,
+                  letterSpacing: 1,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _makePhoneCall(phoneNumber);
+                  },
+                  icon: const Icon(HeroiconsSolid.phone, size: 20),
+                  label: const Text(
+                    'Call Now',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không thể thực hiện cuộc gọi')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -162,7 +293,7 @@ class ProductDetailState extends State<ProductDetail> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                product.productCategory.toUpperCase(), // Category
+                                product.productCategory.toUpperCase(),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w100,
                                   fontSize: 8,
@@ -171,7 +302,7 @@ class ProductDetailState extends State<ProductDetail> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                product.productName, // Tên sản phẩm
+                                product.productName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
@@ -181,7 +312,7 @@ class ProductDetailState extends State<ProductDetail> {
                             ],
                           ),
                           Text(
-                            _formatPrice(product.productPrice), // Giá
+                            _formatPrice(product.productPrice),
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
@@ -197,7 +328,6 @@ class ProductDetailState extends State<ProductDetail> {
 
                       const SizedBox(height: 16),
 
-                      // Nội dung Tab
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         switchInCurve: Curves.easeIn,
@@ -260,7 +390,6 @@ class ProductDetailState extends State<ProductDetail> {
   Widget _buildTabToggle() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Lấy chiều rộng tổng của cha trừ đi padding (4px: 2 trái + 2 phải)
         final double totalWidth = constraints.maxWidth;
         final double tabWidth = (totalWidth - 4) / 2;
 
@@ -274,14 +403,12 @@ class ProductDetailState extends State<ProductDetail> {
           ),
           child: Stack(
             children: [
-              // 1. THANH TRƯỢT MÀU ĐEN (Background động)
               AnimatedAlign(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                // Nếu đang ở Description thì nằm trái (-1), View Detail thì nằm phải (1)
                 alignment: isDescription ? Alignment.centerLeft : Alignment.centerRight,
                 child: Container(
-                  width: tabWidth, // Chiều rộng động = 50% cha
+                  width: tabWidth,
                   height: 38,
                   decoration: BoxDecoration(
                     color: Colors.black,
@@ -290,7 +417,6 @@ class ProductDetailState extends State<ProductDetail> {
                 ),
               ),
 
-              // 2. TEXT BUTTONS (Nằm đè lên trên)
               Row(
                 children: [
                   _buildTabItem(
@@ -328,7 +454,6 @@ class ProductDetailState extends State<ProductDetail> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              // Đổi màu chữ tương phản với nền đen/xám
               color: isSelected ? Colors.white : Colors.black,
             ),
           ),
@@ -345,7 +470,31 @@ class ProductDetailState extends State<ProductDetail> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => print('Chat pressed'),
+              onTap: () {
+                if (_product?.userInfo != null) {
+                  final userInfo = _product!.userInfo!;
+                  final partner = ChatPartner(
+                    userId: userInfo.userId,
+                    fullName: userInfo.fullName,
+                    avatarUrl: userInfo.avatarUrl,
+                    email: userInfo.email,
+                  );
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatScreen(
+                        conversationId: "",
+                        partnerUser: partner,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Không tìm thấy thông tin người bán')),
+                  );
+                }
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -371,7 +520,7 @@ class ProductDetailState extends State<ProductDetail> {
 
           Expanded(
             child: GestureDetector(
-              onTap: () => print('Call pressed'),
+              onTap: () => _showCallDialog(),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -433,13 +582,12 @@ class ProductDetailState extends State<ProductDetail> {
     }
   }
 
-  // Widget hiển thị Mô tả
   Widget _buildDescriptionContent(String description) {
     return Container(
       key: const ValueKey('description'),
       width: double.infinity,
       child: Text(
-        description, // Dùng mô tả từ API
+        description,
         style: const TextStyle(fontSize: 12, color: Colors.black54),
       ),
     );
@@ -471,12 +619,6 @@ class ProductDetailState extends State<ProductDetail> {
           attrMap = jsonDecode(attributesInput);
         } else if (attributesInput is Map) {
           attrMap = Map<String, dynamic>.from(attributesInput);
-        } else if (attributesInput is ProductAttribute) {
-          // Trường hợp 3: Dữ liệu là Model cũ (Fallback cho dữ liệu cũ)
-          if (attributesInput.cpu != null) attrMap['CPU'] = attributesInput.cpu;
-          if (attributesInput.ram != null) attrMap['RAM'] = attributesInput.ram;
-          if (attributesInput.storage != null) attrMap['Storage'] = attributesInput.storage;
-          if (attributesInput.screen != null) attrMap['Screen'] = attributesInput.screen;
         }
       } catch (e) {
         print("Lỗi parse attribute: $e");

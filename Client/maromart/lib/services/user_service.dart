@@ -1,12 +1,28 @@
-
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:maromart/models/User/User.dart';
 import 'package:maromart/utils/storage.dart';
-import 'package:image_picker/image_picker.dart';
-
 import 'api_service.dart';
 
 class UserService {
+  static final UserService _instance = UserService._internal();
+
+  factory UserService() {
+    return _instance;
+  }
+
+  UserService._internal() {
+    userNotifier.value = StorageHelper.getUser();
+  }
+
   final ApiService _apiService = ApiService();
+
+  final ValueNotifier<User?> userNotifier = ValueNotifier<User?>(null);
+
+  Future<void> saveUserToStorage(User user) async {
+    await StorageHelper.saveUser(user);
+    userNotifier.value = user;
+  }
 
   Future<User> getUserById(String userId) async {
     try {
@@ -14,7 +30,6 @@ class UserService {
         endpoint: '/users/$userId',
         needAuth: true,
       );
-
       return User.fromJson(response);
     } catch (e) {
       throw Exception('Không thể lấy thông tin user: ${e.toString()}');
@@ -28,7 +43,11 @@ class UserService {
         throw Exception('Chưa đăng nhập');
       }
 
-      return await getUserById(userId);
+      final user = await getUserById(userId);
+
+      await saveUserToStorage(user);
+
+      return user;
     } catch (e) {
       throw Exception('Không thể lấy thông tin user: ${e.toString()}');
     }
@@ -59,7 +78,11 @@ class UserService {
         needAuth: true,
       );
 
-      return User.fromJson(response);
+      final updatedUser = User.fromJson(response);
+
+      await saveUserToStorage(updatedUser);
+
+      return updatedUser;
     } catch (e) {
       throw Exception('Cập nhật thất bại: ${e.toString()}');
     }
@@ -82,12 +105,20 @@ class UserService {
         needAuth: true,
       );
 
-      final userData = response['data'] ?? response;
-      final updatedUser = User.fromJson(userData);
+      final responseData = response['data'] ?? response;
+      final newAvatarUrl = responseData['avatarUrl'];
 
-      await StorageHelper.saveUser(updatedUser);
+      User? currentUser = userNotifier.value ?? StorageHelper.getUser();
 
-      return updatedUser;
+      if (currentUser != null && newAvatarUrl != null) {
+        User updatedUser = currentUser.copyWith(avatarUrl: newAvatarUrl);
+
+        await saveUserToStorage(updatedUser);
+
+        return updatedUser;
+      } else {
+        return await getCurrentUser();
+      }
     } catch (e) {
       throw Exception('Đổi avatar thất bại: ${e.toString()}');
     }
@@ -146,7 +177,7 @@ class UserService {
   }
 
   User? getCurrentUserFromStorage() {
-    return StorageHelper.getUser();
+    return userNotifier.value ?? StorageHelper.getUser();
   }
 
   String? getCurrentUserId() {

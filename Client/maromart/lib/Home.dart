@@ -34,7 +34,6 @@ class _HomeState extends State<Home> {
     _initSocketListeners();
   }
 
-  // --- HÀM LẮNG NGHE SOCKET ---
   void _initSocketListeners() {
     _socketService.connect();
 
@@ -82,7 +81,6 @@ class _HomeState extends State<Home> {
     setState(() {
       _currentIndex = index;
 
-      // Nếu người dùng bấm vào tab Thông báo (index = 1) -> Reset số lượng về 0
       if (index == 1) {
         _unreadNotifications = 0;
       }

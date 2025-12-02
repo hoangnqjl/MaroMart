@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -10,22 +11,32 @@ import '../utils/constants.dart';
 class ProductService {
   final ApiService _apiService = ApiService();
 
-  Future<List<Product>> getProducts() async {
+  final ValueNotifier<int> productChangeNotifier = ValueNotifier<int>(0);
+
+  // Hàm helper để kích hoạt thông báo
+  void notifyProductChanges() {
+    productChangeNotifier.value++;
+  }
+
+  Future<List<Product>> getProducts({int page = 1, int limit = 10}) async {
     try {
+      final queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
       final dynamic response = await _apiService.get(
         endpoint: ApiConstants.productsBaseEndpoint,
+        queryParameters: queryParams,
         needAuth: false,
       );
 
       if (response is List) {
-        final List<dynamic> productListJson = response;
-
-        return productListJson
-            .map((json) => Product.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return response.map((json) => Product.fromJson(json)).toList();
+      } else if (response is Map && response['data'] is List) {
+        return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
       }
       return [];
-
     } catch (e) {
       rethrow;
     }
@@ -128,7 +139,7 @@ class ProductService {
         fileKey: 'productMedia',
         needAuth: true,
       );
-
+      notifyProductChanges();
       final productJson = response['data'] ?? response;
 
       return Product.fromJson(productJson);
@@ -138,6 +149,32 @@ class ProductService {
     }
   }
 
+  Future<List<Product>> getUserProducts(String userId, {int page = 1, int limit = 10}) async {
+    try {
+      final queryParams = {
+        'userId': userId,
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      final response = await _apiService.get(
+        endpoint: ApiConstants.productsFilterEndpoint,
+        queryParameters: queryParams,
+        needAuth: true,
+      );
+
+      // Xử lý dữ liệu trả về
+      if (response is List) {
+        return response.map((json) => Product.fromJson(json)).toList();
+      } else if (response is Map && response['data'] is List) {
+        return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+      }
+
+      return [];
+    } catch (e) {
+      throw Exception('Lỗi lấy sản phẩm của User: $e');
+    }
+  }
 
   Future<Product> updateProduct(String productId, Map<String, dynamic> productData) async {
     try {
@@ -148,7 +185,7 @@ class ProductService {
         body: productData,
         needAuth: true,
       );
-
+      notifyProductChanges();
       final updatedProductJson = response['data'] ?? response;
       return Product.fromJson(updatedProductJson as Map<String, dynamic>);
     } catch (e) {
@@ -165,6 +202,7 @@ class ProductService {
         endpoint: endpoint,
         needAuth: true,
       );
+      notifyProductChanges();
     } catch (e) {
       rethrow;
     }

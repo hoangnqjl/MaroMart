@@ -3,6 +3,7 @@ import 'package:maromart/models/Conversation/Conversation.dart';
 import 'package:maromart/models/Message/Message.dart';
 import 'package:maromart/services/api_service.dart';
 import 'package:maromart/services/socket_service.dart';
+import 'package:maromart/utils/storage.dart';
 
 class ChatService {
   final ApiService _apiService = ApiService();
@@ -107,11 +108,20 @@ class ChatService {
 
       return null;
     } catch (e) {
-      print('❌ Lỗi sendMessage: $e');
+      print('Lỗi sendMessage: $e');
       throw Exception('Gửi tin nhắn thất bại: $e');
     }
   }
-
+  Future<void> deleteConversation(String conId) async {
+    try {
+      await _apiService.delete(
+        endpoint: '/chat/delete-conversations/$conId',
+        needAuth: true,
+      );
+    } catch (e) {
+      throw Exception('Lỗi khi xóa conversation: $e');
+    }
+  }
   void disconnectSocket() {
     _socketService.disconnect();
   }
