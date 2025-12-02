@@ -1,0 +1,41 @@
+import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { cn } from '../../lib/utils';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+    variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+    size?: 'sm' | 'md' | 'lg';
+    children: ReactNode;
+}
+
+export function Button({
+    variant = 'primary',
+    size = 'md',
+    className,
+    children,
+    ...props
+}: ButtonProps) {
+    return (
+        <button
+            className={cn(
+                'rounded-button font-medium transition-all duration-200',
+                'hover:shadow-lg hover:scale-105 active:scale-95',
+                'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+                {
+                    'bg-primary text-white hover:bg-primary-hover': variant === 'primary',
+                    'bg-gray-100 text-gray-700 hover:bg-gray-200': variant === 'secondary',
+                    'bg-red-500 text-white hover:bg-red-600': variant === 'danger',
+                    'bg-transparent hover:bg-gray-100': variant === 'ghost',
+                },
+                {
+                    'px-3 py-1.5 text-sm': size === 'sm',
+                    'px-4 py-2 text-base': size === 'md',
+                    'px-6 py-3 text-lg': size === 'lg',
+                },
+                className
+            )}
+            {...props}
+        >
+            {children}
+        </button>
+    );
+}

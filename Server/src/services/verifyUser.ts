@@ -11,5 +11,23 @@ export const verifyUser = (req: Request): string => {
     const token = authHeader.split(' ')[1];
     const userId = verifyToken(token);
 
-    return userId ? userId : 'Unauthorized';
+    if (!userId || !userId.userId) {
+        throw new Error('Invalid token payload');
+    }
+
+    return userId.userId;
 }
+
+export async function getUserIdFromToken (token: string): Promise<string | null> {
+    try {
+        const payload = verifyToken(token);
+        if (!payload) {
+            return null;
+        }
+        console.log(payload.userId)
+        return payload.userId;
+    } catch (err) {
+        console.error('Invalid token:', err);
+        return null;
+    }
+};

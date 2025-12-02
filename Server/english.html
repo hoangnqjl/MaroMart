@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Dictation Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .correct { color: #10b981; font-weight: 600; }
+        .incorrect { color: #ef4444; font-weight: 600; }
+        .incorrect s { text-decoration: line-through; opacity: 0.7; }
+        .missed { color: #6b7280; font-style: italic; opacity: 0.8; }
+        .guide-text { color: #f59e0b; font-weight: 600; font-style: italic; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans p-4 md:p-8 flex items-center justify-center min-h-screen">
+
+<div class="max-w-3xl w-full mx-auto bg-white p-6 md:p-8 rounded-lg shadow-lg">
+    
+    <div id="quiz-container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Bài tập Nghe-Viết</h1>
+        <p class="text-center text-gray-600 mb-4">Nghe câu và gõ lại chính xác.</p>
+        
+        <div id="question-header" class="flex justify-between items-center mb-6">
+            <span id="question-counter" class="text-lg font-semibold text-blue-600">Câu 1 / 10</span>
+            <span id="current-score" class="text-lg font-semibold text-gray-700">Điểm: 0</span>
+        </div>
+
+        <div id="question-area" class="text-center">
+            <div class="mb-6">
+                <button id="play-audio-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 text-lg shadow-md">
+                    Play Audio
+                </button>
+                <p id="error-message" class="text-red-500 mt-2 hidden"></p>
+            </div>
+            
+            <div class="mb-4">
+                <textarea id="dictation-input" rows="4" class="w-full p-3 border border-gray-300 rounded-lg text-lg" placeholder="Gõ câu bạn nghe được..."></textarea>
+            </div>
+
+            <div id="feedback-container" class="hidden text-left"></div>
+        </div>
+
+        <div id="controls-container" class="text-center mt-8">
+            <button id="check-btn" class="w-full md:w-auto bg-green-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-green-700 transition duration-300 text-lg">
+                Kiểm tra
+            </button>
+            <button id="next-btn" class="w-full md:w-auto bg-gray-800 text-white font-bold py-3 px-12 rounded-lg hover:bg-gray-700 transition duration-300 text-lg hidden">
+                Câu tiếp theo
+            </button>
+        </div>
+    </div>
+
+    <div id="results-container" class="text-center hidden">
+        <h2 class="text-4xl font-bold text-gray-800 mb-4">Hoàn thành!</h2>
+        <p class="text-2xl text-gray-700 mb-8">
+            Tổng điểm của bạn là: 
+            <span id="final-score" class="text-blue-600 font-bold">0</span>
+        </p>
+        <button id="restart-btn" class="bg-blue-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">
+            Làm lại
+        </button>
+    </div>
+
+</div>
+
+<script>
+    // --- Câu hỏi ---
+    const quizData = [
+        "The executive will promote a competent employee after the mandatory appraisal, as this is our main objective.",
+        "To oversee the strategic communications campaign, the public relations department will reach out for a cost-effective solution.",
+        "The automotive collision will obstruct transit, forcing a detour; the toll and fare for the commute will go up.",
+        "To alleviate high staff turnover, we must encourage better work ethic and be grateful for their labor, but we prohibit overtime.",
+        "The facade of the harbor lighthouse is visible from the orchard; inside, a chandelier hangs over the fireplace near the lawn.",
+        "The press will obviously exploit the resignation; we regard this as a high turnover rate which entails a radical change in work ethic.",
+        "Please figure out the down payment and the deposit as soon as possible, and take a look at the facade and the roof of that outlet.",
+        "The man in the striped shirt and necktie is stuck on the ladder by the curb; he sees a chandelier, a rug, and a vase in the cupboard.",
+        "This ongoing traffic jam will exacerbate the problem; we must find a detour to alleviate the congestion and divert the commute.",
+        "It is an exceptional accomplishment to obtain assent from the nominee, who will now oversee the process and progress of the cookery department."
+    ];
+
+    const apiKey = "YOUR_GOOGLE_CLOUD_API_KEY"; // <-- Điền API Key của bạn
+
+    // --- DOM elements ---
+    const questionCounter = document.getElementById('question-counter');
+    const currentScoreEl = document.getElementById('current-score');
+    const playAudioBtn = document.getElementById('play-audio-btn');
+    const dictationInput = document.getElementById('dictation-input');
+    const feedbackContainer = document.getElementById('feedback-container');
+    const checkBtn = document.getElementById('check-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const quizContainer = document.getElementById('quiz-container');
+    const resultsContainer = document.getElementById('results-container');
+    const finalScore = document.getElementById('final-score');
+    const restartBtn = document.getElementById('restart-btn');
+    const errorMessage = document.getElementById('error-message');
+
+    let currentQuestionIndex = 0;
+    let userScore = 0;
+
+    function cleanText(text) {
+        return text.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").replace(/\s+/g,' ').trim();
+    }
+
+    function startQuiz() {
+        currentQuestionIndex = 0;
+        userScore = 0;
+        quizContainer.classList.remove('hidden');
+        resultsContainer.classList.add('hidden');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        questionCounter.textContent = `Câu ${currentQuestionIndex + 1} / ${quizData.length}`;
+        currentScoreEl.textContent = `Điểm: ${userScore}`;
+        dictationInput.value = '';
+        dictationInput.disabled = false;
+        feedbackContainer.classList.add('hidden');
+        feedbackContainer.innerHTML = '';
+        checkBtn.classList.remove('hidden');
+        nextBtn.classList.add('hidden');
+        playAudioBtn.disabled = false;
+
+        playAudioBtn.onclick = () => playAudio(quizData[currentQuestionIndex]);
+    }
+
+    async function playAudio(sentence) {
+        playAudioBtn.disabled = true;
+        errorMessage.classList.add('hidden');
+        try {
+            const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    input: { text: sentence },
+                    voice: { languageCode: "en-US", name: "en-US-Wavenet-D" },
+                    audioConfig: { audioEncoding: "MP3" }
+                })
+            });
+
+            if (!response.ok) throw new Error("TTS API Error");
+
+            const data = await response.json();
+            const audioBase64 = data.audioContent;
+            const audio = new Audio("data:audio/mp3;base64," + audioBase64);
+            audio.play();
+            audio.onended = () => { playAudioBtn.disabled = false; };
+
+        } catch (err) {
+            console.error(err);
+            errorMessage.textContent = "Lỗi: Không thể phát âm thanh. Kiểm tra API Key và kết nối mạng.";
+            errorMessage.classList.remove('hidden');
+            playAudioBtn.disabled = false;
+        }
+    }
+
+    function checkAnswer() {
+        const correctWords = cleanText(quizData[currentQuestionIndex]).split(' ');
+        const userWords = cleanText(dictationInput.value).split(' ');
+        let sentenceScore = 0;
+        let feedbackHtml = [];
+        const len = Math.max(correctWords.length, userWords.length);
+
+        for (let i = 0; i < len; i++) {
+            const cWord = correctWords[i];
+            const uWord = userWords[i];
+
+            if (uWord === undefined) feedbackHtml.push(`<span class="missed">(thiếu: ${cWord})</span>`);
+            else if (cWord === undefined) feedbackHtml.push(`<span class="incorrect"><s>${uWord}</s> (thừa)</span>`);
+            else if (cWord === uWord) { sentenceScore++; feedbackHtml.push(`<span class="correct">${uWord}</span>`); }
+            else feedbackHtml.push(`<span class="incorrect"><s>${uWord}</s> <span class="guide-text">(${cWord})</span></span>`);
+        }
+
+        userScore += sentenceScore;
+        feedbackContainer.innerHTML = feedbackHtml.join(' ');
+        feedbackContainer.classList.remove('hidden');
+        currentScoreEl.textContent = `Điểm: ${userScore}`;
+        dictationInput.disabled = true;
+        checkBtn.classList.add('hidden');
+        nextBtn.classList.remove('hidden');
+        nextBtn.textContent = (currentQuestionIndex === quizData.length -1) ? "Xem Kết quả" : "Câu tiếp theo";
+    }
+
+    function loadNextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.length) loadQuestion();
+        else showResults();
+    }
+
+    function showResults() {
+        quizContainer.classList.add('hidden');
+        resultsContainer.classList.remove('hidden');
+        finalScore.textContent = userScore;
+    }
+
+    checkBtn.onclick = checkAnswer;
+    nextBtn.onclick = loadNextQuestion;
+    restartBtn.onclick = startQuiz;
+
+    startQuiz();
+
+</script>
+</body>
+</html>
