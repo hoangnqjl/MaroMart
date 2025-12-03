@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -24,16 +23,20 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   Future<void> _initializeVideo() async {
     try {
-      _controller = VideoPlayerController.asset(widget.videoUrl);
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+
       await _controller.initialize();
       setState(() {
         _isInitialized = true;
       });
-      _controller.setLooping(true);
+      _controller.setLooping(true); // Lặp lại video
     } catch (e) {
-      setState(() {
-        _hasError = true;
-      });
+      print("Error loading video: $e");
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+        });
+      }
     }
   }
 
@@ -48,17 +51,23 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     if (_hasError) {
       return Container(
         color: Colors.grey[300],
-        child: const Center(
-          child: Icon(Icons.video_library_outlined, color: Colors.grey, size: 60),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.error_outline, color: Colors.red, size: 40),
+            SizedBox(height: 8),
+            Text("Video Error", style: TextStyle(color: Colors.grey)),
+          ],
         ),
       );
     }
 
     if (!_isInitialized) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(strokeWidth: 2),
       );
     }
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -70,6 +79,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Video hiển thị full khung (Cover)
           SizedBox.expand(
             child: FittedBox(
               fit: BoxFit.cover,
@@ -80,11 +90,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
               ),
             ),
           ),
+
+          // Nút Play hiển thị khi pause
           if (!_controller.value.isPlaying)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
+                color: Colors.black.withOpacity(0.5),
                 shape: BoxShape.circle,
               ),
               child: const Icon(

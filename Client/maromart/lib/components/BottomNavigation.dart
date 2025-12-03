@@ -6,20 +6,21 @@ import 'package:maromart/Colors/AppColors.dart';
 class BottomNavigation extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
-  final int notificationCount; // <--- 1. THÊM BIẾN NÀY
+  final int notificationCount;
 
   const BottomNavigation({
     Key? key,
     required this.selectedIndex,
     required this.onTabSelected,
-    this.notificationCount = 0, // Mặc định là 0
+    this.notificationCount = 0,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 50),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.18),
       width: MediaQuery.of(context).size.width,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -44,14 +45,12 @@ class BottomNavigation extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
 
-                    // --- ICON THÔNG BÁO (Index 1) ---
                     _buildNavItem(
                       icon: HeroiconsOutline.bellAlert,
                       index: 1,
                       isSelected: selectedIndex == 1,
-                      badgeCount: notificationCount, // Truyền số lượng vào
+                      badgeCount: notificationCount,
                     ),
-                    // --------------------------------
 
                     const SizedBox(width: 8),
                     _buildNavItem(
@@ -92,14 +91,14 @@ class BottomNavigation extends StatelessWidget {
     required IconData icon,
     required int index,
     required bool isSelected,
-    int badgeCount = 0, // Tham số badge
+    int badgeCount = 0,
   }) {
     return GestureDetector(
       onTap: () {
         onTabSelected(index);
       },
       child: Stack(
-        clipBehavior: Clip.none, // Cho phép badge tràn ra ngoài
+        clipBehavior: Clip.none,
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -118,7 +117,6 @@ class BottomNavigation extends StatelessWidget {
             ),
           ),
 
-          // --- VẼ BADGE ĐỎ NẾU CÓ THÔNG BÁO ---
           if (badgeCount > 0)
             Positioned(
               top: 0,

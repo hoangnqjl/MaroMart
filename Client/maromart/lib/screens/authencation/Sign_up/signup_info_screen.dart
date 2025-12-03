@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 
 class SignUpInfoScreen extends StatefulWidget {
   const SignUpInfoScreen({super.key});
 
-  static const String kBackgroundAsset = 'lib/images/signup1.png';
+  static const String kLogoAsset = ''; // Có thể thêm logo nếu cần
 
   @override
   State<SignUpInfoScreen> createState() => _SignUpInfoScreenState();
@@ -60,232 +59,202 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(SignUpInfoScreen.kBackgroundAsset, fit: BoxFit.cover),
-          Container(color: Colors.black.withOpacity(0.35)),
-
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                  child: Container(
-                    width: size.width > 480 ? 420 : size.width * 0.9,
-                    padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.25),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        // Background Gradient giống SignInScreen
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.fromARGB(255, 212, 187, 249),
+              Color.fromARGB(255, 242, 204, 196),
+              Color.fromARGB(255, 195, 219, 245),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              CircleAvatar(
-                                radius: 26,
-                                backgroundColor: Colors.white.withOpacity(0.9),
-                                child: const Icon(Icons.rocket_launch_outlined,
-                                    color: Colors.black),
-                              ),
-                              InkWell(
-                                onTap: () => Navigator.pop(context),
-                                borderRadius: BorderRadius.circular(20),
-                                child: CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.white.withOpacity(0.9),
-                                  child:
-                                  const Icon(Icons.close, color: Colors.black, size: 18),
-                                ),
-                              ),
-                            ],
+                          CircleAvatar(
+                            radius: 26,
+                            backgroundColor: Colors.white.withOpacity(.9),
+                            child: const Icon(Icons.person_add_alt, color: Colors.black),
                           ),
-                          const SizedBox(height: 24),
-
-                          Text(
-                            'MaroMart',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'MaroMart, the easy way for people to buy, sell, and connect with each other.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withOpacity(0.85),
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          _GlassField(
-                            controller: _fullNameController,
-                            hint: 'Fullname...',
-                            validator: (v) => (v?.trim().isEmpty ?? true) ? 'Fullname is required' : null,
-                          ),
-                          const SizedBox(height: 14),
-                          _GlassField(
-                            controller: _emailController,
-                            hint: 'Email...',
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (v) {
-                              if (v?.trim().isEmpty ?? true) return 'Email is required';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          _GlassField(
-                            controller: _phoneController,
-                            hint: 'Phone...',
-                            keyboardType: TextInputType.phone,
-                          ),
-                          const SizedBox(height: 14),
-
-                          _GenderSelectionField(
-                            value: _selectedGender,
-                            items: _genders,
-                            onChanged: (newValue) {
-                              setState(() {
-                                _selectedGender = newValue;
-                              });
-                            },
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _submit, // Gọi hàm submit
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: const StadiumBorder(),
-                                minimumSize: const Size(double.infinity, 56),
-                                textStyle: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              child: const Text('Next →'),
+                          InkWell(
+                            onTap: () => Navigator.maybePop(context),
+                            borderRadius: BorderRadius.circular(20),
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.white.withOpacity(.9),
+                              child: const Icon(Icons.close, size: 18, color: Colors.black),
                             ),
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Join MaroMart',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create an account to start buying and selling today.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF7A7A7A),
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      _RoundedField(
+                        controller: _fullNameController,
+                        hint: 'Full Name...',
+                        icon: Icons.person_outline,
+                        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Fullname is required' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      _RoundedField(
+                        controller: _emailController,
+                        hint: 'Email...',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Email is required' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      _RoundedField(
+                        controller: _phoneController,
+                        hint: 'Phone (Optional)...',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Gender Dropdown
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(.92),
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedGender,
+                            isExpanded: true,
+                            hint: const Row(
+                              children: [
+                                Icon(Icons.wc, size: 20, color: Colors.black54),
+                                SizedBox(width: 12),
+                                Text('Select Gender...', style: TextStyle(color: Colors.black54, fontSize: 16)),
+                              ],
+                            ),
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                            items: _genders.map((String item) {
+                              return DropdownMenuItem<String>(
+                                value: item,
+                                child: Text(item),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() => _selectedGender = val),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: const StadiumBorder(),
+                            minimumSize: const Size(double.infinity, 56),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          child: const Text('Next →'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _GlassField extends StatelessWidget {
+// Widget Field tái sử dụng giống SignInScreen
+class _RoundedField extends StatelessWidget {
+  final TextEditingController? controller;
   final String hint;
+  final IconData icon;
   final bool obscure;
   final TextInputType? keyboardType;
-  final TextEditingController? controller;
   final String? Function(String?)? validator;
 
-  const _GlassField({
+  const _RoundedField({
+    this.controller,
     required this.hint,
+    required this.icon,
     this.obscure = false,
     this.keyboardType,
-    this.controller,
     this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField( // Dùng TextFormField để có validation
+    return TextFormField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.75)),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.25),
+        fillColor: Colors.white.withOpacity(.92),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         enabledBorder: _border(),
         focusedBorder: _border(),
-        errorBorder: _border(isError: true), // Thêm error border
-        focusedErrorBorder: _border(isError: true),
+        errorBorder: _border(color: Colors.red),
+        focusedErrorBorder: _border(color: Colors.red),
+        prefixIcon: Icon(icon, size: 20, color: Colors.black54),
       ),
     );
   }
 
-  OutlineInputBorder _border({bool isError = false}) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(28),
-    borderSide: isError
-        ? const BorderSide(color: Colors.red, width: 1.5)
-        : BorderSide.none,
-  );
-}
-
-
-
-class _GenderSelectionField extends StatelessWidget {
-  final String? value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
-
-  const _GenderSelectionField({
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Kiểu dáng container tương tự _GlassField
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.25),
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          hint: Text(
-            'Gender...',
-            style: TextStyle(color: Colors.white.withOpacity(0.75)),
-          ),
-          icon: const Icon(HeroiconsOutline.chevronDown, color: Colors.white, size: 18),
-          dropdownColor: Colors.black.withOpacity(0.7), // Màu nền dropdown
-          style: const TextStyle(color: Colors.white, fontSize: 16),
-          isExpanded: true,
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
+  OutlineInputBorder _border({Color color = Colors.transparent}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(28),
+      borderSide: BorderSide(color: color, width: 1.5),
     );
   }
 }

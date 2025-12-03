@@ -47,11 +47,83 @@ class _ChatScreenState extends State<ChatScreen> {
     _currentConId = widget.conversationId;
     _currentUserId = StorageHelper.getUserId();
 
+    // THÊM SOCKET LISTENERS
+    _initSocketListeners();
+
     if (_currentConId.isNotEmpty) {
       _fetchMessages();
     } else {
       setState(() => _isLoading = false);
     }
+  }
+
+  // Khởi tạo socket listeners
+  void _initSocketListeners() {
+    _chatService.initSocketListeners(
+      onNewMessage: (data) {
+        print('📩 [ChatScreen] Nhận tin nhắn mới: $data');
+
+        try {
+          final newMsg = Message.fromJson(data['new_message']);
+
+          // Cập nhật conversationId nếu đang ở conversation mới
+          if (_currentConId.isEmpty && newMsg.conId != null) {
+            _currentConId = newMsg.conId!;
+          }
+
+          // Chỉ thêm tin nhắn nếu thuộc conversation hiện tại
+          if (newMsg.conId == _currentConId && mounted) {
+            setState(() {
+              // Kiểm tra không trùng lặp
+              final exists = _messages.any((m) => m.messageId == newMsg.messageId);
+              if (!exists) {
+                _messages.add(newMsg);
+                print('✅ Đã thêm tin nhắn mới vào UI');
+              } else {
+                print('⚠️ Tin nhắn đã tồn tại, bỏ qua');
+              }
+            });
+            _scrollToBottom();
+          }
+        } catch (e) {
+          print('❌ Lỗi parse new message: $e');
+        }
+      },
+
+      onMessageSent: (data) {
+        print('✅ [ChatScreen] Tin nhắn đã gửi thành công: $data');
+
+        try {
+          final sentMsg = Message.fromJson(data['new_message']);
+
+          // Cập nhật conversationId nếu đang ở conversation mới
+          if (_currentConId.isEmpty && sentMsg.conId != null) {
+            _currentConId = sentMsg.conId!;
+          }
+
+          if (sentMsg.conId == _currentConId && mounted) {
+            setState(() {
+              // Xóa tin nhắn tạm (tin nhắn chưa có messageId)
+              _messages.removeWhere((m) =>
+              m.messageId == null &&
+                  m.content == sentMsg.content &&
+                  m.sender == _currentUserId
+              );
+
+              // Thêm tin nhắn thật từ server
+              final exists = _messages.any((m) => m.messageId == sentMsg.messageId);
+              if (!exists) {
+                _messages.add(sentMsg);
+                print('✅ Đã cập nhật tin nhắn đã gửi vào UI');
+              }
+            });
+            _scrollToBottom();
+          }
+        } catch (e) {
+          print('❌ Lỗi parse sent message: $e');
+        }
+      },
+    );
   }
 
   String _getFullUrl(String? path) {
@@ -72,6 +144,7 @@ class _ChatScreenState extends State<ChatScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
       }
     } catch (e) {
+      print('❌ Lỗi fetch messages: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -89,7 +162,6 @@ class _ChatScreenState extends State<ChatScreen> {
   // --- MENU OPTION (Modal Bottom Sheet) ---
 
   void _showChatOptions(BuildContext context) {
-    // Chỉ hiện option nếu đã có cuộc hội thoại (có ID)
     if (_currentConId.isEmpty) return;
 
     showModalBottomSheet(
@@ -117,25 +189,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-
-              // Nút Block (Ví dụ thêm tính năng này sau)
-              // _buildOptionButton(
-              //   icon: HeroiconsOutline.noSymbol, // Icon cấm
-              //   label: 'Block user',
-              //   iconColor: Colors.black87,
-              //   bgColor: const Color(0xFFF5F5F5),
-              //   onTap: () {
-              //     Navigator.pop(ctx);
-              //     // TODO: Implement Block logic
-              //     ScaffoldMessenger.of(context).showSnackBar(
-              //       const SnackBar(content: Text("Block feature coming soon")),
-              //     );
-              //   },
-              // ),
-
-              // const SizedBox(height: 12),
-
-              // Nút Delete Conversation (Màu đỏ nhạt)
               _buildOptionButton(
                 icon: HeroiconsOutline.trash,
                 label: 'Delete conversation',
@@ -255,7 +308,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // --- CÁC HÀM CHỌN FILE & GỬI TIN NHẮN (GIỮ NGUYÊN) ---
+  // --- CÁC HÀM CHỌN FILE & GỬI TIN NHẮN ---
   Future<void> _showAttachmentOptions() async {
     showModalBottomSheet(
       context: context,
@@ -329,6 +382,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _selectedAudios.clear();
     });
 
+    // Tạo tin nhắn tạm để hiển thị ngay
     if (text.isNotEmpty) {
       final tempMsg = Message.createTemp(
         conId: _currentConId,
@@ -349,17 +403,29 @@ class _ChatScreenState extends State<ChatScreen> {
         audios: audiosToSend,
       );
 
+      // Cập nhật conversationId nếu là conversation mới
       if (_currentConId.isEmpty && newMessage != null && newMessage.conId != null) {
-        _currentConId = newMessage.conId!;
+        setState(() {
+          _currentConId = newMessage.conId!;
+        });
       }
 
-      await _fetchMessages();
+      // Socket sẽ tự động nhận và cập nhật tin nhắn qua onMessageSent
+      // Không cần fetch lại toàn bộ messages
+
       if(mounted) setState(() => _isSending = false);
 
     } catch (e) {
+      print('❌ Lỗi gửi tin nhắn: $e');
       if (mounted) {
-        setState(() => _isSending = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+        setState(() {
+          _isSending = false;
+          // Xóa tin nhắn tạm nếu gửi thất bại
+          _messages.removeWhere((m) => m.messageId == null && m.content == text);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send: $e')),
+        );
       }
     }
   }
@@ -420,7 +486,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
-          // Nút 3 chấm để mở Modal
           if (_currentConId.isNotEmpty)
             IconButton(
               icon: const Icon(HeroiconsOutline.ellipsisVertical, color: Colors.black),

@@ -220,16 +220,16 @@ class ModalInAvtState extends State<ModalInAvt> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Logout'),
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Logout'),
           ),
@@ -240,11 +240,13 @@ class ModalInAvtState extends State<ModalInAvt> {
     if (confirmed == true) {
       try {
         await _authService.logout();
+
         if (context.mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
+          Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
         }
       } catch (e) {
-        // Handle error
+        print("Lỗi logout: $e");
+        // Có thể hiện SnackBar thông báo lỗi
       }
     }
   }
