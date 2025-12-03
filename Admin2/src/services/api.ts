@@ -24,6 +24,7 @@ export interface Product {
     userInfo: {
         fullName: string;
         avatarUrl: string;
+        phoneNumber?: string;
     };
 }
 

@@ -20,6 +20,7 @@ import { formatPrice, formatDate } from '../lib/utils';
 import { useToast } from '../hooks/useToast';
 import { useDebounce } from '../hooks/useDebounce';
 
+
 export function Products() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -275,12 +276,43 @@ export function Products() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
-                                                    <img
-                                                        src={product.productMedia[0]}
-                                                        alt={product.productName}
-                                                        className="h-14 w-14 rounded-lg object-cover"
-                                                    />
-                                                    <span className="font-medium">{product.productName}</span>
+                                                    {(() => {
+                                                        const firstMedia = product.productMedia?.[0];
+                                                        if (!firstMedia) {
+                                                            return (
+                                                                <div className="h-14 w-14 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                                                                    <span className="text-xs text-gray-400">No image</span>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        const url = firstMedia.startsWith('image:')
+                                                            ? firstMedia.slice(6)
+                                                            : firstMedia.startsWith('video:')
+                                                                ? firstMedia.slice(6)
+                                                                : firstMedia;
+
+                                                        return (
+                                                            <div className="relative">
+                                                                <img
+                                                                    src={url}
+                                                                    alt={product.productName}
+                                                                    className="h-14 w-14 rounded-lg object-cover"
+                                                                    onError={(e) => {
+                                                                        e.currentTarget.src = "https://via.placeholder.com/56/6366F1/FFFFFF?text=IMG";
+                                                                    }}
+                                                                />
+                                                                {firstMedia.startsWith('video:') && (
+                                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg pointer-events-none">
+                                                                        <svg className="w-7 h-7 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+                                                                            <path d="M8 5v14l11-7z" />
+                                                                        </svg>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    <span className="font-medium text-gray-900">{product.productName}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="font-semibold text-primary">
