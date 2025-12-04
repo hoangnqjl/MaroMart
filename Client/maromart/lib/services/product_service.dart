@@ -13,9 +13,34 @@ class ProductService {
 
   final ValueNotifier<int> productChangeNotifier = ValueNotifier<int>(0);
 
-  // Hàm helper để kích hoạt thông báo
   void notifyProductChanges() {
     productChangeNotifier.value++;
+  }
+
+  Future<Map<String, dynamic>?> getAISuggestion({
+    required String productName,
+    required String description,
+    required String condition,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        endpoint: '/attribute-suggestion',
+        body: {
+          "productName": productName,
+          "description": description,
+          "condition": condition,
+        },
+        needAuth: true,
+      );
+
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+      return null;
+    } catch (e) {
+      print("Lỗi AI Suggestion: $e");
+      return null;
+    }
   }
 
   Future<List<Product>> getProducts({int page = 1, int limit = 10}) async {

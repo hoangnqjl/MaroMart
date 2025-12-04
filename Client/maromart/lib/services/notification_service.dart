@@ -4,16 +4,13 @@ import 'package:maromart/services/api_service.dart';
 class NotificationService {
   final ApiService _apiService = ApiService();
 
-  // Lấy danh sách thông báo
   Future<List<NotificationModel>> getNotifications() async {
     try {
-      // Endpoint dựa trên router bạn cung cấp: router.get("/notifications", ...)
       final response = await _apiService.get(
         endpoint: '/notifications',
         needAuth: true,
       );
 
-      // Backend trả về: { notifications: [...] }
       if (response['notifications'] is List) {
         return (response['notifications'] as List)
             .map((json) => NotificationModel.fromJson(json))
