@@ -201,7 +201,6 @@ class _AddProductState extends State<AddProduct> {
 
   // --- SUBMIT ---
   Future<void> _submitProduct() async {
-    // Không cần validate ở đây nữa vì nút đã bị disable nếu thiếu thông tin
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
     try {
@@ -346,7 +345,6 @@ class _AddProductState extends State<AddProduct> {
             _buildSectionTitle("Product details"),
             const SizedBox(height: 12),
 
-            // --- HEADER ROW VỚI GRADIENT TEXT VÀ NÚT ĐEN ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -359,14 +357,13 @@ class _AddProductState extends State<AddProduct> {
                   ).createShader(bounds),
                   child: Row(
                     children: const [
-                      Icon(HeroiconsSolid.sparkles, color: Colors.white, size: 22), // Màu gốc là trắng để ăn màu gradient
+                      Icon(HeroiconsSolid.sparkles, color: Colors.white, size: 22),
                       SizedBox(width: 8),
                       Text("AI Suggestion", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
                 ),
 
-                // 2. NÚT GET MÀU ĐEN
                 ElevatedButton(
                   onPressed: _isAiLoading ? null : _handleAISuggestion,
                   style: ElevatedButton.styleFrom(
@@ -466,7 +463,6 @@ class _AddProductState extends State<AddProduct> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       readOnly: readOnly,
-      // QUAN TRỌNG: Gọi setState mỗi khi gõ để check validation
       onChanged: (_) => setState(() {}),
 
       decoration: InputDecoration(
