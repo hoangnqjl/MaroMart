@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Eye, Trash2 } from 'lucide-react';
+import { Plus, Eye, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import {
     Table,
@@ -18,18 +17,14 @@ import type { Product, Category } from '../services/api';
 import { productsAPI, categoriesAPI } from '../services/api';
 import { formatPrice, formatDate } from '../lib/utils';
 import { useToast } from '../hooks/useToast';
-import { useDebounce } from '../hooks/useDebounce';
+import { useSearch } from '../hooks/useSearch';
+import { SearchBar } from '../components/ui/SearchBar';
+import { CategoryFilter } from '../components/ui/CategoryFilter';
 
 
 export function Products() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
-    const [limit] = useState(10);
-    const [searchQuery, setSearchQuery] = useState('');
-    const debouncedSearch = useDebounce(searchQuery, 500);
-    const [categoryFilter, setCategoryFilter] = useState('');
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
     const [deleteModal, setDeleteModal] = useState<{
         isOpen: boolean;
@@ -40,6 +35,23 @@ export function Products() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
+
+    // Client-side search hook
+    const {
+        query,
+        setQuery,
+        selectedCategory,
+        setSelectedCategory,
+        filteredItems: filteredProducts,
+        isSearching,
+        clearSearch
+    } = useSearch<Product>({
+        items: products,
+        searchFields: ['productName', 'productDescription', 'userInfo.fullName'],
+        categoryField: 'categoryId',
+        debounceMs: 250,
+        enableVietnameseNormalization: true,
+    });
 
     // Fetch categories
     useEffect(() => {
@@ -54,20 +66,15 @@ export function Products() {
         fetchCategories();
     }, []);
 
-    // Fetch products
+    // Fetch products (fetch ALL for client-side search)
     const fetchProducts = async () => {
         try {
             setIsLoading(true);
             setError(null);
-            // Backend returns { products[], total, page, limit }
-            const response = await productsAPI.getProducts(
-                page,
-                limit,
-                debouncedSearch,
-                categoryFilter
-            );
+            // Fetch a large number to simulate "all" for client-side filtering
+            // In a real app with thousands of products, you'd use server-side search
+            const response = await productsAPI.getProducts(1, 1000);
             setProducts(response.products || []);
-            setTotal(response.total || 0);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to fetch products');
             toast({
@@ -82,7 +89,7 @@ export function Products() {
 
     useEffect(() => {
         fetchProducts();
-    }, [page, debouncedSearch, categoryFilter]);
+    }, []);
 
     const handleDelete = async (productId: string) => {
         try {
@@ -124,10 +131,10 @@ export function Products() {
     };
 
     const toggleSelectAll = () => {
-        if (selectedProducts.length === products.length) {
+        if (selectedProducts.length === filteredProducts.length) {
             setSelectedProducts([]);
         } else {
-            setSelectedProducts(products.map((p) => p.productId));
+            setSelectedProducts(filteredProducts.map((p) => p.productId));
         }
     };
 
@@ -138,8 +145,6 @@ export function Products() {
                 : [...prev, productId]
         );
     };
-
-    const totalPages = Math.ceil(total / limit);
 
     // Loading state
     if (isLoading && products.length === 0) {
@@ -190,39 +195,29 @@ export function Products() {
 
             {/* Filters */}
             <div className="glass-card p-6">
-                <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                            <Input
-                                type="text"
-                                placeholder="Search products..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="flex-1 w-full">
+                        <SearchBar
+                            value={query}
+                            onChange={setQuery}
+                            onClear={clearSearch}
+                            isLoading={isSearching}
+                            placeholder="Search products by name, description, or owner..."
+                        />
                     </div>
-                    <select
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="rounded-button px-4 py-2 border border-gray-200 bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                    >
-                        <option value="">All Categories</option>
-                        {categories.map((category) => (
-                            <option key={category.categoryId} value={category.categoryId}>
-                                {category.categoryName}
-                            </option>
-                        ))}
-                    </select>
+                    <CategoryFilter
+                        categories={categories}
+                        selectedCategory={selectedCategory}
+                        onCategoryChange={setSelectedCategory}
+                    />
                     {selectedProducts.length > 0 && (
                         <Button
                             variant="danger"
                             onClick={() => setBulkDeleteModal(true)}
-                            className="gap-2"
+                            className="gap-2 whitespace-nowrap"
                         >
                             <Trash2 className="h-4 w-4" />
-                            Delete Selected ({selectedProducts.length})
+                            Delete ({selectedProducts.length})
                         </Button>
                     )}
                 </div>
@@ -230,7 +225,7 @@ export function Products() {
 
             {/* Table */}
             <div className="glass-card p-6">
-                {products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                     <div className="text-center py-12">
                         <p className="text-gray-500 text-lg">No products found</p>
                         <p className="text-gray-400 text-sm mt-2">Try adjusting your filters</p>
@@ -244,8 +239,8 @@ export function Products() {
                                         <input
                                             type="checkbox"
                                             checked={
-                                                selectedProducts.length === products.length &&
-                                                products.length > 0
+                                                selectedProducts.length === filteredProducts.length &&
+                                                filteredProducts.length > 0
                                             }
                                             onChange={toggleSelectAll}
                                             className="rounded border-gray-300"
@@ -260,7 +255,7 @@ export function Products() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {products.map((product) => {
+                                {filteredProducts.map((product) => {
                                     const category = categories.find(
                                         (c) => c.categoryId === product.categoryId
                                     );
@@ -365,29 +360,8 @@ export function Products() {
                             </TableBody>
                         </Table>
 
-                        {/* Pagination */}
-                        <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200/50">
-                            <p className="text-sm text-gray-600">
-                                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} products
-                            </p>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                    disabled={page === 1}
-                                >
-                                    Previous
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                    disabled={page === totalPages}
-                                >
-                                    Next
-                                </Button>
-                            </div>
+                        <div className="mt-4 text-center text-sm text-gray-500">
+                            Showing {filteredProducts.length} products
                         </div>
                     </>
                 )}

@@ -82,14 +82,64 @@ export const usersAPI = {
         return response.data;
     },
 
-    updateUserRole: async (userId: string, role: 'admin' | 'user') => {
-        const response = await axiosInstance.patch(`/admin/users/${userId}/role`, { role });
-        return response.data;
+    /**
+     * Toggle user role between 'admin' and 'user'
+     * Backend expects: { userId, newRole }
+     * @param userId - User ID to toggle
+     * @param newRole - New role to set ('admin' or 'user')
+     * @returns { userId: string, newRole: 'admin' | 'user' }
+     */
+    toggleUserRole: async (userId: string, newRole: 'admin' | 'user'): Promise<{ userId: string; newRole: 'admin' | 'user' }> => {
+        console.log('🔄 [API] toggleUserRole called');
+        console.log('📝 [API] Parameters:', { userId, newRole });
+
+        const url = `/admin/users/${userId}/role`;
+        const payload = { userId, newRole };
+
+        console.log('🌐 [API] Request URL:', url);
+        console.log('📦 [API] Request payload:', JSON.stringify(payload, null, 2));
+        console.log('⏳ [API] Sending PATCH request...');
+
+        try {
+            const response = await axiosInstance.patch(url, payload);
+            console.log('✅ [API] Response received:', response.data);
+            console.log('📊 [API] Response status:', response.status);
+            return response.data;
+        } catch (error: any) {
+            console.error('❌ [API] Error occurred:', error);
+            console.error('📄 [API] Error response:', error.response?.data);
+            console.error('🔢 [API] Error status:', error.response?.status);
+            console.error('📋 [API] Full error object:', JSON.stringify(error, null, 2));
+            throw error;
+        }
     },
 
     deleteUser: async (userId: string) => {
         const response = await axiosInstance.delete(`/admin/users/${userId}`);
         return response.data;
+    },
+
+    /**
+     * Update user information
+     * Route: PUT /admin/users/:userId
+     */
+    updateUser: async (userId: string, data: Partial<User>) => {
+        console.log('🔄 [API] updateUser called');
+        console.log('📝 [API] Parameters:', { userId, data });
+
+        const url = `/admin/users/${userId}`;
+        console.log('🌐 [API] Request URL:', url);
+        console.log('📦 [API] Request payload:', JSON.stringify(data, null, 2));
+
+        try {
+            const response = await axiosInstance.put(url, data);
+            console.log('✅ [API] Response received:', response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error('❌ [API] Error occurred:', error);
+            console.error('📄 [API] Error response:', error.response?.data);
+            throw error;
+        }
     },
 };
 
