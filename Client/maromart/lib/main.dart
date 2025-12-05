@@ -8,9 +8,9 @@ import 'app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await StorageHelper.init();
-  if (StorageHelper.isLoggedIn()) {
-    SocketService().connect();
-  }
+  // if (StorageHelper.isLoggedIn()) {
+  //   SocketService().connect();
+  // }
   runApp(const MyApp());
 }
 

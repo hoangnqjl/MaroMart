@@ -289,24 +289,46 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   _NotiStyle _getStyleByType(String type) {
-    switch (type) {
-      case 'successful_upload':
-      case 'order_success':
-        return _NotiStyle(bgColor: const Color(0xFFE8F5E9), iconColor: const Color(0xFF4CAF50), icon: HeroiconsOutline.check);
+    final safeType = type.toLowerCase();
 
-      case 'product_refusal':
-        return _NotiStyle(bgColor: const Color(0xFFFCE4EC), iconColor: const Color(0xFFF44336), icon: HeroiconsOutline.xMark);
+    switch (safeType) {
+      case 'success':
+        return _NotiStyle(
+            bgColor: const Color(0xFFE8F5E9),
+            iconColor: const Color(0xFF4CAF50),
+            icon: HeroiconsOutline.check
+        );
 
       case 'warning':
+      case 'product_refusal':
+        return _NotiStyle(
+            bgColor: const Color(0xFFFFEBEE),
+            iconColor: const Color(0xFFF44336),
+            icon: HeroiconsOutline.xMark
+        );
+
+      case 'new':
+      case 'message':
+        return _NotiStyle(
+            bgColor: const Color(0xFFE3F2FD),
+            iconColor: const Color(0xFF2196F3),
+            icon: HeroiconsOutline.bell
+        );
+
+      case 'info':
       case 'report':
-        return _NotiStyle(bgColor: const Color(0xFFFFF3E0), iconColor: const Color(0xFFFF9800), icon: HeroiconsOutline.exclamationTriangle);
+        return _NotiStyle(
+            bgColor: const Color(0xFFFFF3E0),
+            iconColor: const Color(0xFFFF9800),
+            icon: HeroiconsOutline.exclamationTriangle
+        );
 
-      case 'new_message':
-        return _NotiStyle(bgColor: const Color(0xFFE3F2FD), iconColor: const Color(0xFF2196F3), icon: HeroiconsOutline.bell);
-
-      case 'like':
       default:
-        return _NotiStyle(bgColor: const Color(0xFFEEEEEE), iconColor: Colors.grey, icon: HeroiconsOutline.heart);
+        return _NotiStyle(
+            bgColor: const Color(0xFFF5F5F5), // Grey 100
+            iconColor: Colors.grey,
+            icon: HeroiconsOutline.informationCircle
+        );
     }
   }
 }

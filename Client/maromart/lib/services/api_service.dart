@@ -7,6 +7,7 @@ import '../utils/storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
+
 class ApiService {
   Map<String, String> _getHeaders({bool needAuth = false}) {
     final headers = {
@@ -48,7 +49,6 @@ class ApiService {
     }
   }
 
-
   Future<dynamic> postMultipart({
     required String endpoint,
     required Map<String, String> fields,
@@ -73,12 +73,20 @@ class ApiService {
       if (files != null && files.isNotEmpty) {
         for (var xFile in files) {
           final bytes = await xFile.readAsBytes();
+          final mimeType = lookupMimeType(xFile.name, headerBytes: bytes);
+
+          MediaType? contentType;
+          if (mimeType != null) {
+            final split = mimeType.split('/');
+            contentType = MediaType(split[0], split[1]);
+          }
 
           request.files.add(
             http.MultipartFile.fromBytes(
               fileKey,
               bytes,
               filename: xFile.name,
+              contentType: contentType,
             ),
           );
         }
@@ -123,23 +131,20 @@ class ApiService {
 
         for (var xFile in files) {
           final bytes = await xFile.readAsBytes();
-
           final mimeType = lookupMimeType(xFile.name, headerBytes: bytes);
 
-          // 2. Tạo MediaType object
           MediaType? contentType;
           if (mimeType != null) {
             final split = mimeType.split('/');
             contentType = MediaType(split[0], split[1]);
           }
 
-          // 3. Thêm file kèm contentType
           request.files.add(
             http.MultipartFile.fromBytes(
               fileKey,
               bytes,
               filename: xFile.name,
-              contentType: contentType, // <--- QUAN TRỌNG: Phải có dòng này
+              contentType: contentType,
             ),
           );
         }
@@ -159,7 +164,61 @@ class ApiService {
     }
   }
 
+  Future<dynamic> putMultipart({
+    required String endpoint,
+    required Map<String, String> fields,
+    List<XFile>? files,
+    String fileKey = 'productMedia',
+    bool needAuth = true,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      var request = http.MultipartRequest('PUT', url);
 
+      if (needAuth) {
+        final token = StorageHelper.getToken();
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+      }
+
+      request.fields.addAll(fields);
+
+      if (files != null && files.isNotEmpty) {
+        for (var xFile in files) {
+          final bytes = await xFile.readAsBytes();
+          final mimeType = lookupMimeType(xFile.name, headerBytes: bytes);
+
+          MediaType? contentType;
+          if (mimeType != null) {
+            final split = mimeType.split('/');
+            contentType = MediaType(split[0], split[1]);
+          }
+
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              fileKey,
+              bytes,
+              filename: xFile.name,
+              contentType: contentType,
+            ),
+          );
+        }
+      }
+
+      final streamedResponse = await request.send().timeout(ApiConstants.connectTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+
+    } on SocketException {
+      throw Exception('Không có kết nối internet');
+    } on TimeoutException {
+      throw Exception('Timeout - Vui lòng thử lại');
+    } catch (e) {
+      throw Exception('Lỗi Update: ${e.toString()}');
+    }
+  }
 
   Future<dynamic> get({
     required String endpoint,
@@ -208,7 +267,6 @@ class ApiService {
     }
   }
 
-  // DELETE Request: Thay đổi kiểu trả về thành Future<dynamic>
   Future<dynamic> delete({
     required String endpoint,
     bool needAuth = true,
@@ -237,18 +295,13 @@ class ApiService {
       body = null;
     }
 
-    //  (200-299)
     if (statusCode >= 200 && statusCode < 300) {
       if (body == null) return {'success': true};
       return body;
-    }
-
-    // (400, 401, 404, 500...)
-    else {
+    } else {
       String errorMessage = 'Có lỗi xảy ra ($statusCode)';
 
       if (body is Map<String, dynamic>) {
-        // Lấy message chính
         if (body['message'] != null) {
           errorMessage = body['message'];
         }

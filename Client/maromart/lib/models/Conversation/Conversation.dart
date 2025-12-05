@@ -6,10 +6,10 @@ class Conversation {
   final String conId;
   final String userId1;
   final String userId2;
-  final Message? latestMessage;
+   Message? latestMessage;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final User? partnerInfo; // THÊM FIELD NÀY
+  final User? partnerInfo;
 
   Conversation({
     required this.conId,
@@ -18,7 +18,7 @@ class Conversation {
     this.latestMessage,
     required this.createdAt,
     required this.updatedAt,
-    this.partnerInfo, // THÊM FIELD NÀY
+    this.partnerInfo,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {

@@ -60,7 +60,7 @@ class _UpdateProductState extends State<UpdateProduct> {
   String? _selectedWardCode;
   String? _selectedWardName;
 
-  // Template Attribute (Giống AddProduct)
+  // Template Attribute
   final Map<String, List<String>> _attributeTemplates = {
     "auto": ["brand", "model", "year", "fuel_type", "transmission", "mileage", "condition", "color", "warranty"],
     "furniture": ["material", "color", "dimensions", "style", "brand", "warranty"],
@@ -140,9 +140,7 @@ class _UpdateProductState extends State<UpdateProduct> {
         if (product.productAttribute != null) {
           Map<String, dynamic> attrMap = {};
           if (product.productAttribute is ProductAttribute) {
-            // Convert object sang map nếu cần, hoặc xử lý trực tiếp
-            // Ở đây giả sử bạn muốn map lại vào list _attributes
-            // Cần logic parse cụ thể tùy cấu trúc model
+            // Convert object sang map nếu cần
           } else if (product.productAttribute is Map) {
             attrMap = Map<String, dynamic>.from(product.productAttribute);
           } else if (product.productAttribute is String) {
@@ -165,7 +163,11 @@ class _UpdateProductState extends State<UpdateProduct> {
     } catch (e) {
       print("Lỗi tải sản phẩm: $e");
       setState(() => _isLoading = false);
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to load product details")));
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Failed to load product details"))
+        );
+      }
     }
   }
 
@@ -185,7 +187,9 @@ class _UpdateProductState extends State<UpdateProduct> {
 
   Future<void> _fetchWards(String provinceCode) async {
     try {
-      final response = await http.get(Uri.parse('https://34tinhthanh.com/api/wards?province_code=$provinceCode'));
+      final response = await http.get(
+          Uri.parse('https://34tinhthanh.com/api/wards?province_code=$provinceCode')
+      );
       if (response.statusCode == 200) {
         setState(() {
           _wards = jsonDecode(response.body);
@@ -204,7 +208,9 @@ class _UpdateProductState extends State<UpdateProduct> {
         _attributes.clear();
       }
 
-      if (newCategory != null && _attributeTemplates.containsKey(newCategory) && _attributes.isEmpty) {
+      if (newCategory != null &&
+          _attributeTemplates.containsKey(newCategory) &&
+          _attributes.isEmpty) {
         List<String> templates = _attributeTemplates[newCategory]!;
         for (String key in templates) {
           _attributes.add(AttributeItem(name: key, value: ""));
@@ -216,24 +222,28 @@ class _UpdateProductState extends State<UpdateProduct> {
   // --- MEDIA ---
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) setState(() => _selectedImages.addAll(images));
+    if (images.isNotEmpty) {
+      setState(() => _selectedImages.addAll(images));
+    }
   }
 
   Future<void> _pickVideo() async {
     final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-    if (video != null) setState(() => _selectedVideos.add(video));
+    if (video != null) {
+      setState(() => _selectedVideos.add(video));
+    }
   }
 
   void _removeNewImage(int index) => setState(() => _selectedImages.removeAt(index));
   void _removeNewVideo(int index) => setState(() => _selectedVideos.removeAt(index));
-
-  // Xóa ảnh cũ (chỉ xóa khỏi list hiển thị, logic xóa server cần xử lý ở backend nếu muốn)
   void _removeOldMedia(int index) => setState(() => _oldMediaUrls.removeAt(index));
 
   // --- UPDATE ---
   Future<void> _updateProduct() async {
     if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter Name and Price!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enter Name and Price!"))
+      );
       return;
     }
 
@@ -244,6 +254,7 @@ class _UpdateProductState extends State<UpdateProduct> {
     );
 
     try {
+      // Chuẩn bị attributes
       Map<String, dynamic> attributesMap = {};
       for (var item in _attributes) {
         String key = item.nameController.text.trim();
@@ -253,47 +264,58 @@ class _UpdateProductState extends State<UpdateProduct> {
         }
       }
 
+      // Chuẩn bị address
       Map<String, String> addressMap = {
         "province": _selectedProvinceName ?? "",
         "commune": _selectedWardName ?? "",
         "detail": _addressDetailController.text.trim(),
       };
 
-      // Gửi tất cả thông tin cập nhật
-      // Lưu ý: Nếu backend của bạn chưa hỗ trợ cập nhật ảnh mới qua multipart ở endpoint PUT, bạn cần sửa backend.
-      // Nếu chỉ update text thì dùng _productService.updateProduct (PUT json).
-      // Nhưng UI này có chọn ảnh mới, nên logic ở Service cần hỗ trợ PUT multipart hoặc gọi API riêng.
-
-      // Giả sử logic update của bạn hỗ trợ gửi kèm file mới (nếu có)
-      // Nếu backend chỉ nhận JSON cho update, bạn sẽ không gửi được file mới ở đây.
-
-      // TẠM THỜI GỬI JSON (Text only)
-      Map<String, dynamic> updateData = {
+      // Chuẩn bị fields (PHẢI là Map<String, String>)
+      Map<String, String> fields = {
         "productName": _titleController.text,
-        "productPrice": int.tryParse(_priceController.text) ?? 0,
+        "productPrice": _priceController.text,
         "productDescription": _descController.text,
-        "productCategory": _selectedCategory,
+        "productCategory": _selectedCategory ?? "",
         "productOrigin": _originController.text,
         "productCondition": _conditionController.text,
         "productBrand": _brandController.text,
         "productWP": _policyController.text,
         "productAttribute": jsonEncode(attributesMap),
         "productAddress": jsonEncode(addressMap),
-        // "productMedia": _oldMediaUrls // Gửi lại list cũ nếu muốn giữ (tùy backend xử lý)
+        "existingMedia": jsonEncode(_oldMediaUrls), // Gửi list ảnh cũ
       };
 
-      await _productService.updateProduct(widget.productId, updateData);
+      // Gộp ảnh + video mới
+      List<XFile> allNewMedia = [..._selectedImages, ..._selectedVideos];
+
+      // Gọi API update
+      await _productService.updateProductWithMedia(
+        widget.productId,
+        fields,
+        allNewMedia.isNotEmpty ? allNewMedia : null,
+      );
 
       if (mounted) {
-        Navigator.pop(context); // Close loading
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Update Success!"), backgroundColor: Colors.green));
-        Navigator.pop(context, true); // Return true to refresh list
+        Navigator.pop(context); // Đóng loading
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Update Success!"),
+              backgroundColor: Colors.green,
+            )
+        );
+        Navigator.pop(context, true); // Quay lại với kết quả true
       }
 
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error: $e"),
+              backgroundColor: Colors.red,
+            )
+        );
       }
     }
   }
@@ -324,7 +346,11 @@ class _UpdateProductState extends State<UpdateProduct> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) {
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator())
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -335,9 +361,9 @@ class _UpdateProductState extends State<UpdateProduct> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ===== EXISTING MEDIA =====
             _buildSectionTitle("Existing Media"),
             const SizedBox(height: 12),
-            // HIỂN THỊ ẢNH CŨ
             if (_oldMediaUrls.isNotEmpty)
               SizedBox(
                 height: 100,
@@ -355,18 +381,35 @@ class _UpdateProductState extends State<UpdateProduct> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             color: Colors.grey[200],
-                            image: !isVideo ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover) : null,
+                            image: !isVideo
+                                ? DecorationImage(
+                                image: NetworkImage(url),
+                                fit: BoxFit.cover
+                            )
+                                : null,
                           ),
-                          child: isVideo ? const Center(child: Icon(Icons.videocam, size: 40)) : null,
+                          child: isVideo
+                              ? const Center(
+                              child: Icon(Icons.videocam, size: 40)
+                          )
+                              : null,
                         ),
                         Positioned(
-                          top: 4, right: 16,
+                          top: 4,
+                          right: 16,
                           child: GestureDetector(
                             onTap: () => _removeOldMedia(index),
                             child: Container(
                               padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                              child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle
+                              ),
+                              child: const Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: Colors.white
+                              ),
                             ),
                           ),
                         )
@@ -376,18 +419,37 @@ class _UpdateProductState extends State<UpdateProduct> {
                 ),
               )
             else
-              const Text("No existing media", style: TextStyle(color: Colors.grey)),
+              const Text(
+                  "No existing media",
+                  style: TextStyle(color: Colors.grey)
+              ),
 
             const SizedBox(height: 24),
+
+            // ===== ADD NEW MEDIA =====
             _buildSectionTitle("Add New Media"),
             const SizedBox(height: 12),
-            // (Phần chọn ảnh mới giống AddProduct)
             _buildHorizontalMediaList(
-              label: "Add Image", icon: HeroiconsOutline.photo, items: _selectedImages,
-              onAdd: _pickImages, onRemove: _removeNewImage, isImage: true,
+              label: "Add Image",
+              icon: HeroiconsOutline.photo,
+              items: _selectedImages,
+              onAdd: _pickImages,
+              onRemove: _removeNewImage,
+              isImage: true,
+            ),
+            const SizedBox(height: 12),
+            _buildHorizontalMediaList(
+              label: "Add Video",
+              icon: HeroiconsOutline.videoCamera,
+              items: _selectedVideos,
+              onAdd: _pickVideo,
+              onRemove: _removeNewVideo,
+              isImage: false,
             ),
 
             const SizedBox(height: 24),
+
+            // ===== BASIC INFORMATION =====
             _buildSectionTitle("Basic Information"),
             const SizedBox(height: 12),
             _buildDropdownField(
@@ -397,13 +459,46 @@ class _UpdateProductState extends State<UpdateProduct> {
                 onChanged: (val) => _onCategoryChanged(val, reset: true)
             ),
             const SizedBox(height: 12),
-            _buildTextField(controller: _titleController, hint: "Product Name"),
+            _buildTextField(
+                controller: _titleController,
+                hint: "Product Name"
+            ),
             const SizedBox(height: 12),
-            _buildTextField(controller: _priceController, hint: "Price (VND)", keyboardType: TextInputType.number),
+            _buildTextField(
+                controller: _priceController,
+                hint: "Price (VND)",
+                keyboardType: TextInputType.number
+            ),
             const SizedBox(height: 12),
-            _buildTextField(controller: _descController, hint: "Description...", maxLines: 4),
+            _buildTextField(
+                controller: _descController,
+                hint: "Description...",
+                maxLines: 4
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(
+                controller: _conditionController,
+                hint: "Condition"
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(
+                controller: _brandController,
+                hint: "Brand"
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(
+                controller: _originController,
+                hint: "Origin"
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(
+                controller: _policyController,
+                hint: "Warranty Policy"
+            ),
 
             const SizedBox(height: 24),
+
+            // ===== ADDRESS =====
             _buildSectionTitle("Address"),
             const SizedBox(height: 12),
             _buildDynamicDropdown(
@@ -415,7 +510,10 @@ class _UpdateProductState extends State<UpdateProduct> {
               onChanged: (val) {
                 setState(() {
                   _selectedProvinceCode = val;
-                  final item = _provinces.firstWhere((e) => e['province_code'].toString() == val, orElse: () => null);
+                  final item = _provinces.firstWhere(
+                          (e) => e['province_code'].toString() == val,
+                      orElse: () => null
+                  );
                   _selectedProvinceName = item != null ? item['name'] : null;
                   _selectedWardCode = null;
                   _selectedWardName = null;
@@ -434,17 +532,25 @@ class _UpdateProductState extends State<UpdateProduct> {
               onChanged: (val) {
                 setState(() {
                   _selectedWardCode = val;
-                  final item = _wards.firstWhere((e) => e['ward_code'].toString() == val, orElse: () => null);
+                  final item = _wards.firstWhere(
+                          (e) => e['ward_code'].toString() == val,
+                      orElse: () => null
+                  );
                   _selectedWardName = item != null ? item['ward_name'] : null;
                 });
               },
             ),
             const SizedBox(height: 12),
-            _buildTextField(controller: _addressDetailController, hint: "Detail Address"),
+            _buildTextField(
+                controller: _addressDetailController,
+                hint: "Detail Address"
+            ),
 
             const SizedBox(height: 24),
+
+            // ===== ATTRIBUTES =====
             _buildSectionTitle("Attributes"),
-            // ... (Phần thuộc tính giống AddProduct) ...
+            const SizedBox(height: 12),
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -456,12 +562,19 @@ class _UpdateProductState extends State<UpdateProduct> {
                     children: [
                       Expanded(
                         flex: 2,
-                        child: _buildTextField(controller: _attributes[index].nameController, hint: "Name", readOnly: true),
+                        child: _buildTextField(
+                            controller: _attributes[index].nameController,
+                            hint: "Name",
+                            readOnly: true
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         flex: 3,
-                        child: _buildTextField(controller: _attributes[index].valueController, hint: "Value"),
+                        child: _buildTextField(
+                            controller: _attributes[index].valueController,
+                            hint: "Value"
+                        ),
                       ),
                     ],
                   ),
@@ -470,6 +583,8 @@ class _UpdateProductState extends State<UpdateProduct> {
             ),
 
             const SizedBox(height: 40),
+
+            // ===== UPDATE BUTTON =====
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -480,7 +595,10 @@ class _UpdateProductState extends State<UpdateProduct> {
                   shape: const StadiumBorder(),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text("Update Product", style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                    "Update Product",
+                    style: TextStyle(fontWeight: FontWeight.bold)
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -490,11 +608,17 @@ class _UpdateProductState extends State<UpdateProduct> {
     );
   }
 
-  // ... (Copy các hàm _buildSectionTitle, _buildTextField, _buildDropdownField, _buildDynamicDropdown, _buildHorizontalMediaList từ AddProduct sang đây)
-  // Để tiết kiệm không gian tôi không paste lại, bạn copy y nguyên từ file cũ là chạy được.
+  // ========== WIDGET BUILDERS ==========
 
   Widget _buildSectionTitle(String title) {
-    return Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500));
+    return Text(
+        title,
+        style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500
+        )
+    );
   }
 
   Widget _buildTextField({
@@ -515,23 +639,38 @@ class _UpdateProductState extends State<UpdateProduct> {
         filled: true,
         fillColor: readOnly ? Colors.grey[200] : const Color(0xFFF2F2F2),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none
+        ),
       ),
     );
   }
 
   Widget _buildDropdownField({
-    required String hint, required String? value, required List<String> items, required ValueChanged<String?> onChanged,
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: const Color(0xFFF2F2F2), borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(
+          color: const Color(0xFFF2F2F2),
+          borderRadius: BorderRadius.circular(30)
+      ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          hint: Text(hint, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+          hint: Text(
+              hint,
+              style: TextStyle(color: Colors.grey[400], fontSize: 13)
+          ),
           isExpanded: true,
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
+          items: items.map((e) => DropdownMenuItem(
+              value: e,
+              child: Text(e, style: const TextStyle(fontSize: 14))
+          )).toList(),
           onChanged: onChanged,
         ),
       ),
@@ -553,18 +692,32 @@ class _UpdateProductState extends State<UpdateProduct> {
       final val = itemValueMapper(item);
       if (!uniqueValues.contains(val)) {
         uniqueValues.add(val);
-        dropdownItems.add(DropdownMenuItem(value: val, child: Text(itemLabelMapper(item), overflow: TextOverflow.ellipsis)));
+        dropdownItems.add(
+            DropdownMenuItem(
+                value: val,
+                child: Text(
+                    itemLabelMapper(item),
+                    overflow: TextOverflow.ellipsis
+                )
+            )
+        );
       }
     }
     final safeValue = uniqueValues.contains(value) ? value : null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: const Color(0xFFF2F2F2), borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(
+          color: const Color(0xFFF2F2F2),
+          borderRadius: BorderRadius.circular(30)
+      ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: safeValue,
-          hint: Text(hint, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+          hint: Text(
+              hint,
+              style: TextStyle(color: Colors.grey[400], fontSize: 13)
+          ),
           isExpanded: true,
           items: dropdownItems,
           onChanged: onChanged,
@@ -574,8 +727,12 @@ class _UpdateProductState extends State<UpdateProduct> {
   }
 
   Widget _buildHorizontalMediaList({
-    required String label, required IconData icon, required List<XFile> items,
-    required VoidCallback onAdd, required Function(int) onRemove, required bool isImage,
+    required String label,
+    required IconData icon,
+    required List<XFile> items,
+    required VoidCallback onAdd,
+    required Function(int) onRemove,
+    required bool isImage,
   }) {
     return SizedBox(
       height: 100,
@@ -587,9 +744,11 @@ class _UpdateProductState extends State<UpdateProduct> {
             return GestureDetector(
               onTap: onAdd,
               child: Container(
-                width: 100, margin: const EdgeInsets.only(right: 12),
+                width: 100,
+                margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.black, width: 1),
                 ),
                 child: Column(
@@ -597,7 +756,13 @@ class _UpdateProductState extends State<UpdateProduct> {
                   children: [
                     Icon(icon, size: 24, color: Colors.black),
                     const SizedBox(height: 4),
-                    Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))
+                    Text(
+                        label,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold
+                        )
+                    )
                   ],
                 ),
               ),
@@ -607,21 +772,44 @@ class _UpdateProductState extends State<UpdateProduct> {
           return Stack(
             children: [
               Container(
-                width: 100, margin: const EdgeInsets.only(right: 12),
+                width: 100,
+                margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16), color: Colors.grey[200],
-                  image: isImage ? DecorationImage(image: FileImage(File(file.path)), fit: BoxFit.cover) : null,
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.grey[200],
+                  image: isImage
+                      ? DecorationImage(
+                      image: FileImage(File(file.path)),
+                      fit: BoxFit.cover
+                  )
+                      : null,
                 ),
-                child: !isImage ? const Center(child: Icon(Icons.play_circle_fill, size: 30, color: Colors.white)) : null,
+                child: !isImage
+                    ? const Center(
+                    child: Icon(
+                        Icons.play_circle_fill,
+                        size: 30,
+                        color: Colors.white
+                    )
+                )
+                    : null,
               ),
               Positioned(
-                top: 4, right: 16,
+                top: 4,
+                right: 16,
                 child: GestureDetector(
                   onTap: () => onRemove(index - 1),
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle
+                    ),
+                    child: const Icon(
+                        Icons.close,
+                        size: 14,
+                        color: Colors.white
+                    ),
                   ),
                 ),
               )
