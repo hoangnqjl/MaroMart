@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -12,12 +12,14 @@ import { Categories } from './pages/Categories';
 import { useAuthStore } from './stores/authStore';
 
 function AdminLayout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-white">
-      <Sidebar />
-      <div className="ml-64">
-        <div className="max-w-[1440px] mx-auto px-8 py-6">
-          <Header />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="transition-all duration-300 md:ml-64">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6">
+          <Header onToggleSidebar={() => setIsSidebarOpen(true)} />
           <main>
             <Outlet />
           </main>

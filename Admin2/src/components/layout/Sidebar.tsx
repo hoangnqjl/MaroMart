@@ -11,7 +11,12 @@ const navigation = [
     { name: 'Categories', href: '/categories', icon: Grid3x3 },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const navigate = useNavigate();
     const logout = useAuthStore((state) => state.logout);
     const { toast } = useToast();
@@ -27,61 +32,77 @@ export function Sidebar() {
     };
 
     return (
-        <aside className="fixed left-0 top-0 h-screen w-64 glass border-r border-white/20 shadow-lg z-40">
-            <div className="flex flex-col h-full">
-                {/* Logo */}
-                <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-200/50">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
-                        <Package className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900">MaroMart</h1>
-                        <p className="text-xs text-gray-500">Admin Dashboard</p>
-                    </div>
-                </div>
+        <>
+            {/* Mobile Backdrop */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+                    onClick={onClose}
+                />
+            )}
 
-                {/* Navigation */}
-                <nav className="flex-1 px-4 py-6 space-y-2">
-                    {navigation.map((item) => (
-                        <NavLink
-                            key={item.name}
-                            to={item.href}
-                            className={({ isActive }) =>
-                                cn(
-                                    'flex items-center gap-3 px-4 py-3 rounded-button font-medium transition-all duration-200',
-                                    'hover:bg-gray-50',
-                                    isActive
-                                        ? 'bg-indigo-50 text-primary border-l-4 border-primary'
-                                        : 'text-gray-700'
-                                )
-                            }
+            <aside
+                className={cn(
+                    'fixed top-0 left-0 z-50 h-screen w-64 bg-white/80 glass border-r border-white/20 shadow-lg transition-transform duration-300 ease-in-out md:translate-x-0',
+                    isOpen ? 'translate-x-0' : '-translate-x-full'
+                )}
+            >
+                <div className="flex flex-col h-full">
+                    {/* Logo */}
+                    <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-200/50">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
+                            <Package className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900">MaroMart</h1>
+                            <p className="text-xs text-gray-500">Admin Dashboard</p>
+                        </div>
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                        {navigation.map((item) => (
+                            <NavLink
+                                key={item.name}
+                                to={item.href}
+                                onClick={() => onClose()} // Close sidebar on navigate (mobile)
+                                className={({ isActive }) =>
+                                    cn(
+                                        'flex items-center gap-3 px-4 py-3 rounded-button font-medium transition-all duration-200',
+                                        'hover:bg-gray-50',
+                                        isActive
+                                            ? 'bg-indigo-50 text-primary border-l-4 border-primary'
+                                            : 'text-gray-700'
+                                    )
+                                }
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <item.icon
+                                            className={cn(
+                                                'h-5 w-5',
+                                                isActive ? 'text-primary' : 'text-gray-500'
+                                            )}
+                                        />
+                                        <span>{item.name}</span>
+                                    </>
+                                )}
+                            </NavLink>
+                        ))}
+                    </nav>
+
+                    {/* Logout */}
+                    <div className="px-4 py-6 border-t border-gray-200/50">
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-3 px-4 py-3 w-full rounded-button font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                            {({ isActive }) => (
-                                <>
-                                    <item.icon
-                                        className={cn(
-                                            'h-5 w-5',
-                                            isActive ? 'text-primary' : 'text-gray-500'
-                                        )}
-                                    />
-                                    <span>{item.name}</span>
-                                </>
-                            )}
-                        </NavLink>
-                    ))}
-                </nav>
-
-                {/* Logout */}
-                <div className="px-4 py-6 border-t border-gray-200/50">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-3 w-full rounded-button font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                        <LogOut className="h-5 w-5 text-gray-500" />
-                        <span>Logout</span>
-                    </button>
+                            <LogOut className="h-5 w-5 text-gray-500" />
+                            <span>Logout</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </aside>
+            </aside>
+        </>
     );
 }

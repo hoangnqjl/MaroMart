@@ -1,7 +1,13 @@
 import { Bell } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 
-export function Header() {
+import { Menu } from 'lucide-react';
+
+interface HeaderProps {
+    onToggleSidebar: () => void;
+}
+
+export function Header({ onToggleSidebar }: HeaderProps) {
     const user = useAuthStore((state) => state.user);
 
     const getAvatarUrl = () => {
@@ -12,9 +18,18 @@ export function Header() {
     return (
         <header className="glass-card sticky top-0 z-30 px-8 py-4 mb-8">
             <div className="flex items-center justify-between">
-                <div className="flex-1 max-w-xl">
-                    {/* Placeholder for global search if needed in future */}
-                </div>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onToggleSidebar}
+                        className="p-2 -ml-2 rounded-lg hover:bg-gray-100 md:hidden"
+                    >
+                        <Menu className="h-6 w-6 text-gray-600" />
+                    </button>
+
+                    <div className="flex-1 max-w-xl">
+                        {/* Placeholder for global search if needed in future */}
+                    </div>
+                </div>{/* Close wrapper for Hamburger + Search */}
 
                 <div className="flex items-center gap-4">
                     <button className="relative p-2 rounded-button hover:bg-gray-100 transition-colors">
