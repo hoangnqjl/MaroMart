@@ -12,24 +12,69 @@ import '../screens/authencation/Sign_up/signup_info_screen.dart';
 import '../screens/authencation/Sign_up/signup_password_screen.dart';
 
 
+// iOS-style smooth route transition
 Route smoothRoute(Widget page, RouteSettings settings) {
   return PageRouteBuilder(
     settings: settings,
-    transitionDuration: const Duration(milliseconds: 600),
-    reverseTransitionDuration: const Duration(milliseconds: 600),
-    pageBuilder: (_, __, ___) => page,
-    transitionsBuilder: (_, animation, __, child) {
-      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
-      return FadeTransition(
-        opacity: curved,
-        child: SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, .08), end: Offset.zero).animate(curved),
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 350),
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      // Smooth iOS-style slide from right with fade
+      const begin = Offset(1.0, 0.0);
+      const end = Offset.zero;
+      const curve = Curves.easeInOutCubic;
+
+      var slideTween = Tween(begin: begin, end: end).chain(
+        CurveTween(curve: curve),
+      );
+      var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(
+        CurveTween(curve: curve),
+      );
+
+      return SlideTransition(
+        position: animation.drive(slideTween),
+        child: FadeTransition(
+          opacity: animation.drive(fadeTween),
           child: child,
         ),
       );
     },
   );
 }
+
+// Helper function for smooth imperative navigation
+Future<T?> smoothPush<T>(BuildContext context, Widget page) {
+  return Navigator.push<T>(
+    context,
+    PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 350),
+      reverseTransitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOutCubic;
+
+        var slideTween = Tween(begin: begin, end: end).chain(
+          CurveTween(curve: curve),
+        );
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(
+          CurveTween(curve: curve),
+        );
+
+        return SlideTransition(
+          position: animation.drive(slideTween),
+          child: FadeTransition(
+            opacity: animation.drive(fadeTween),
+            child: child,
+          ),
+        );
+      },
+    ),
+  );
+}
+
 
 Route? onGenerateRoute(RouteSettings settings) {
   switch (settings.name) {

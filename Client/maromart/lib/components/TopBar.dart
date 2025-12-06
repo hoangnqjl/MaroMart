@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/Colors/AppColors.dart';
@@ -57,13 +58,16 @@ class _TopBarState extends State<TopBar> {
 
         return Stack(
           children: [
-            Container(
-              color: Colors.white,
-              width: MediaQuery.of(context).size.width,
-              padding: const EdgeInsets.only(top: 16, bottom: 4, left: 18, right: 18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+            ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                child: Container(
+                  color: Colors.white.withOpacity(0.85),
+                  width: MediaQuery.of(context).size.width,
+                  padding: const EdgeInsets.only(top: 16, bottom: 4, left: 18, right: 18),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                   Row(
                     children: [
                       GestureDetector(
@@ -126,6 +130,8 @@ class _TopBarState extends State<TopBar> {
                 ],
               ),
             ),
+          ),
+        ),
             ModalInAvt(key: _modalKey),
           ],
         );

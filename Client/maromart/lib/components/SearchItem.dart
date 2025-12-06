@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/screens/Search/SearchResult.dart';
+import 'package:maromart/app_router.dart';
 
 class SearchItem extends StatefulWidget {
   const SearchItem({super.key});
@@ -40,11 +41,9 @@ class SearchItemState extends State<SearchItem> {
                     ),
                     onSubmitted: (value) {
                       if (value.trim().isNotEmpty) {
-                        Navigator.push(
+                        smoothPush(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => SearchResultScreen(keyword: value.trim()),
-                          ),
+                          SearchResultScreen(keyword: value.trim()),
                         );
                       }
                     },

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
@@ -28,32 +29,40 @@ class _TopBarSecond extends State<TopBarSecond> {
   }
 
   Widget _TopBarAddProduct() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ButtonWithIcon(
-            icon: HeroiconsOutline.chevronLeft,
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            size: 38,
-            backgroundColor: AppColors.E2Color,
-            iconColor: Colors.black,
-            isSelected: false,
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.85),
           ),
-          Text(
-            widget.title,
-            style: const TextStyle(
-                fontFamily: 'QuickSand',
-                fontWeight: FontWeight.w600,
-                fontSize: 14
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ButtonWithIcon(
+                icon: HeroiconsOutline.chevronLeft,
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                size: 38,
+                backgroundColor: AppColors.E2Color,
+                iconColor: Colors.black,
+                isSelected: false,
+              ),
+              Text(
+                widget.title,
+                style: const TextStyle(
+                    fontFamily: 'QuickSand',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14
+                ),
+              ),
+              const SizedBox(width: 38)
+            ],
           ),
-          const SizedBox(width: 38)
-        ],
+        ),
       ),
     );
   }

@@ -53,9 +53,10 @@ class FilterOverlay {
             Positioned.fill(
               child: GestureDetector(
                 onTap: hide,
-                child: Container(
-                  color: Colors.black.withOpacity(0.3),
-                ),
+                  child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(color: Colors.black.withOpacity(0.5)),
+              ),
               ),
             ),
             Positioned(
@@ -180,14 +181,14 @@ class _FilterContentState extends State<_FilterContent> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(30),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(20),
+            color: Colors.white.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 5))
             ],
@@ -281,7 +282,7 @@ class _FilterContentState extends State<_FilterContent> {
                   });
                   widget.onApply(null, null, null, null, null);
                 },
-                child: const Text("Clear Filter", style: TextStyle(color: Colors.red, fontSize: 12)),
+                child: const Text("Clear Filter", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
               )
             ],
           ),
@@ -337,7 +338,7 @@ class _FilterContentState extends State<_FilterContent> {
             constraints: const BoxConstraints(maxHeight: 200),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.grey.shade200),
             ),
             child: ListView.separated(
@@ -367,7 +368,7 @@ class _FilterContentState extends State<_FilterContent> {
                             ),
                           ),
                         ),
-                        if (isSelected) const Icon(Icons.check, size: 16, color: Colors.green),
+                        if (isSelected) const Icon(Icons.check, size: 16, color: Color.fromARGB(255, 0, 0, 0)),
                       ],
                     ),
                   ),
@@ -418,7 +419,7 @@ class _FilterContentState extends State<_FilterContent> {
             height: 180,
             decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(color: Colors.grey.shade200)
             ),
             child: ListView.separated(
@@ -450,7 +451,7 @@ class _FilterContentState extends State<_FilterContent> {
                             )
                         ),
                         if (isSelected) const Spacer(),
-                        if (isSelected) const Icon(Icons.check, size: 16, color: Colors.green),
+                        if (isSelected) const Icon(Icons.check, size: 16, color: Colors.black),
                       ],
                     ),
                   ),

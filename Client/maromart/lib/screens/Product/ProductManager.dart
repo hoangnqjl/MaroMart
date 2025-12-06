@@ -5,9 +5,11 @@ import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/screens/Product/UpdateProduct.dart';
+import 'package:maromart/screens/Product/ProductDetail.dart';
 import 'package:maromart/services/product_service.dart';
 import 'package:maromart/services/user_service.dart';
 import 'package:maromart/utils/constants.dart';
+import 'package:maromart/app_router.dart';
 
 class ProductManager extends StatefulWidget {
   const ProductManager({super.key});
@@ -143,14 +145,21 @@ class _ProductManager extends State<ProductManager> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      transitionAnimationController: AnimationController(
+        vsync: Navigator.of(context),
+        duration: const Duration(milliseconds: 300),
+      ),
       builder: (BuildContext ctx) {
-        return Container(
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
           padding: const EdgeInsets.all(20),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
             ),
           ),
           child: Column(
@@ -174,11 +183,9 @@ class _ProductManager extends State<ProductManager> {
                 onTap: () async {
                   Navigator.pop(ctx); // Đóng Modal trước
 
-                  final result = await Navigator.push(
+                  final result = await smoothPush(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => UpdateProduct(productId: product.productId),
-                    ),
+                    UpdateProduct(productId: product.productId),
                   );
 
                   if (result == true) {
@@ -251,7 +258,37 @@ class _ProductManager extends State<ProductManager> {
 
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: AppColors.ButtonBlackColor.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.all(15),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.ButtonBlackColor),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading products...',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
                   : TabBarView(
                 children: [
                   _buildPostedList(), // Tab Posted (Dữ liệu thật)
@@ -304,15 +341,22 @@ class _ProductManager extends State<ProductManager> {
   Widget _buildProductCard(Product product) {
     final imageUrl = _getThumbnailUrl(product.productMedia);
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.F6Color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: () {
+        smoothPush(
+          context,
+          ProductDetail(productId: product.productId),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.F6Color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // ẢNH SẢN PHẨM (Giữ nguyên)
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -415,7 +459,8 @@ class _ProductManager extends State<ProductManager> {
               )
             ],
           )
-        ],
+          ],
+        ),
       ),
     );
   }

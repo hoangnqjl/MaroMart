@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/User/ChatPartner.dart';
 import '../Message/ChatScreen.dart';
+import 'package:maromart/app_router.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -383,7 +384,7 @@ class ProductDetailState extends State<ProductDetail> {
                 if (_product?.userInfo != null) {
                   final userInfo = _product!.userInfo!;
                   final partner = ChatPartner(userId: userInfo.userId, fullName: userInfo.fullName, avatarUrl: userInfo.avatarUrl, email: userInfo.email);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(conversationId: "", partnerUser: partner)));
+                  smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không tìm thấy thông tin người bán')));
                 }

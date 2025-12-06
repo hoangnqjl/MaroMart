@@ -51,13 +51,13 @@ class ModalInAvtState extends State<ModalInAvt> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(35),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
                   child: Container(
                     width: double.infinity,
                     height: 350,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.5),
                     ),
@@ -157,7 +157,7 @@ class ModalInAvtState extends State<ModalInAvt> {
                           label: 'Logout',
                           backgroundColor: AppColors.ColorFCEEEB,
                           iconColor: Colors.red,
-                          onTap: () => _handleLogout(context),
+                          onTap: () => _handleLogout(),
                         ),
                       ],
                     ),
@@ -215,8 +215,10 @@ class ModalInAvtState extends State<ModalInAvt> {
     );
   }
 
-  Future<void> _handleLogout(BuildContext context) async {
+  Future<void> _handleLogout() async {
     _hideOverlay();
+
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -241,7 +243,7 @@ class ModalInAvtState extends State<ModalInAvt> {
       try {
         await _authService.logout();
 
-        if (context.mounted) {
+        if (mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
         }
       } catch (e) {

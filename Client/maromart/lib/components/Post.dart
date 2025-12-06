@@ -11,6 +11,7 @@ import 'package:maromart/models/User/User.dart';
 import 'package:maromart/screens/Message/ChatScreen.dart';
 import 'package:maromart/screens/Product/ProductDetail.dart';
 import 'package:maromart/utils/storage.dart';
+import 'package:maromart/app_router.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -84,12 +85,9 @@ class _PostState extends State<Post> {
           // MEDIA VIEWER
           GestureDetector(
             onTap: () {
-              Navigator.push(
+              smoothPush(
                 context,
-                MaterialPageRoute(builder: (context) => ProductDetail(
-                    productId: product.productId,
-                )
-                ),
+                ProductDetail(productId: product.productId),
               );
             },
             onHorizontalDragEnd: (details) {
@@ -201,13 +199,11 @@ class _PostState extends State<Post> {
                                         avatarUrl: widget.product.userInfo!.avatarUrl,
                                         email: widget.product.userInfo!.email,
                                       );
-                                      Navigator.push(
+                                      smoothPush(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ChatScreen(
-                                            conversationId: "",
-                                            partnerUser: partner,
-                                          ),
+                                        ChatScreen(
+                                          conversationId: "",
+                                          partnerUser: partner,
                                         ),
                                       );
                                     }
