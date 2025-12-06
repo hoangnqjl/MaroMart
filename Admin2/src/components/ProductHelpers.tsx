@@ -1,5 +1,5 @@
 import { Play } from 'lucide-react';
-import { formatPrice } from '../lib/utils';
+
 
 interface ProductImageProps {
     productMedia: string[];

@@ -183,11 +183,12 @@ TextareaField.displayName = 'TextareaField';
 interface CheckboxFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
     label: string;
     error?: string;
+    description?: string;
     containerClassName?: string;
 }
 
 export const CheckboxField = forwardRef<HTMLInputElement, CheckboxFieldProps>(
-    ({ label, error, containerClassName, className, ...props }, ref) => {
+    ({ label, error, description, containerClassName, className, ...props }, ref) => {
         return (
             <div className={cn('flex flex-col', containerClassName)}>
                 <label className="flex items-center gap-3 cursor-pointer group">
@@ -208,6 +209,9 @@ export const CheckboxField = forwardRef<HTMLInputElement, CheckboxFieldProps>(
                         {label}
                     </span>
                 </label>
+                {description && !error && (
+                    <p className="mt-1 ml-8 text-sm text-gray-500">{description}</p>
+                )}
                 {error && (
                     <span className={cn(errorStyles, 'ml-8')} style={{ color: errorColor }}>
                         {error}
