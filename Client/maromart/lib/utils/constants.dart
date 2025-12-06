@@ -1,7 +1,7 @@
 class ApiConstants {
   // static const String baseUrl = 'https://maromart-server-version-01.onrender.com';
 
-  static const String baseUrl = 'http://localhost:5000';
+  static const String baseUrl = 'https://maromart-server.onrender.com';
 
 
   // auth

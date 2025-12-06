@@ -22,6 +22,7 @@ export function Categories() {
     const { toast } = useToast();
 
     const [formData, setFormData] = useState({
+        categoryId: '',
         categoryName: '',
         categorySpec: '',
     });
@@ -52,6 +53,7 @@ export function Categories() {
     const handleOpenAddModal = () => {
         setEditingCategory(null);
         setFormData({
+            categoryId: '',
             categoryName: '',
             categorySpec: '',
         });
@@ -61,6 +63,7 @@ export function Categories() {
     const handleOpenEditModal = (category: Category) => {
         setEditingCategory(category);
         setFormData({
+            categoryId: category.categoryId,
             categoryName: category.categoryName,
             categorySpec: category.categorySpec,
         });
@@ -79,7 +82,7 @@ export function Categories() {
                     description: 'The category has been successfully updated.',
                 });
             } else {
-                await categoriesAPI.createCategory(formData);
+                await categoriesAPI.createCategory(formData as Category);
                 toast({
                     type: 'success',
                     title: 'Category created',
@@ -260,6 +263,17 @@ export function Categories() {
                             setFormData({ ...formData, categoryName: e.target.value })
                         }
                         placeholder="e.g., Electronics"
+                    />
+                    <Input
+                        label="Category ID"
+                        type="text"
+                        required
+                        disabled={!!editingCategory} // Disable when editing
+                        value={formData.categoryId}
+                        onChange={(e) =>
+                            setFormData({ ...formData, categoryId: e.target.value })
+                        }
+                        placeholder="e.g., CAT001"
                     />
                     <div>
                         <label className="text-sm font-medium text-gray-700 mb-1.5 block">

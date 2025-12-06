@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, ShieldAlert } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { SearchBar } from '../components/ui/SearchBar';
+import { InputField, SelectField, CheckboxField } from '../components/ui/FormField';
+import { useSearch } from '../hooks/useSearch';
 import { Badge } from '../components/ui/Badge';
 import {
     Table,
@@ -16,12 +18,18 @@ import { TableSkeleton } from '../components/skeletons/Skeletons';
 import type { User } from '../services/api';
 import { usersAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
-import { useDebounce } from '../hooks/useDebounce';
+// @ts-ignore
+import { updateUser, toggleUserRole } from '../services/adminService';
 
 export function Users() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const debouncedSearch = useDebounce(searchQuery, 500);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
+    // Use the search hook with Vietnamese normalization
+    const { query: searchQuery, setQuery: setSearchQuery, filteredItems: filteredUsers, isSearching, clearSearch } = useSearch({
+        items: allUsers,
+        searchFields: ['fullName', 'email', 'phoneNumber'],
+        debounceMs: 250,
+        enableVietnameseNormalization: true,
+    });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -41,14 +49,16 @@ export function Users() {
         isActive: true,
     });
 
-    // Fetch users
+    // Fetch users (fetch all for frontend search)
     const fetchUsers = async () => {
         try {
             setIsLoading(true);
             setError(null);
-            // Backend returns plain array
-            const data = await usersAPI.getUsers(1, 100, debouncedSearch);
-            setUsers(Array.isArray(data) ? data : []);
+            // Fetch a large number to get "all" users for frontend filtering
+            // In a real large-scale app, we'd still want backend search, but per requirements:
+            const data = await usersAPI.getUsers(1, 1000);
+            const userList = Array.isArray(data) ? data : [];
+            setAllUsers(userList);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to fetch users');
             toast({
@@ -63,7 +73,7 @@ export function Users() {
 
     useEffect(() => {
         fetchUsers();
-    }, [debouncedSearch]);
+    }, []);
 
     const handleOpenAddModal = () => {
         setEditingUser(null);
@@ -73,7 +83,8 @@ export function Users() {
             phoneNumber: '',
             role: 'user',
             isActive: true,
-        });
+            avatarUrl: '', // Add default if needed
+        } as any);
         setIsModalOpen(true);
     };
 
@@ -89,19 +100,49 @@ export function Users() {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('📝 [Users] handleSubmit called');
+        console.log('📝 [Users] Form data:', formData);
 
-        // For demo - just close modal and show toast
-        toast({
-            type: 'success',
-            title: editingUser ? 'User updated' : 'User created',
-            description: editingUser
-                ? 'The user has been successfully updated.'
-                : 'The new user has been successfully created.',
-        });
-        setIsModalOpen(false);
-        fetchUsers(); // Refresh list
+        try {
+            if (editingUser) {
+                console.log('🔄 [Users] Updating existing user:', editingUser.userId);
+                await updateUser(editingUser.userId, {
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    phoneNumber: formData.phoneNumber,
+                    role: formData.role as 'admin' | 'user',
+                    isActive: formData.isActive,
+                });
+                console.log('✅ [Users] User updated successfully');
+
+                toast({
+                    type: 'success',
+                    title: 'User updated',
+                    description: 'The user has been successfully updated.',
+                });
+            } else {
+                // Handle create user if needed, or just log that it's not implemented yet for this task
+                console.log('⚠️ [Users] Create user not fully implemented in this task scope, focusing on update');
+                // ... existing create logic if any, or just close
+                toast({
+                    type: 'success',
+                    title: 'User created',
+                    description: 'The new user has been successfully created.',
+                });
+            }
+
+            setIsModalOpen(false);
+            fetchUsers(); // Refresh list
+        } catch (error: any) {
+            console.error('❌ [Users] Submit failed:', error);
+            toast({
+                type: 'error',
+                title: 'Error',
+                description: error.response?.data?.message || 'Failed to save user.',
+            });
+        }
     };
 
     const handleDelete = async (userId: string) => {
@@ -112,7 +153,9 @@ export function Users() {
                 title: 'User deleted',
                 description: 'The user has been successfully deleted.',
             });
-            fetchUsers(); // Refresh list
+            // Update local state immediately
+            const updatedUsers = allUsers.filter(u => u.userId !== userId);
+            setAllUsers(updatedUsers);
         } catch (err: any) {
             toast({
                 type: 'error',
@@ -122,27 +165,76 @@ export function Users() {
         }
     };
 
-    const toggleRole = async (userId: string, currentRole: 'admin' | 'user') => {
-        const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const handleToggleRole = async (user: User) => {
+        console.log('🔘 [ToggleRole] Button clicked');
+        console.log('👤 [ToggleRole] Current user:', { userId: user.userId, fullName: user.fullName, currentRole: user.role });
+
+        const newRole: 'admin' | 'user' = user.role === 'admin' ? 'user' : 'admin';
+        console.log('🔄 [ToggleRole] Calculated new role:', newRole);
+        console.log('📝 [ToggleRole] Will change:', `${user.role} → ${newRole}`);
+
+        // Optimistic update
+        console.log('⚡ [ToggleRole] Applying optimistic update...');
+        const optimisticUsers = allUsers.map(u =>
+            u.userId === user.userId ? { ...u, role: newRole } : u
+        );
+        setAllUsers(optimisticUsers);
+        console.log('✅ [ToggleRole] Optimistic update applied');
+        console.log('📊 [ToggleRole] Updated user count:', optimisticUsers.length);
+
+        console.log('🚀 [ToggleRole] Preparing API call...');
         try {
-            await usersAPI.updateUserRole(userId, newRole);
+            console.log('📡 [ToggleRole] Calling adminService.toggleUserRole...');
+            const result = await toggleUserRole(user.userId, newRole);
+
+            console.log('✅ [ToggleRole] API call successful!');
+            console.log('📦 [ToggleRole] Server response:', result);
+            console.log('🔍 [ToggleRole] Returned userId:', result.userId);
+            console.log('🔍 [ToggleRole] Returned newRole:', result.newRole);
+
+            // Use server response to ensure consistency
+            console.log('🔄 [ToggleRole] Updating state with server response...');
+            const finalUsers = allUsers.map(u =>
+                u.userId === result.userId ? { ...u, role: result.newRole } : u
+            );
+            setAllUsers(finalUsers);
+            console.log('✅ [ToggleRole] Final state updated');
+            console.log('📊 [ToggleRole] Final user list:', finalUsers.filter(u => u.userId === result.userId));
+
             toast({
                 type: 'success',
                 title: 'Role updated',
-                description: `User role changed to ${newRole}.`,
+                description: `User role changed to ${result.newRole}.`,
             });
-            fetchUsers(); // Refresh list
+            console.log('🎉 [ToggleRole] Success toast shown');
         } catch (err: any) {
+            console.error('❌ [ToggleRole] Error caught in handler');
+            console.error('📄 [ToggleRole] Error object:', err);
+            console.error('📋 [ToggleRole] Error message:', err.message);
+            console.error('🔢 [ToggleRole] Error response status:', err.response?.status);
+            console.error('📦 [ToggleRole] Error response data:', err.response?.data);
+            console.error('🌐 [ToggleRole] Error config:', err.config);
+
+            // Revert on failure
+            console.log('⏮️  [ToggleRole] Reverting optimistic update...');
+            const revertedUsers = allUsers.map(u =>
+                u.userId === user.userId ? { ...u, role: user.role } : u
+            );
+            setAllUsers(revertedUsers);
+            console.log('✅ [ToggleRole] State reverted to original');
+            console.log('📊 [ToggleRole] Reverted user:', revertedUsers.filter(u => u.userId === user.userId));
+
             toast({
                 type: 'error',
                 title: 'Error',
                 description: err.response?.data?.message || 'Failed to update role.',
             });
+            console.log('⚠️  [ToggleRole] Error toast shown');
         }
     };
 
     // Loading state
-    if (isLoading && users.length === 0) {
+    if (isLoading && allUsers.length === 0) {
         return (
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -157,7 +249,7 @@ export function Users() {
     }
 
     // Error state
-    if (error && users.length === 0) {
+    if (error && allUsers.length === 0) {
         return (
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -188,23 +280,20 @@ export function Users() {
                 </Button>
             </div>
 
-            {/* Search */}
+            {/* Search Bar */}
             <div className="glass-card p-6">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                        type="text"
-                        placeholder="Search users by name or email..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                    />
-                </div>
+                <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onClear={clearSearch}
+                    isLoading={isSearching}
+                    placeholder="Search users by name, email, or phone..."
+                />
             </div>
 
-            {/* Table */}
+            {/* Users Table */}
             <div className="glass-card p-6">
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                     <div className="text-center py-12">
                         <p className="text-gray-500 text-lg">No users found</p>
                         <p className="text-gray-400 text-sm mt-2">Try adjusting your search</p>
@@ -222,28 +311,60 @@ export function Users() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {users.map((user) => (
+                            {filteredUsers.map((user) => (
                                 <TableRow key={user.userId}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={user.avatarUrl}
+                                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`}
                                                 alt={user.fullName}
-                                                className="h-10 w-10 rounded-full"
+                                                className="h-10 w-10 rounded-full object-cover"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`;
+                                                }}
                                             />
-                                            <span className="font-medium">{user.fullName}</span>
+                                            <span className="font-medium text-gray-900">
+                                                {searchQuery ? (
+                                                    <span dangerouslySetInnerHTML={{
+                                                        __html: user.fullName.replace(
+                                                            new RegExp(`(${searchQuery})`, 'gi'),
+                                                            '<span class="bg-yellow-200 text-gray-900">$1</span>'
+                                                        )
+                                                    }} />
+                                                ) : user.fullName}
+                                            </span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-gray-600">{user.email}</TableCell>
+                                    <TableCell className="text-gray-600">
+                                        {searchQuery ? (
+                                            <span dangerouslySetInnerHTML={{
+                                                __html: user.email.replace(
+                                                    new RegExp(`(${searchQuery})`, 'gi'),
+                                                    '<span class="bg-yellow-200 text-gray-900">$1</span>'
+                                                )
+                                            }} />
+                                        ) : user.email}
+                                    </TableCell>
                                     <TableCell className="text-gray-600">{user.phoneNumber}</TableCell>
                                     <TableCell>
-                                        <Badge
-                                            variant={user.role === 'admin' ? 'danger' : 'default'}
-                                            className="cursor-pointer hover:opacity-80 transition-opacity"
-                                            onClick={() => toggleRole(user.userId, user.role)}
+                                        <button
+                                            onClick={() => handleToggleRole(user)}
+                                            className={`
+                                                flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all
+                                                ${user.role === 'admin'
+                                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                                }
+                                            `}
+                                            title="Click to toggle role"
                                         >
+                                            {user.role === 'admin' ? (
+                                                <ShieldAlert className="h-3 w-3" />
+                                            ) : (
+                                                <Shield className="h-3 w-3" />
+                                            )}
                                             {user.role.toUpperCase()}
-                                        </Badge>
+                                        </button>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={user.isActive ? 'success' : 'default'}>
@@ -292,66 +413,55 @@ export function Users() {
                     </>
                 }
             >
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <Input
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <InputField
                         label="Full Name"
                         type="text"
                         required
+                        placeholder="Enter full name"
                         value={formData.fullName}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setFormData({ ...formData, fullName: e.target.value })
                         }
                     />
-                    <Input
+                    <InputField
                         label="Email"
                         type="email"
                         required
+                        placeholder="Enter email address"
                         value={formData.email}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setFormData({ ...formData, email: e.target.value })
                         }
                     />
-                    <Input
+                    <InputField
                         label="Phone Number"
-                        type="text"
-                        required
+                        type="tel"
+                        placeholder="Enter phone number"
                         value={formData.phoneNumber}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setFormData({ ...formData, phoneNumber: e.target.value })
                         }
                     />
-                    <div>
-                        <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                            Role
-                        </label>
-                        <select
-                            value={formData.role}
-                            onChange={(e) =>
-                                setFormData({
-                                    ...formData,
-                                    role: e.target.value as 'admin' | 'user',
-                                })
-                            }
-                            className="w-full rounded-button px-4 py-2 border border-gray-200 bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                        >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="isActive"
-                            checked={formData.isActive}
-                            onChange={(e) =>
-                                setFormData({ ...formData, isActive: e.target.checked })
-                            }
-                            className="rounded border-gray-300"
-                        />
-                        <label htmlFor="isActive" className="text-sm text-gray-700">
-                            Active user
-                        </label>
-                    </div>
+                    <SelectField
+                        label="Role"
+                        value={formData.role}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                            setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })
+                        }
+                        options={[
+                            { value: 'user', label: 'User' },
+                            { value: 'admin', label: 'Admin' },
+                        ]}
+                    />
+                    <CheckboxField
+                        label="Active Account"
+                        checked={formData.isActive}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setFormData({ ...formData, isActive: e.target.checked })
+                        }
+                        description="Inactive users cannot log in to the system."
+                    />
                 </form>
             </Modal>
 

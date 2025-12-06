@@ -170,7 +170,7 @@ export const categoriesAPI = {
         return response.data;
     },
 
-    createCategory: async (data: Omit<Category, 'categoryId'>) => {
+    createCategory: async (data: Category) => {
         const response = await axiosInstance.post('/categories', data);
         return response.data;
     },

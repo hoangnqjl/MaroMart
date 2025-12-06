@@ -5,6 +5,7 @@ interface User {
     email: string;
     fullName: string;
     role: 'admin' | 'user';
+    avatarUrl?: string;
 }
 
 interface AuthState {
@@ -18,7 +19,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             isAuthenticated: false,
             user: null,
             token: null,
