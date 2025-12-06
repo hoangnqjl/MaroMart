@@ -19,11 +19,10 @@ class SocketService {
 
   // Kết nối socket
   void connect() {
-    if (_socket != null && _isConnected) {
-      print('[Socket] Đã kết nối rồi');
+    if (_socket != null) {
+      print('[Socket] Socket instance đã tồn tại, không tạo mới.');
       return;
     }
-
     final token = StorageHelper.getToken();
     if (token == null || token.isEmpty) {
       print('[Socket] Không có token, không thể kết nối');

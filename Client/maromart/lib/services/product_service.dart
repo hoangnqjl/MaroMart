@@ -75,18 +75,15 @@ class ProductService {
         queryParams['categoryId'] = categoryId;
       }
 
-
       final response = await _apiService.get(
         endpoint: ApiConstants.productsFilterEndpoint,
         queryParameters: queryParams,
         needAuth: true,
       );
 
-      // Parse kết quả
       if (response is List) {
         return response.map((json) => Product.fromJson(json)).toList();
-      }
-      else if (response is Map && response['data'] is List) {
+      } else if (response is Map && response['data'] is List) {
         return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
       }
 
@@ -124,9 +121,6 @@ class ProductService {
         return response.map((json) => Product.fromJson(json)).toList();
       } else if (response is Map && response['data'] is List) {
         return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
-      }
-      if (response is List) {
-        return response.map((json) => Product.fromJson(json)).toList();
       }
 
       return [];
@@ -188,7 +182,6 @@ class ProductService {
         needAuth: true,
       );
 
-      // Xử lý dữ liệu trả về
       if (response is List) {
         return response.map((json) => Product.fromJson(json)).toList();
       } else if (response is Map && response['data'] is List) {
@@ -218,6 +211,28 @@ class ProductService {
     }
   }
 
+  Future<Product> updateProductWithMedia(
+      String productId,
+      Map<String, String> fields,
+      List<XFile>? files,
+      ) async {
+    try {
+      final endpoint = ApiConstants.productsByIdEndpoint(productId);
+
+      final response = await _apiService.putMultipart(
+        endpoint: endpoint,
+        fields: fields,
+        files: files,
+        fileKey: 'productMedia',
+        needAuth: true,
+      );
+      notifyProductChanges();
+      final updatedProductJson = response['data'] ?? response;
+      return Product.fromJson(updatedProductJson as Map<String, dynamic>);
+    } catch (e) {
+      rethrow;
+    }
+  }
 
   Future<void> deleteProduct(String productId) async {
     try {
@@ -232,7 +247,6 @@ class ProductService {
       rethrow;
     }
   }
-
 
   Future<List<Product>> filterProducts(Map<String, String> filters) async {
     try {
@@ -254,6 +268,7 @@ class ProductService {
       rethrow;
     }
   }
+
   Future<List<Product>> searchProducts(String keyword) async {
     try {
       final response = await _apiService.get(
@@ -270,28 +285,6 @@ class ProductService {
       return [];
     } catch (e) {
       throw Exception('Lỗi tìm kiếm: $e');
-    }
-  }
-
-  dynamic _handleResponse(http.Response response) {
-    final statusCode = response.statusCode;
-    if (statusCode >= 200 && statusCode < 300) {
-      if (response.body.isEmpty) return {'success': true};
-      return jsonDecode(response.body);
-    } else if (statusCode == 401) {
-      throw Exception('Phiên đăng nhập hết hạn');
-    } else if (statusCode >= 500) {
-      throw Exception('Lỗi server ($statusCode)');
-    } else {
-      try {
-        final error = jsonDecode(response.body);
-        if (error is Map<String, dynamic>) {
-          throw Exception(error['message'] ?? 'Có lỗi xảy ra');
-        }
-        throw Exception('Có lỗi xảy ra ($statusCode)');
-      } catch (e) {
-        throw Exception('Có lỗi xảy ra ($statusCode)');
-      }
     }
   }
 }
