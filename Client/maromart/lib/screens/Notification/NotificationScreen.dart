@@ -5,6 +5,10 @@ import 'package:maromart/models/Notification/Notification.dart';
 import 'package:maromart/services/notification_service.dart';
 import 'package:maromart/services/socket_service.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:maromart/screens/Notification/NotificationDetailScreen.dart';
+import 'package:maromart/screens/Message/ChatScreen.dart';
+import 'package:maromart/models/User/ChatPartner.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -57,16 +61,69 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _onTapNotification(NotificationModel noti) async {
+    // 1. Mark as read
     if (!noti.isRead) {
       _notificationService.markAsRead(noti.id);
       setState(() {
-        // Update local state
         final index = _allNotifications.indexWhere((element) => element.id == noti.id);
         if (index != -1) {
-          _loadNotifications();
+          _allNotifications[index] = NotificationModel(
+              id: noti.id,
+              title: noti.title,
+              content: noti.content,
+              type: noti.type,
+              isRead: true,
+              relatedUrl: noti.relatedUrl,
+              relatedId: noti.relatedId,
+              data: noti.data,
+              createdAt: noti.createdAt
+          );
         }
       });
     }
+
+    // 2. Handle Navigation based on Type
+    if (noti.type == 'message' || noti.type == 'new_message') {
+      try {
+        final data = noti.data ?? {};
+        final String conversationId = noti.relatedId ?? data['conversationId'] ?? "";
+        
+        // Extract sender info from data to create ChatPartner
+        // Assuming data contains sender info like senderId, senderName, senderAvatar
+        if (conversationId.isNotEmpty && data.containsKey('sender')) {
+          final senderData = data['sender'];
+           // Adapt based on actual data structure from server
+          final partner = ChatPartner(
+            userId: senderData['_id'] ?? senderData['id'] ?? "",
+            fullName: senderData['fullName'] ?? senderData['name'] ?? "User",
+            avatarUrl: senderData['avatarUrl'] ?? senderData['avatar'] ?? "",
+            email: senderData['email'],
+          );
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+               builder: (context) => ChatScreen(
+                 conversationId: conversationId,
+                 partnerUser: partner,
+               ),
+            ),
+          );
+          return; // Stop here, don't go to detail screen
+        }
+      } catch (e) {
+        print("Error navigating to chat: $e");
+        // Fallback to detail screen if parsing fails
+      }
+    }
+
+    // Default: Navigate to Detail Screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NotificationDetailScreen(notification: noti),
+      ),
+    );
   }
 
   // LỌC DANH SÁCH THEO TAB
@@ -148,35 +205,46 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildGroupedList() {
     final list = _displayNotifications;
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final noti = list[index];
+    return AnimationLimiter(
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final noti = list[index];
 
-        bool showHeader = true;
-        if (index > 0) {
-          final prevNoti = list[index - 1];
-          if (_isSameDay(prevNoti.createdAt, noti.createdAt)) {
-            showHeader = false;
+          bool showHeader = true;
+          if (index > 0) {
+            final prevNoti = list[index - 1];
+            if (_isSameDay(prevNoti.createdAt, noti.createdAt)) {
+              showHeader = false;
+            }
           }
-        }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (showHeader)
-              Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 10),
-                child: Text(
-                  _getDateHeader(noti.createdAt),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'QuickSand'),
+          return AnimationConfiguration.staggeredList(
+            position: index,
+            duration: const Duration(milliseconds: 375),
+            child: SlideAnimation(
+              verticalOffset: 50.0,
+              child: FadeInAnimation(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showHeader)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20, bottom: 10),
+                        child: Text(
+                          _getDateHeader(noti.createdAt),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'QuickSand'),
+                        ),
+                      ),
+                    _buildNotificationItem(noti),
+                  ],
                 ),
               ),
-            _buildNotificationItem(noti),
-          ],
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -187,13 +255,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ? "${item.createdAt.difference(DateTime.now()).inMinutes.abs()} phút trước" // Nếu dưới 1 giờ
         : DateFormat('HH:mm').format(item.createdAt);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: style.bgColor,
-        borderRadius: BorderRadius.circular(30),
-      ),
+    return GestureDetector(
+      onTap: () => _onTapNotification(item),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: style.bgColor,
+          borderRadius: BorderRadius.circular(50),
+        ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -239,6 +309,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -251,7 +322,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : Colors.transparent, // Đen khi chọn
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(50),
         ),
         child: Row(
           children: [

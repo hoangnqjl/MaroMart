@@ -1,0 +1,12 @@
+{
+    "settings": "Settings",
+    "account": "Account",
+    "changeProfile": "Change profile",
+    "changePassword": "Change password",
+    "preferences": "Preferences",
+    "aboutUs": "About us",
+    "darkMode": "Dark mode",
+    "language": "Language",
+    "selectLanguage": "Select Language",
+    "cancel": "Cancel"
+}

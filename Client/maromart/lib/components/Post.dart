@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:maromart/Colors/AppColors.dart';
@@ -310,12 +311,17 @@ class _PostState extends State<Post> {
 
   Widget _buildMediaItem(MediaItem item) {
     if (item.type == MediaType.image) {
-      return Image.network(
-        item.url,
+      return CachedNetworkImage(
+        imageUrl: item.url,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (context, error, stackTrace) => Container(
+        memCacheWidth: 700, // Limit memory cache size (approx 2x screen width usually safe for quality)
+        placeholder: (context, url) => Container(
+          color: Colors.grey[200],
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        errorWidget: (context, url, error) => Container(
             color: Colors.grey[300],
             child: const Center(child: Icon(Icons.image_not_supported, color: Colors.grey))
         ),

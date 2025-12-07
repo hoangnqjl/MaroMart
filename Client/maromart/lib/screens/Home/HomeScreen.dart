@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maromart/Colors/AppColors.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:maromart/components/Post.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/models/User/User.dart';
@@ -165,19 +166,34 @@ class HomeScreenState extends State<HomeScreen> {
             else if (_products.isEmpty)
               const Padding(padding: EdgeInsets.only(top: 40), child: Center(child: Text('Không tìm thấy sản phẩm nào.', style: TextStyle(color: Colors.grey))))
             else
-              Column(
-                children: [
-                  ..._products.map((p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 20.0),
-                    child: Post(product: p),
-                  )).toList(),
+              AnimationLimiter(
+                child: Column(
+                  children: [
+                    ..._products.asMap().entries.map((entry) { // Use asMap to get index
+                      int index = entry.key;
+                      Product p = entry.value;
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 375),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 20.0),
+                              child: Post(product: p),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
 
-                  if (_isLoadingMore)
-                    const Padding(padding: EdgeInsets.all(16.0), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                    if (_isLoadingMore)
+                      const Padding(padding: EdgeInsets.all(16.0), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
 
-                  if (!_hasMore && !_isInitialLoading)
-                    _buildEndOfListMessage(),
-                ],
+                    if (!_hasMore && !_isInitialLoading)
+                      _buildEndOfListMessage(),
+                  ],
+                ),
               ),
           ],
         ),

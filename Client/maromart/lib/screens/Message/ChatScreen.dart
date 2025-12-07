@@ -103,12 +103,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
           if (sentMsg.conId == _currentConId && mounted) {
             setState(() {
-              // Xóa tin nhắn tạm (tin nhắn chưa có messageId)
-              _messages.removeWhere((m) =>
-              m.messageId == null &&
-                  m.content == sentMsg.content &&
-                  m.sender == _currentUserId
-              );
+              // Tin nhắn tạm đã bị loại bỏ, chỉ thêm tin nhắn thật từ server
+
 
               // Thêm tin nhắn thật từ server
               final exists = _messages.any((m) => m.messageId == sentMsg.messageId);
@@ -382,17 +378,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _selectedAudios.clear();
     });
 
-    // Tạo tin nhắn tạm để hiển thị ngay
-    if (text.isNotEmpty) {
-      final tempMsg = Message.createTemp(
-        conId: _currentConId,
-        sender: _currentUserId!,
-        receiver: widget.partnerUser.userId,
-        content: text,
-      );
-      setState(() => _messages.add(tempMsg));
-      _scrollToBottom();
-    }
+    // Removed optimistic update as per user request
+
 
     try {
       final newMessage = await _chatService.sendMessage(
@@ -420,8 +407,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         setState(() {
           _isSending = false;
-          // Xóa tin nhắn tạm nếu gửi thất bại
-          _messages.removeWhere((m) => m.messageId == null && m.content == text);
+          // Xóa tin nhắn tạm nếu gửi thất bại - Removed
+
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send: $e')),

@@ -8,6 +8,9 @@ import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/components/UserAvatar.dart';
 import 'package:maromart/services/user_service.dart';
+import 'package:provider/provider.dart';
+import 'package:maromart/providers/settings_provider.dart';
+import 'package:maromart/l10n/app_localizations.dart';
 
 class Setting extends StatefulWidget {
   const Setting({Key? key}) : super(key: key);
@@ -23,7 +26,8 @@ class _Setting extends State<Setting> {
   String _fullName = '';
   String _email = '';
   String _avatarUrl = '';
-  bool _isDarkMode = false;
+  // String _email = '';
+  // String _avatarUrl = '';
   bool _isUploading = false;
 
   @override
@@ -74,9 +78,12 @@ class _Setting extends State<Setting> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = Provider.of<SettingsProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const TopBarSecond(title: 'Setting'),
+      appBar: TopBarSecond(title: l10n.settings),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -86,11 +93,11 @@ class _Setting extends State<Setting> {
 
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Account'),
+              _buildSectionTitle(l10n.account),
               const SizedBox(height: 12),
               _buildMenuItem(
                 icon: HeroiconsOutline.pencil,
-                label: 'Change profile',
+                label: l10n.changeProfile,
                 onTap: () {
                   Navigator.pushNamed(context, '/change-infomation');
                 },
@@ -98,7 +105,7 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 8),
               _buildMenuItem(
                 icon: HeroiconsOutline.lockClosed,
-                label: 'Change password',
+                label: l10n.changePassword,
                 onTap: () {
                   Navigator.pushNamed(context, '/change-password');
                 },
@@ -106,17 +113,23 @@ class _Setting extends State<Setting> {
 
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Preferences'),
+              _buildSectionTitle(l10n.preferences),
               const SizedBox(height: 12),
               _buildMenuItem(
+                icon: HeroiconsOutline.language,
+                label: l10n.language,
+                onTap: () => _showLanguageSheet(context),
+              ),
+              const SizedBox(height: 8),
+              _buildMenuItem(
                 icon: HeroiconsOutline.informationCircle,
-                label: 'About us',
+                label: l10n.aboutUs,
                 onTap: () {
                   Navigator.pushNamed(context, '/about');
                 },
               ),
               const SizedBox(height: 8),
-              _buildDarkModeToggle(),
+              _buildDarkModeToggle(l10n.darkMode, settings),
             ],
           ),
         ),
@@ -149,10 +162,11 @@ class _Setting extends State<Setting> {
               children: [
                 Text(
                   _fullName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'QuickSand',
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -162,7 +176,7 @@ class _Setting extends State<Setting> {
                   _email,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7) ?? Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -200,7 +214,7 @@ class _Setting extends State<Setting> {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Colors.grey[600],
+          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7) ?? Colors.grey[600],
           letterSpacing: 0.5,
         ),
       ),
@@ -212,32 +226,33 @@ class _Setting extends State<Setting> {
     required String label,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.F6Color,
+          color: isDark ? const Color(0xFF1E1E1E) : AppColors.F6Color,
           borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: Colors.black),
+            Icon(icon, size: 20, color: Theme.of(context).iconTheme.color),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               HeroiconsOutline.chevronRight,
               size: 20,
-              color: Colors.black,
+              color: Theme.of(context).iconTheme.color,
             ),
           ],
         ),
@@ -245,38 +260,90 @@ class _Setting extends State<Setting> {
     );
   }
 
-  Widget _buildDarkModeToggle() {
+  Widget _buildDarkModeToggle(String label, SettingsProvider settings) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.F6Color,
+        color: isDark ? const Color(0xFF1E1E1E) : AppColors.F6Color,
         borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
         children: [
-          const Icon(HeroiconsOutline.moon, size: 20, color: Colors.black),
+          Icon(HeroiconsOutline.moon, size: 20, color: Theme.of(context).iconTheme.color),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Dark mode',
+              label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ),
           CupertinoSwitch(
-            value: _isDarkMode,
-            activeColor: Colors.black,
+            value: settings.themeMode == ThemeMode.dark,
+            activeColor: Theme.of(context).primaryColor,
             onChanged: (value) {
-              setState(() {
-                _isDarkMode = value;
-              });
+              settings.toggleTheme(value);
             },
           ),
         ],
       ),
+    );
+  }
+
+  void _showLanguageSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.selectLanguage, // "Select Language"
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Text("🇺🇸", style: TextStyle(fontSize: 24)),
+                title: const Text("English"),
+                trailing: settings.locale.languageCode == 'en'
+                    ? const Icon(Icons.check, color: Colors.blue)
+                    : null,
+                onTap: () {
+                  settings.setLocale(const Locale('en'));
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Text("🇻🇳", style: TextStyle(fontSize: 24)),
+                title: const Text("Tiếng Việt"),
+                trailing: settings.locale.languageCode == 'vi'
+                    ? const Icon(Icons.check, color: Colors.blue)
+                    : null,
+                onTap: () {
+                  settings.setLocale(const Locale('vi'));
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 }
