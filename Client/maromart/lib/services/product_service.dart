@@ -43,6 +43,46 @@ class ProductService {
     }
   }
 
+  // --- NEW AI METHODS ---
+  Future<Map<String, dynamic>> validateMedia(List<XFile> files) async {
+    try {
+      final response = await _apiService.postMultipart(
+        endpoint: '/products/validate-media',
+        fields: {},
+        files: files,
+        fileKey: 'files',
+        needAuth: true,
+      );
+      return response['data'] ?? {};
+    } catch (e) {
+      throw Exception('Lỗi kiểm duyệt ảnh: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> generateDetails({
+    required String productName,
+    required String visualDetails,
+    String? style,
+    String? length,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        endpoint: '/products/generate-details',
+        body: {
+          "productName": productName,
+          "visualDetails": visualDetails,
+          "style": style ?? "Professional",
+          "length": length ?? "Medium"
+        },
+        needAuth: true,
+      );
+      return response['data'] ?? {};
+    } catch (e) {
+      throw Exception('Lỗi tạo chi tiết sản phẩm: $e');
+    }
+  }
+  // ----------------------
+
   Future<List<Product>> getProducts({int page = 1, int limit = 10}) async {
     try {
       final queryParams = {

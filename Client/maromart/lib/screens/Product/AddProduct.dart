@@ -50,7 +50,11 @@ class _AddProductState extends State<AddProduct> {
   // --- STATE ---
   String? _selectedCategory;
   bool _isAiLoading = false;
-  bool _showManualBackup = false; // Chỉ hiện khi AI lỗi
+  bool _showManualBackup = false; 
+  
+  // AI Data
+  String? _visualDetails;
+  String? _aiCondition;
 
   List<AttributeItem> _attributes = [];
 
@@ -65,6 +69,12 @@ class _AddProductState extends State<AddProduct> {
     "hobby": ["category", "skill_level", "material", "brand", "age_range", "weight", "size"],
     "kids": ["age_range", "material", "size", "color", "brand", "education_type", "certification", "weight"]
   };
+  
+  // AI Config
+  String _selectedStyle = "Professional";
+  String _selectedLength = "Medium";
+  final List<String> _styles = ["Professional", "Casual", "Funny", "Technical"];
+  final List<String> _lengths = ["Short", "Medium", "Detailed"];
 
   // --- ADDRESS & MEDIA ---
   List<dynamic> _provinces = [];
@@ -77,6 +87,10 @@ class _AddProductState extends State<AddProduct> {
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
   List<XFile> _selectedVideos = [];
+
+  // --- WIZARD STATE ---
+  int _currentStep = 0;
+  final PageController _pageController = PageController();
 
   @override
   void initState() {
@@ -95,6 +109,7 @@ class _AddProductState extends State<AddProduct> {
     _policyController.dispose();
     _originController.dispose();
     _addressDetailController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -143,48 +158,102 @@ class _AddProductState extends State<AddProduct> {
   }
 
   // --- LOGIC AI SUGGESTION ---
-  Future<void> _handleAISuggestion() async {
-    final name = _titleController.text.trim();
-    final desc = _descController.text.trim();
-    final condition = _conditionController.text.trim();
-
-    if (name.isEmpty || desc.isEmpty || condition.isEmpty) {
-      _showErrorDialog("Please enter Product Name, Description, and Condition.");
-      return;
+  // --- LOGIC AI HANDLERS ---
+  
+  // STEP 1: VALIDATE MEDIA
+  Future<bool> _handleValidateMedia() async {
+    if (_selectedImages.isEmpty) {
+      _showErrorDialog("Vui lòng đăng tải ít nhất 1 hình ảnh sản phẩm (ảnh chụp thật).");
+      return false;
+    }
+    if (_titleController.text.trim().isEmpty) {
+        _showErrorDialog("Vui lòng nhập tên sản phẩm.");
+        return false;
     }
 
-    setState(() {
-      _isAiLoading = true;
-      _showManualBackup = false;
-    });
-
+    setState(() => _isAiLoading = true);
     try {
-      final result = await _productService.getAISuggestion(
-        productName: name,
-        description: desc,
-        condition: condition,
+      final result = await _productService.validateMedia(_selectedImages);
+      // result: { is_stock, reason, visual_details, condition }
+      
+      if (result['is_stock'] == true) {
+        _showErrorDialog("Lỗi ảnh: ${result['reason'] ?? 'Ảnh trông giống ảnh mạng/stock.'}\nVui lòng dùng ảnh chụp thật.");
+        return false;
+      }
+      
+      setState(() {
+        _visualDetails = result['visual_details'];
+        if (result['condition'] != null) _conditionController.text = result['condition'];
+      });
+      
+      return true;
+    } catch (e) {
+      // Fail open or closed? User asked for strict check. 
+      // But if API fail (network), maybe warn?
+      _showErrorDialog("Không thể kiểm tra ảnh: ${e.toString()}");
+      return false; // Prevent proceed if check fails? Or allow with warning? User said "bắt buộc phải là ảnh chụp thật".
+    } finally {
+      setState(() => _isAiLoading = false);
+    }
+  }
+
+  // STEP 2: GENERATE DETAILS
+  Future<void> _handleGenerateDetails() async {
+    setState(() => _isAiLoading = true);
+    try {
+      final result = await _productService.generateDetails(
+        productName: _titleController.text,
+        visualDetails: _visualDetails ?? "",
+        style: _selectedStyle,
+        length: _selectedLength
       );
 
-      if (result != null) {
-        setState(() {
-          if (result['category'] != null) _selectedCategory = result['category'];
-          for (var attr in _attributes) attr.dispose();
-          _attributes.clear();
+      // result: { is_consistent, inconsistency_reason, description, attributes }
+      
+      if (result['is_consistent'] == false) {
+        bool continueAnyway = await showDialog(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text("Cảnh báo AI"),
+            content: Text("AI phát hiện mâu thuẫn: ${result['inconsistency_reason']}\nBạn có muốn sửa lại Tên/Ảnh không?"),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Quay lại sửa")),
+              TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Vẫn tiếp tục", style: TextStyle(color: Colors.red))),
+            ],
+          )
+        ) ?? false;
 
-          if (result['attributes'] != null) {
-            Map<String, dynamic> aiAttrs = result['attributes'];
-            aiAttrs.forEach((key, value) {
-              String valToShow = (value == "no" || value == null) ? "" : value.toString();
-              _attributes.add(AttributeItem(name: key, value: valToShow));
-            });
-          }
-        });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("AI Applied!"), backgroundColor: Colors.green));
-      } else {
-        _activateBackupMode();
+        if (!continueAnyway) {
+           _prevStep(); // Go back to Step 1
+           return;
+        }
       }
+
+      setState(() {
+        _descController.text = result['description'] ?? "";
+        
+        // Populate attributes
+        _attributes.clear();
+        Map<String, dynamic> attrs = result['attributes'] ?? {};
+        
+        // Extract basic fields if present in attributes
+        if (attrs.containsKey('brand')) _brandController.text = attrs['brand'];
+        if (attrs.containsKey('origin')) _originController.text = attrs['origin'];
+        // Remove them from generic list if you want, or keep them.
+        
+        attrs.forEach((k, v) {
+            if (k != 'brand' && k != 'origin') {
+                _attributes.add(AttributeItem(name: k, value: v.toString()));
+            }
+        });
+        
+        // Set category based on content? Or just auto select? 
+        // For now user has to select Category manual or AI could suggest it. 
+        // Assuming AI attributes are generic.
+      });
+
     } catch (e) {
-      _activateBackupMode();
+      _showErrorDialog("Lỗi tạo nội dung: $e");
     } finally {
       setState(() => _isAiLoading = false);
     }
@@ -201,7 +270,20 @@ class _AddProductState extends State<AddProduct> {
 
   // --- SUBMIT ---
   Future<void> _submitProduct() async {
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    // Show Loading: "AI đang phân tích sản phẩm..."
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: const [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text("AI đang phân tích sản phẩm...\nQuá trình này mất khoảng 5-8 giây.", style: TextStyle(fontSize: 14))),
+          ],
+        ),
+      )
+    );
 
     try {
       Map<String, dynamic> attributesMap = {};
@@ -237,14 +319,15 @@ class _AddProductState extends State<AddProduct> {
       await _productService.createProduct(fields: fields, files: allFiles);
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Product Created!"), backgroundColor: Colors.green));
-        Navigator.pop(context);
+        Navigator.pop(context); // Close Loading
+        Navigator.pop(context); // Close AddProduct Screen
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Sản phẩm đã tạo thành công & được AI viết mô tả!"), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
-        _showErrorDialog(e.toString().replaceAll("Exception:", "").trim());
+        Navigator.pop(context); // Close Loading
+        String errorMsg = e.toString().replaceAll("Exception:", "").trim();
+        _showErrorDialog(errorMsg);
       }
     }
   }
@@ -253,210 +336,370 @@ class _AddProductState extends State<AddProduct> {
     showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text("Error"), content: Text(message), actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text("OK"))]));
   }
 
-  // --- HÀM KIỂM TRA VALIDATION TOÀN BỘ FORM ---
-  bool _checkAllFieldsFilled() {
-    // 1. Basic Info
-    if (_titleController.text.isEmpty) return false;
-    if (_priceController.text.isEmpty) return false;
-    if (_descController.text.isEmpty) return false;
+  // --- VALIDATION ---
+  Future<bool> _validateCurrentStep() async {
+    switch (_currentStep) {
+      case 0: // Step 1: Media + Info
+        if (_selectedImages.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cần ít nhất 1 hình ảnh.")));
+            return false;
+        }
+        if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng nhập Tên và Giá.")));
+             return false;
+        }
+        // Gọi AI check Media
+        bool isMediaValid = await _handleValidateMedia();
+        return isMediaValid;
 
-    // 2. Address
-    if (_selectedProvinceName == null) return false;
-    if (_selectedWardName == null) return false;
-    if (_addressDetailController.text.isEmpty) return false;
+      case 1: // Step 2: AI Details
+        // Check if generated? Or minimal requirement
+        if (_descController.text.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng tạo Mô tả (hoặc tự nhập).")));
+            return false;
+        }
+        return true;
 
-    // 3. Other Details (Bắt buộc nhập hết theo yêu cầu)
-    if (_conditionController.text.isEmpty) return false;
-    if (_brandController.text.isEmpty) return false;
-    if (_originController.text.isEmpty) return false;
-    if (_policyController.text.isEmpty) return false;
-
-    // 4. Attributes (Phải có danh sách VÀ phải điền hết giá trị)
-    if (_selectedCategory == null) return false;
-    if (_attributes.isEmpty) return false;
-
-    // Kiểm tra từng dòng attribute
-    for (var attr in _attributes) {
-      if (attr.valueController.text.trim().isEmpty) return false;
+      case 2: // Step 3: Review -> Submit called directly
+        return true;
+      default:
+        return false;
     }
+  }
 
-    return true; // Tất cả ok
+  void _nextStep() async {
+    bool valid = await _validateCurrentStep();
+    if (valid) {
+      if (_currentStep < 2) { // 0 -> 1 -> 2
+        setState(() => _currentStep++);
+        _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      } else {
+        _submitProduct();
+      }
+    }
+  }
+
+  void _prevStep() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  // --- UI BUILDING BLOCKS ---
+
+  // STEP 1: MEDIA & INFO
+  Widget _buildStep1Media() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Bước 1: Hình ảnh & Thông tin", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("Đăng tải ảnh thật (AI sẽ kiểm tra stock/mạng).", style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 20),
+          
+          _buildSectionTitle("Hình ảnh (Bắt buộc ảnh thật)"),
+          const SizedBox(height: 12),
+          _buildHorizontalMediaList(label: "Thêm Ảnh", icon: HeroiconsOutline.photo, items: _selectedImages, onAdd: _pickImages, onRemove: _removeImage, isImage: true),
+          if (_selectedImages.length > 0)
+            const Padding(padding: EdgeInsets.only(top: 8), child: Text("Đã chọn ảnh. Nhấn 'Next' để AI kiểm tra Stock.", style: TextStyle(color: Colors.blue, fontSize: 12))),
+            
+          const SizedBox(height: 24),
+          _buildSectionTitle("Video (Tùy chọn)"),
+          const SizedBox(height: 12),
+          _buildHorizontalMediaList(label: "Thêm Video", icon: HeroiconsOutline.videoCamera, items: _selectedVideos, onAdd: _pickVideo, onRemove: _removeVideo, isImage: false),
+
+           const SizedBox(height: 24),
+           _buildSectionTitle("Tên sản phẩm"),
+           const SizedBox(height: 8),
+           _buildTextField(controller: _titleController, hint: "VD: Laptop Dell XPS 15 9500"),
+
+           const SizedBox(height: 16),
+           _buildSectionTitle("Giá mong muốn (VND)"),
+           const SizedBox(height: 8),
+           _buildTextField(controller: _priceController, hint: "VD: 25000000", keyboardType: TextInputType.number),
+        ],
+      ),
+    );
+  }
+
+  // STEP 2: ESSENTIALS
+  Widget _buildStep2Essentials() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("The Basics", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("What are you selling?", style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 30),
+
+          _buildSectionTitle("Product Name"),
+          const SizedBox(height: 8),
+          _buildTextField(controller: _titleController, hint: "e.g. iPhone 14 Pro Max"),
+
+          const SizedBox(height: 20),
+          _buildSectionTitle("Price (VND)"),
+          const SizedBox(height: 8),
+          _buildTextField(controller: _priceController, hint: "e.g. 25000000", keyboardType: TextInputType.number),
+
+           const SizedBox(height: 20),
+            _buildSectionTitle("Condition"),
+          // REMOVED from Step 2
+          // const SizedBox(height: 8),
+          // _buildTextField(controller: _conditionController, hint: "e.g. New, Like New, Used"),
+
+          const SizedBox(height: 30),
+          // AI Suggestion Teaser
+           Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Colors.purple.shade50, Colors.blue.shade50]),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blue.shade100)
+            ),
+            child: Row(
+              children: [
+                 const Icon(HeroiconsSolid.sparkles, color: Colors.purple),
+                 const SizedBox(width: 12),
+                 const Expanded(child: Text("Start typing Description in the next step to unlock AI Categories!", style: TextStyle(color: Colors.black87, fontSize: 13))),
+              ],
+            ),
+           )
+
+        ],
+      ),
+    );
+  }
+
+  // STEP 3: REVIEW & FINALIZE (Merged old Step 3 & 4)
+  Widget _buildStep3Finalize() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Bước 3: Kiểm tra & Đăng", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("Không cần kiểm duyệt lại. Đăng ngay!", style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 20),
+          
+          _buildSectionTitle("Địa chỉ giao dịch"),
+          const SizedBox(height: 8),
+          _buildDynamicDropdown(
+                hint: "Tỉnh / Thành phố", value: _selectedProvinceCode, items: _provinces,
+                itemValueMapper: (item) => item['province_code'].toString(), itemLabelMapper: (item) => item['name'],
+                onChanged: (val) { setState(() { _selectedProvinceCode = val; final s = _provinces.firstWhere((e) => e['province_code'].toString() == val, orElse: () => null); _selectedProvinceName = s != null ? s['name'] : null; }); if (val != null) _fetchWards(val); }
+            ),
+            const SizedBox(height: 8),
+            _buildDynamicDropdown(
+                hint: "Phường / Xã", value: _selectedWardCode, items: _wards,
+                itemValueMapper: (item) => item['ward_code'].toString(), itemLabelMapper: (item) => item['ward_name'],
+                onChanged: (val) { setState(() { _selectedWardCode = val; final s = _wards.firstWhere((e) => e['ward_code'].toString() == val, orElse: () => null); _selectedWardName = s != null ? s['ward_name'] : null; }); }
+            ),
+            const SizedBox(height: 8),
+            _buildTextField(controller: _addressDetailController, hint: "Số nhà, tên đường..."),
+            
+            const SizedBox(height: 20),
+            _buildSectionTitle("Danh mục"),
+             if (_showManualBackup || _selectedCategory == null)
+              _buildDropdownField(hint: "Chọn danh mục", value: _selectedCategory, items: _attributeTemplates.keys.toList(), onChanged: _onCategoryChanged)
+             else 
+              Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                  child: Text("Category: ${_selectedCategory?.toUpperCase()}", style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold))
+              ),
+            
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                     const Text("Review nhanh:", style: TextStyle(fontWeight: FontWeight.bold)),
+                     const SizedBox(height: 10),
+                     Row(children: [
+                        if (_selectedImages.isNotEmpty) Image.file(File(_selectedImages.first.path), width: 50, height: 50, fit: BoxFit.cover),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(_titleController.text, style: const TextStyle(fontWeight: FontWeight.bold)))
+                     ]),
+                     const SizedBox(height: 5),
+                     Text("Giá: ${_priceController.text} VND"),
+                     Text("Tình trạng: ${_conditionController.text}"),
+                ]
+              )
+            )
+        ]
+      )
+    );
+  }
+
+  // STEP 4: REVIEW
+  Widget _buildStep4Review() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Review & Submit", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("Double check everything before listing.", style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 30),
+
+           Container(
+             padding: const EdgeInsets.all(16),
+             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+             child: Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 Row(
+                   children: [
+                     Container(
+                       width: 60, height: 60,
+                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.grey[100], image: _selectedImages.isNotEmpty ? DecorationImage(image: FileImage(File(_selectedImages.first.path)), fit: BoxFit.cover) : null),
+                     ),
+                     const SizedBox(width: 16),
+                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                       Text(_titleController.text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                       Text("${_priceController.text} VND", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                     ]))
+                   ],
+                 ),
+                 const Divider(height: 30),
+                 _buildReviewRow("Category", _selectedCategory?.toUpperCase() ?? "N/A"),
+                 _buildReviewRow("Condition", _conditionController.text),
+                 _buildReviewRow("Brand", _brandController.text),
+                 _buildReviewRow("Origin", _originController.text),
+                 _buildReviewRow("Warranty", _policyController.text),
+                 const SizedBox(height: 10),
+                 const Text("Description:", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                 Text(_descController.text, maxLines: 3, overflow: TextOverflow.ellipsis),
+                 const SizedBox(height: 10),
+                 const Text("Address:", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                 Text("${_addressDetailController.text}, ${_selectedWardName ?? ''}, ${_selectedProvinceName ?? ''}"),
+               ],
+             ),
+           )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Gọi hàm kiểm tra mỗi lần rebuild
-    final bool isFormValid = _checkAllFieldsFilled();
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const TopBarSecond(title: 'Add New Product'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle("Images & Videos"),
-            const SizedBox(height: 12),
-            _buildHorizontalMediaList(label: "Add Image", icon: HeroiconsOutline.photo, items: _selectedImages, onAdd: _pickImages, onRemove: _removeImage, isImage: true),
-            const SizedBox(height: 16),
-            _buildHorizontalMediaList(label: "Add Video", icon: HeroiconsOutline.videoCamera, items: _selectedVideos, onAdd: _pickVideo, onRemove: _removeVideo, isImage: false),
-
-            const SizedBox(height: 24),
-            _buildSectionTitle("Basic Information"),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _titleController, hint: "Product Name"),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _priceController, hint: "Price (VND)", keyboardType: TextInputType.number),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _descController, hint: "Description", maxLines: 4),
-
-            const SizedBox(height: 24),
-            _buildSectionTitle("Address"),
-            const SizedBox(height: 12),
-            _buildDynamicDropdown(
-                hint: "Province / City", value: _selectedProvinceCode, items: _provinces,
-                itemValueMapper: (item) => item['province_code'].toString(), itemLabelMapper: (item) => item['name'],
-                onChanged: (val) { setState(() { _selectedProvinceCode = val; final s = _provinces.firstWhere((e) => e['province_code'].toString() == val, orElse: () => null); _selectedProvinceName = s != null ? s['name'] : null; }); if (val != null) _fetchWards(val); }
-            ),
-            const SizedBox(height: 12),
-            _buildDynamicDropdown(
-                hint: "Ward / Commune", value: _selectedWardCode, items: _wards,
-                itemValueMapper: (item) => item['ward_code'].toString(), itemLabelMapper: (item) => item['ward_name'],
-                onChanged: (val) { setState(() { _selectedWardCode = val; final s = _wards.firstWhere((e) => e['ward_code'].toString() == val, orElse: () => null); _selectedWardName = s != null ? s['ward_name'] : null; }); }
-            ),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _addressDetailController, hint: "Detail Address"),
-
-            const SizedBox(height: 24),
-            _buildSectionTitle("Other Details"),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _conditionController, hint: "Condition (Required)"),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _brandController, hint: "Brand (Required)"),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _originController, hint: "Origin (Required)"),
-            const SizedBox(height: 12),
-            _buildTextField(controller: _policyController, hint: "Warranty Policy (Required)"),
-
-            const SizedBox(height: 32),
-
-            _buildSectionTitle("Product details"),
-            const SizedBox(height: 12),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Column(
+        children: [
+          // CUSTOM STEPPER
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+            color: Colors.white,
+            child: Row(
               children: [
-                // 1. GRADIENT TEXT & ICON
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Colors.purple, Colors.blue, Colors.pinkAccent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ).createShader(bounds),
-                  child: Row(
-                    children: const [
-                      Icon(HeroiconsSolid.sparkles, color: Colors.white, size: 22),
-                      SizedBox(width: 8),
-                      Text("AI Suggestion", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ],
-                  ),
-                ),
-
-                ElevatedButton(
-                  onPressed: _isAiLoading ? null : _handleAISuggestion,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    elevation: 5,
-                  ),
-                  child: _isAiLoading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text("Get", style: TextStyle(fontWeight: FontWeight.bold)),
-                )
+                _buildStepIndicator(0, "Media & Info"),
+                _buildStepLine(0),
+                _buildStepIndicator(1, "AI Auto"),
+                _buildStepLine(1),
+                _buildStepIndicator(2, "Review & Post"),
               ],
             ),
+          ),
+          const Divider(height: 1),
 
-            const SizedBox(height: 16),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(), // Disable swipe
+              children: [
+                _buildStep1Media(),
+                _buildStep2Essentials(),
+                _buildStep3Finalize(),
+              ],
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+         decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+             if (_currentStep > 0)
+                TextButton(onPressed: _prevStep, child: const Text("Back", style: TextStyle(color: Colors.grey)))
+             else
+                const SizedBox.shrink(),
 
-            if (_showManualBackup) ...[
-              Container(padding: const EdgeInsets.all(8), color: Colors.red.shade50, margin: const EdgeInsets.only(bottom: 8), child: const Text("API Error. Select Category manually:", style: TextStyle(color: Colors.red, fontSize: 12))),
-              _buildDropdownField(hint: "Select Category", value: _selectedCategory, items: _attributeTemplates.keys.toList(), onChanged: _onCategoryChanged),
-              const SizedBox(height: 16),
-            ] else if (_selectedCategory != null && _attributes.isNotEmpty) ...[
-              Text("Category: ${_selectedCategory!.toUpperCase()}", style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-            ],
-
-            if (_attributes.isNotEmpty)
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _attributes.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(children: [
-                      Expanded(flex: 4, child: _buildTextField(controller: _attributes[index].nameController, hint: "Name", readOnly: true)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 6,
-                        // Truyền onChanged để trigger validate nút Upload ngay khi gõ
-                        child: _buildTextField(controller: _attributes[index].valueController, hint: "Value"),
-                      ),
-                    ]),
-                  );
-                },
-              ),
-
-            if (_attributes.isEmpty && !_isAiLoading)
-              const Center(child: Text("Press 'Get' to generate attributes.", style: TextStyle(color: Colors.grey))),
-
-            const SizedBox(height: 30),
-
-            if (!isFormValid)
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-                  Icon(Icons.lock_outline, color: Colors.grey, size: 18),
-                  SizedBox(width: 8),
-                  Text("Please fill ALL fields to enable Upload.", style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600)),
-                ]),
-              ),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                // Disable nếu form chưa valid
-                onPressed: isFormValid ? _submitProduct : null,
-
+             ElevatedButton(
+                onPressed: _nextStep,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.ButtonBlackColor,
-                  disabledBackgroundColor: Colors.grey[300], // Màu xám khi disable
                   foregroundColor: Colors.white,
                   shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 ),
-                child: const Text("Upload Product"),
+                child: _isAiLoading 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(_currentStep == 2 ? "Upload Product" : "Next"),
               ),
-            ),
-            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  // --- HELPERS ---
+  Widget _buildStepIndicator(int step, String label) {
+    bool isActive = _currentStep >= step;
+    return Column(
+      children: [
+        Container(
+          width: 30, height: 30,
+          decoration: BoxDecoration(
+            color: isActive ? Colors.black : Colors.grey[200],
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: isActive
+              ? const Icon(Icons.check, color: Colors.white, size: 16)
+              : Text((step + 1).toString(), style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 10, color: isActive ? Colors.black : Colors.grey, fontWeight: FontWeight.bold))
+      ],
+    );
+  }
+
+  Widget _buildStepLine(int step) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        color: _currentStep > step ? Colors.black : Colors.grey[200],
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 15), // align with circle center roughly
+        // remove vertical margin if it looks off, alignment is key
+      ),
+    );
+  }
+
+  // --- HELPERS (Reused) ---
   Widget _buildSectionTitle(String title) => Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[800], fontWeight: FontWeight.bold));
 
-  // Update TextField để hỗ trợ setState khi gõ (Real-time Validation)
   Widget _buildTextField({required TextEditingController controller, required String hint, TextInputType keyboardType = TextInputType.text, int maxLines = 1, bool readOnly = false}) {
     return TextField(
       controller: controller,
@@ -464,7 +707,6 @@ class _AddProductState extends State<AddProduct> {
       maxLines: maxLines,
       readOnly: readOnly,
       onChanged: (_) => setState(() {}),
-
       decoration: InputDecoration(
         hintText: hint, hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
         filled: true, fillColor: readOnly ? Colors.grey[200] : const Color(0xFFF2F2F2),
@@ -522,7 +764,11 @@ class _AddProductState extends State<AddProduct> {
           }
           final file = items[index - 1];
           return Stack(children: [
-            Container(width: 100, margin: const EdgeInsets.only(right: 12), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Colors.grey[200], image: isImage ? DecorationImage(image: FileImage(File(file.path)), fit: BoxFit.cover) : null), child: !isImage ? const Center(child: Icon(Icons.play_circle_fill, size: 30, color: Colors.white)) : null),
+            Container(
+                width: 100, margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Colors.grey[200], image: isImage ? DecorationImage(image: FileImage(File(file.path)), fit: BoxFit.cover) : null),
+                child: !isImage ? const Center(child: Icon(Icons.play_circle_fill, size: 30, color: Colors.white)) : null
+            ),
             Positioned(top: 4, right: 16, child: GestureDetector(onTap: () => onRemove(index - 1), child: Container(padding: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))
           ]);
         },
