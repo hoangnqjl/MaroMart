@@ -10,6 +10,7 @@ import 'package:maromart/models/User/User.dart';
 import 'package:maromart/services/user_service.dart';
 import 'package:maromart/utils/storage.dart';
 import 'package:maromart/services/socket_service.dart';
+import 'package:maromart/screens/Product/ProductManager.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -99,7 +100,7 @@ class _HomeState extends State<Home> {
       HomeScreen(key: _homeScreenKey),
       NotificationScreen(),
       MessageScreen(),
-      SearchScreen(),
+      ProductManager(), // Changed from SearchScreen to ProductManager as requested (Cube icon)
     ];
 
     return Scaffold(
@@ -140,17 +141,8 @@ class _HomeState extends State<Home> {
               children: [
                 screens[_currentIndex],
 
-                if (_currentIndex == 3)
-                  Positioned(
-                    bottom: 80,
-                    left: 0,
-                    right: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: SearchItem(),
-                    ),
-                  ),
-
+                // Removed SearchItem logic as tab 3 is now Manager
+                
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -158,8 +150,10 @@ class _HomeState extends State<Home> {
                   child: BottomNavigation(
                     selectedIndex: _currentIndex,
                     onTabSelected: _onTabSelected,
-
                     notificationCount: _unreadNotifications,
+                    onAddPressed: () {
+                      Navigator.pushNamed(context, '/add_product');
+                    },
                   ),
                 ),
               ],

@@ -6,7 +6,12 @@ class StorageHelper {
   static SharedPreferences? _prefs;
 
   static Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    try {
+      _prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      print("Error initializing SharedPreferences: $e");
+      // Handle error accordingly, maybe set _prefs to null or retry
+    }
   }
 
   static Future<bool> saveToken(String token) async {

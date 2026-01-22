@@ -12,10 +12,20 @@ import 'app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await StorageHelper.init();
-  // if (StorageHelper.isLoggedIn()) {
-  //   SocketService().connect();
-  // }
+  
+  // Protect against initialization hangs (e.g., storage corruption)
+  try {
+    await StorageHelper.init().timeout(
+      const Duration(seconds: 3),
+      onTimeout: () {
+        debugPrint("Storage initialization timed out. Proceeding regardless.");
+      },
+    );
+  } catch (e) {
+    debugPrint("Storage initialization failed: $e");
+    // Continue anyway so the app doesn't stay on a black screen
+  }
+
   runApp(const MyApp());
 }
 

@@ -10,6 +10,7 @@ import 'package:maromart/screens/authencation/get_started_screen.dart';
 import '../screens/authencation/Login/signin_screen.dart';
 import '../screens/authencation/Sign_up/signup_info_screen.dart';
 import '../screens/authencation/Sign_up/signup_password_screen.dart';
+import 'package:maromart/screens/Product/SuccessPostScreen.dart';
 
 
 // iOS-style smooth route transition
@@ -98,6 +99,8 @@ Route? onGenerateRoute(RouteSettings settings) {
       return smoothRoute(ChangePasswordScreen(), settings);
     case '/product-manager':
       return smoothRoute(ProductManager(), settings);
+    case '/success_post':
+      return smoothRoute(const SuccessPostScreen(), settings);
     default:
       return null;
   }

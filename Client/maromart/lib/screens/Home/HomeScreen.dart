@@ -3,6 +3,7 @@ import 'package:maromart/Colors/AppColors.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:maromart/components/Post.dart';
 import 'package:maromart/models/Product/Product.dart';
+import 'package:maromart/components/ProductFlashCard.dart' as import_ProductFlashCard;
 import 'package:maromart/models/User/User.dart';
 import 'package:maromart/services/user_service.dart';
 import 'package:maromart/services/product_service.dart';
@@ -146,104 +147,127 @@ class HomeScreenState extends State<HomeScreen> {
 
   String get greetingName => _currentUser?.fullName ?? 'Friend';
 
+  bool _isFlashCardMode = true; // Default to immersive mode
+
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.only(top: 10, left: 16, right: 16),
-      child: RefreshIndicator(
-        onRefresh: () async => _loadProducts(isRefresh: true),
-        child: ListView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            // HEADER
-            _buildHeader(),
-
-            // PRODUCT LIST
-            if (_isInitialLoading && _products.isEmpty)
-              const Padding(padding: EdgeInsets.all(32.0), child: Center(child: CircularProgressIndicator()))
-            else if (_products.isEmpty)
-              const Padding(padding: EdgeInsets.only(top: 40), child: Center(child: Text('Không tìm thấy sản phẩm nào.', style: TextStyle(color: Colors.grey))))
-            else
-              AnimationLimiter(
-                child: Column(
-                  children: [
-                    ..._products.asMap().entries.map((entry) { // Use asMap to get index
-                      int index = entry.key;
-                      Product p = entry.value;
-                      return AnimationConfiguration.staggeredList(
-                        position: index,
-                        duration: const Duration(milliseconds: 375),
-                        child: SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 20.0),
-                              child: Post(product: p),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-
-                    if (_isLoadingMore)
-                      const Padding(padding: EdgeInsets.all(16.0), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-
-                    if (!_hasMore && !_isInitialLoading)
-                      _buildEndOfListMessage(),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      decoration: BoxDecoration(color: AppColors.E2Color, borderRadius: BorderRadius.circular(30)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // CUSTOM HEADER with Toggle
+          _buildHeader(),
+          
+          // TOGGLE BAR (Optional, or integrate into Header)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(height: 10),
-                Text('Hi $greetingName!', style: const TextStyle(fontSize: 12, fontFamily: 'QuickSand', fontWeight: FontWeight.w600)),
-                const SizedBox(height: 10),
-                const Text('Turn your stuff into cash it only takes a minute to post', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w200)),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/add_product'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
-                    decoration: BoxDecoration(color: AppColors.ButtonBlackColor, borderRadius: BorderRadius.circular(30)),
-                    child: const Text('Sell now', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
-                )
+                 const Text("For You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                 Row(
+                   children: [
+                     IconButton(
+                       icon: Icon(Icons.view_agenda, color: _isFlashCardMode ? Colors.black : Colors.grey),
+                       onPressed: () => setState(() => _isFlashCardMode = true),
+                     ),
+                     IconButton(
+                       icon: Icon(Icons.grid_view, color: !_isFlashCardMode ? Colors.black : Colors.grey),
+                       onPressed: () => setState(() => _isFlashCardMode = false),
+                     ),
+                   ],
+                 )
               ],
             ),
           ),
-          Image.asset('lib/images/twomen.png', width: 120, fit: BoxFit.contain)
+
+          // LIST CONTENT
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async => _loadProducts(isRefresh: true),
+              child: _products.isEmpty 
+                 ? (_isInitialLoading 
+                     ? const Center(child: CircularProgressIndicator()) 
+                     : const Center(child: Text("No products found.")))
+                 : _buildProductList(),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEndOfListMessage() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20.0, bottom: 100),
-      child: Center(
-        child: Column(
+  Widget _buildProductList() {
+    if (_isFlashCardMode) {
+      // MODE 1: FLASH CARD (PageView Vertical)
+      return PageView.builder(
+        scrollDirection: Axis.vertical,
+        controller: PageController(viewportFraction: 1.0), // Full screen feel
+        itemCount: _products.length,
+        itemBuilder: (context, index) {
+          if (index == _products.length - 1 && _hasMore) {
+             _loadProducts(isRefresh: false); // Lazy load
+          }
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 0), // Full tight layout
+            child: import_ProductFlashCard.ProductFlashCard( // Resolving naming conflict if any
+              product: _products[index],
+              onTap: () {
+                 // Navigate to details if needed
+              },
+            ),
+          );
+        },
+      );
+    } else {
+      // MODE 2: GRID 2x2
+      return GridView.builder(
+        padding: const EdgeInsets.all(10),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+        ),
+        itemCount: _products.length,
+        itemBuilder: (context, index) {
+           return Post(product: _products[index]); // Use existing Post for grid or create new GridItem
+        },
+      );
+    }
+  }
+
+  // Simplified Header
+  Widget _buildHeader() {
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.grey[300], size: 40),
-            const SizedBox(height: 8),
-            const Text("You're all caught up!", style: TextStyle(color: Colors.grey)),
+             Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 Text('Location', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                 const Row(
+                   children: [
+                     Icon(Icons.location_on, size: 14, color: Colors.black),
+                     SizedBox(width: 4),
+                     Text('An Khe, Da Nang', style: TextStyle(fontWeight: FontWeight.bold)),
+                   ],
+                 )
+               ],
+             ),
+             CircleAvatar(
+               backgroundColor: Colors.grey[200],
+               backgroundImage: (_currentUser?.avatarUrl?.isNotEmpty == true) 
+                   ? NetworkImage(_currentUser!.avatarUrl!) 
+                   : null,
+               child: (_currentUser?.avatarUrl?.isEmpty ?? true) 
+                   ? const Icon(Icons.person) 
+                   : null,
+             )
           ],
         ),
       ),

@@ -63,11 +63,15 @@ class _AddProductState extends State<AddProduct> {
     "auto": ["brand", "model", "year", "fuel_type", "transmission", "mileage", "condition", "color", "accessories_type", "warranty"],
     "furniture": ["material", "color", "dimensions", "style", "room_type", "weight", "brand", "warranty", "assembly_required"],
     "technology": ["brand", "model", "cpu", "ram", "storage", "screen_size", "battery_capacity", "os", "connectivity", "warranty"],
+    "appliances": ["brand", "type", "capacity", "power_usage", "dimensions", "warranty", "color", "material"], // Fridge, Fan, etc.
     "office": ["material", "dimensions", "color", "brand", "quantity", "type", "weight"],
     "style": ["size", "color", "material", "gender", "brand", "season", "pattern", "style", "origin"],
     "service": ["service_type", "duration", "price_type", "provider", "area", "availability", "warranty"],
     "hobby": ["category", "skill_level", "material", "brand", "age_range", "weight", "size"],
-    "kids": ["age_range", "material", "size", "color", "brand", "education_type", "certification", "weight"]
+    "kids": ["age_range", "material", "size", "color", "brand", "education_type", "certification", "weight"],
+    "books": ["author", "genre", "language", "publisher", "publication_year", "page_count", "condition"],
+    "pets": ["species", "breed", "age", "gender", "color", "health_status", "vaccination"],
+    "other": ["brand", "material", "color", "dimensions", "weight", "condition"]
   };
   
   // AI Config
@@ -144,14 +148,27 @@ class _AddProductState extends State<AddProduct> {
   // --- LOGIC MANUAL CATEGORY ---
   void _onCategoryChanged(String? newCategory) {
     setState(() {
+      // 1. Capture current values into a map
+      Map<String, String> currentValues = {};
+      for (var attr in _attributes) {
+        if (attr.valueController.text.isNotEmpty) {
+          currentValues[attr.nameController.text.toLowerCase()] = attr.valueController.text;
+        }
+      }
+
       _selectedCategory = newCategory;
+      
+      // 2. Dispose old controllers
       for (var attr in _attributes) attr.dispose();
       _attributes.clear();
 
+      // 3. Rebuild based on new template
       if (newCategory != null && _attributeTemplates.containsKey(newCategory)) {
         List<String> templates = _attributeTemplates[newCategory]!;
         for (String key in templates) {
-          _attributes.add(AttributeItem(name: key, value: ""));
+          // 4. Restore value if matched (fuzzy match key)
+          String initialValue = currentValues[key.toLowerCase()] ?? "";
+          _attributes.add(AttributeItem(name: key, value: initialValue));
         }
       }
     });
@@ -208,8 +225,13 @@ class _AddProductState extends State<AddProduct> {
         length: _selectedLength
       );
 
-      // result: { is_consistent, inconsistency_reason, description, attributes }
-      
+      // 1. Check Moderation (Safety)
+      if (result['is_safe'] == false) {
+         _showErrorDialog("Vi phạm tiêu chuẩn cộng đồng: ${result['violation_reason'] ?? 'Nội dung không phù hợp.'}");
+         return;
+      }
+
+      // 2. Check Consistency
       if (result['is_consistent'] == false) {
         bool continueAnyway = await showDialog(
           context: context,
@@ -230,33 +252,56 @@ class _AddProductState extends State<AddProduct> {
       }
 
       setState(() {
+        // 3. Auto-fill Description
         _descController.text = result['description'] ?? "";
         
-        // Populate attributes
-        _attributes.clear();
-        Map<String, dynamic> attrs = result['attributes'] ?? {};
+        // 4. Auto-select Category
+        String? predictedCategory = result['category'];
+        if (predictedCategory != null && _attributeTemplates.containsKey(predictedCategory.toLowerCase())) {
+             _onCategoryChanged(predictedCategory.toLowerCase());
+        }
+
+        // 5. Auto-fill Attributes (Dynamic Expansion)
+        // We iterate through ALL keys returned by AI.
+        // If key exists in list -> Update value.
+        // If key does NOT exist -> Add new AttributeItem.
+        Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
         
-        // Extract basic fields if present in attributes
-        if (attrs.containsKey('brand')) _brandController.text = attrs['brand'];
-        if (attrs.containsKey('origin')) _originController.text = attrs['origin'];
-        // Remove them from generic list if you want, or keep them.
-        
-        attrs.forEach((k, v) {
-            if (k != 'brand' && k != 'origin') {
-                _attributes.add(AttributeItem(name: k, value: v.toString()));
+        // Handle standard fields first
+        if (aiAttrs.containsKey('brand')) _brandController.text = aiAttrs['brand'].toString();
+        if (aiAttrs.containsKey('origin')) _originController.text = aiAttrs['origin'].toString();
+
+        aiAttrs.forEach((key, value) {
+            String cleanKey = key.toString().toLowerCase().trim();
+            String cleanValue = value.toString().trim();
+
+            if (cleanKey == 'brand' || cleanKey == 'origin') return; // Skip standard fields
+
+            // Check if attribute already exists in current list
+            int existingIndex = _attributes.indexWhere((attr) => attr.nameController.text.toLowerCase().trim() == cleanKey);
+
+            if (existingIndex != -1) {
+                // Update existing
+                _attributes[existingIndex].valueController.text = cleanValue;
+            } else {
+                // Add NEW dynamic attribute
+                _attributes.add(AttributeItem(name: _formatKey(cleanKey), value: cleanValue));
             }
         });
-        
-        // Set category based on content? Or just auto select? 
-        // For now user has to select Category manual or AI could suggest it. 
-        // Assuming AI attributes are generic.
       });
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã tự động điền đầy đủ thông tin!"), backgroundColor: Colors.green));
 
     } catch (e) {
       _showErrorDialog("Lỗi tạo nội dung: $e");
     } finally {
       setState(() => _isAiLoading = false);
     }
+  }
+  
+  String _formatKey(String key) {
+     // Optional: format "power_usage" -> "Power Usage"
+     return key.replaceAll("_", " ").split(" ").map((str) => str.isNotEmpty ? '${str[0].toUpperCase()}${str.substring(1)}' : '').join(" ");
   }
 
   void _activateBackupMode() {
@@ -320,8 +365,8 @@ class _AddProductState extends State<AddProduct> {
 
       if (mounted) {
         Navigator.pop(context); // Close Loading
-        Navigator.pop(context); // Close AddProduct Screen
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Sản phẩm đã tạo thành công & được AI viết mô tả!"), backgroundColor: Colors.green));
+        // Replace AddProduct screen with SuccessPostScreen
+        Navigator.pushReplacementNamed(context, '/success_post');
       }
     } catch (e) {
       if (mounted) {
@@ -352,10 +397,13 @@ class _AddProductState extends State<AddProduct> {
         bool isMediaValid = await _handleValidateMedia();
         return isMediaValid;
 
-      case 1: // Step 2: AI Details
-        // Check if generated? Or minimal requirement
+      case 1: // Step 2: Details & Attributes
         if (_descController.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng tạo Mô tả (hoặc tự nhập).")));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng nhập Mô tả sản phẩm.")));
+            return false;
+        }
+        if (_selectedCategory == null) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng chọn Danh mục sản phẩm.")));
             return false;
         }
         return true;
@@ -432,42 +480,122 @@ class _AddProductState extends State<AddProduct> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("The Basics", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const Text("What are you selling?", style: TextStyle(color: Colors.grey)),
-          const SizedBox(height: 30),
+          const Text("Detailed information about your product.", style: TextStyle(color: Colors.grey)),
+          const SizedBox(height: 20),
 
-          _buildSectionTitle("Product Name"),
+          // --- CONDITION ---
+          _buildSectionTitle("Condition"),
           const SizedBox(height: 8),
-          _buildTextField(controller: _titleController, hint: "e.g. iPhone 14 Pro Max"),
+          _buildTextField(controller: _conditionController, hint: "e.g. New, Like New, Used"),
 
           const SizedBox(height: 20),
-          _buildSectionTitle("Price (VND)"),
+
+          // --- STYLE & LENGTH ---
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle("Style"),
+                    const SizedBox(height: 8),
+                     DropdownButtonFormField<String>(
+                      value: _selectedStyle,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: const Color(0xFFF2F2F2),
+                      ),
+                      items: _styles.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
+                      onChanged: (val) => setState(() => _selectedStyle = val!),
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                     _buildSectionTitle("Length"),
+                     const SizedBox(height: 8),
+                     DropdownButtonFormField<String>(
+                      value: _selectedLength,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                         fillColor: const Color(0xFFF2F2F2),
+                      ),
+                      items: _lengths.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
+                      onChanged: (val) => setState(() => _selectedLength = val!),
+                    )
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- DESCRIPTION ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildSectionTitle("Description"),
+              TextButton.icon(
+                onPressed: _isAiLoading ? null : _handleGenerateDetails,
+                icon: _isAiLoading 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                    : const Icon(HeroiconsSolid.sparkles, size: 16, color: Colors.purple),
+                label: Text(_isAiLoading ? "Processing..." : "✨ AI Generate & Fill", style: const TextStyle(color: Colors.purple, fontSize: 13, fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(backgroundColor: Colors.purple.shade50, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+              )
+            ],
+          ),
           const SizedBox(height: 8),
-          _buildTextField(controller: _priceController, hint: "e.g. 25000000", keyboardType: TextInputType.number),
+          _buildTextField(controller: _descController, hint: "Describe your product...", maxLines: 5),
 
-           const SizedBox(height: 20),
-            _buildSectionTitle("Condition"),
-          // REMOVED from Step 2
-          // const SizedBox(height: 8),
-          // _buildTextField(controller: _conditionController, hint: "e.g. New, Like New, Used"),
+          const SizedBox(height: 20),
 
-          const SizedBox(height: 30),
-          // AI Suggestion Teaser
-           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Colors.purple.shade50, Colors.blue.shade50]),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.shade100)
-            ),
-            child: Row(
-              children: [
-                 const Icon(HeroiconsSolid.sparkles, color: Colors.purple),
-                 const SizedBox(width: 12),
-                 const Expanded(child: Text("Start typing Description in the next step to unlock AI Categories!", style: TextStyle(color: Colors.black87, fontSize: 13))),
-              ],
-            ),
-           )
+          // --- CATEGORY ---
+          _buildSectionTitle("Category"),
+          const SizedBox(height: 8),
+          _buildDropdownField(
+            hint: "Select Category", 
+            value: _selectedCategory, 
+            items: _attributeTemplates.keys.toList(), 
+            onChanged: _onCategoryChanged
+          ),
 
+          // --- ATTRIBUTES ---
+          if (_attributes.isNotEmpty) ...[
+             const SizedBox(height: 20),
+             const Divider(),
+             const SizedBox(height: 10),
+             const Text("Attributes", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+             const SizedBox(height: 10),
+             ListView.builder(
+               shrinkWrap: true,
+               physics: const NeverScrollableScrollPhysics(),
+               itemCount: _attributes.length,
+               itemBuilder: (context, index) {
+                 final attr = _attributes[index];
+                 return Padding(
+                   padding: const EdgeInsets.only(bottom: 12),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text(attr.nameController.text.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                       const SizedBox(height: 6),
+                       _buildTextField(controller: attr.valueController, hint: "Enter ${attr.nameController.text}"),
+                     ],
+                   ),
+                 );
+               },
+             )
+          ]
         ],
       ),
     );
@@ -481,7 +609,7 @@ class _AddProductState extends State<AddProduct> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Bước 3: Kiểm tra & Đăng", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const Text("Không cần kiểm duyệt lại. Đăng ngay!", style: TextStyle(color: Colors.grey)),
+          const Text("Đảm bảo thông tin chính xác trước khi đăng bán.", style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 20),
           
           _buildSectionTitle("Địa chỉ giao dịch"),
@@ -501,17 +629,7 @@ class _AddProductState extends State<AddProduct> {
             _buildTextField(controller: _addressDetailController, hint: "Số nhà, tên đường..."),
             
             const SizedBox(height: 20),
-            _buildSectionTitle("Danh mục"),
-             if (_showManualBackup || _selectedCategory == null)
-              _buildDropdownField(hint: "Chọn danh mục", value: _selectedCategory, items: _attributeTemplates.keys.toList(), onChanged: _onCategoryChanged)
-             else 
-              Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
-                  child: Text("Category: ${_selectedCategory?.toUpperCase()}", style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold))
-              ),
             
-            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
@@ -528,6 +646,7 @@ class _AddProductState extends State<AddProduct> {
                      const SizedBox(height: 5),
                      Text("Giá: ${_priceController.text} VND"),
                      Text("Tình trạng: ${_conditionController.text}"),
+                     Text("Danh mục: ${_selectedCategory ?? 'Chưa chọn'}"),
                 ]
               )
             )
