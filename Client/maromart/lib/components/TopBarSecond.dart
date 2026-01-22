@@ -30,13 +30,13 @@ class _TopBarSecond extends State<TopBarSecond> {
 
   Widget _TopBarAddProduct() {
     return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+      // child: BackdropFilter(
+      //   filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.85),
+            color: Colors.white, // Removed opacity for test
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
