@@ -20,7 +20,7 @@ class BottomNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+      margin: const EdgeInsets.only(bottom: 20, left: 24, right: 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [

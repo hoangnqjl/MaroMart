@@ -8,11 +8,12 @@ import 'package:maromart/components/VideoPlayerWidget.dart';
 import 'package:maromart/models/Media/MediaItem.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/models/User/ChatPartner.dart';
-import 'package:maromart/models/User/User.dart';
 import 'package:maromart/screens/Message/ChatScreen.dart';
 import 'package:maromart/screens/Product/ProductDetail.dart';
 import 'package:maromart/utils/storage.dart';
+import 'package:maromart/utils/constants.dart';
 import 'package:maromart/app_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -24,7 +25,6 @@ class Post extends StatefulWidget {
 
 class _PostState extends State<Post> {
   late List<MediaItem> _mediaItems;
-  bool isExpanded = false;
   final PageController _pageController = PageController();
 
   @override
@@ -33,98 +33,82 @@ class _PostState extends State<Post> {
     _mediaItems = _parseProductMedia(widget.product.productMedia);
   }
 
+  String _getFullUrl(String path) {
+    if (path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '${ApiConstants.baseUrl}$path';
+  }
+
   List<MediaItem> _parseProductMedia(List<String> rawMedia) {
     return rawMedia.map((mediaString) {
+      String cleanUrl = mediaString;
       if (mediaString.toLowerCase().startsWith('video:')) {
-        return MediaItem(
-          type: MediaType.video,
-          url: mediaString.substring(6).trim(),
-        );
+        cleanUrl = mediaString.substring(6).trim();
+        return MediaItem(type: MediaType.video, url: _getFullUrl(cleanUrl));
       } else {
-        String url = mediaString;
         if (mediaString.toLowerCase().startsWith('image:')) {
-          url = mediaString.substring(6).trim();
+          cleanUrl = mediaString.substring(6).trim();
         }
-        return MediaItem(type: MediaType.image, url: url);
+        return MediaItem(type: MediaType.image, url: _getFullUrl(cleanUrl));
       }
     }).toList();
   }
 
   String _formatPrice(int price) {
-    final formatter = NumberFormat('#,###', 'vi_VN');
-    return '${formatter.format(price)} đ';
+    return NumberFormat('#,###', 'vi_VN').format(price) + ' đ';
   }
 
-  void _toggleExpanded() {
-    setState(() => isExpanded = !isExpanded);
+  void _makeCall(String? phone) async {
+    if (phone == null || phone.isEmpty) return;
+    final uri = Uri.parse("tel:$phone");
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final product = widget.product;
-
-    final String sellerName = product.userInfo?.fullName ?? 'Người dùng ẩn danh';
-    final String sellerAvatar = product.userInfo?.avatarUrl ?? '';
-    final currentUserId = StorageHelper.getUserId();
-    final sellerId = product.userInfo?.userId;
-    final bool isOwner = currentUserId != null && sellerId != null && currentUserId == sellerId;
+    final seller = product.userInfo;
 
     return Container(
-      height: screenWidth * 1.2,
+      height: screenWidth * 1.35,
       width: double.infinity,
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.E2Color,
-        border: Border.all(color: Colors.grey.shade300, width: 0.5),
         borderRadius: BorderRadius.circular(30),
       ),
       child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.centerRight,
         children: [
-          // MEDIA VIEWER
+          // 1. MEDIA VIEWER
           GestureDetector(
-            onTap: () {
-              smoothPush(
-                context,
-                ProductDetail(productId: product.productId),
-              );
-            },
-            onHorizontalDragEnd: (details) {
-              if (details.primaryVelocity! < -500) {
-                if (!isExpanded) _toggleExpanded();
-              }
-              else if (details.primaryVelocity! > 500) {
-                if (isExpanded) _toggleExpanded();
-              }
-            },
+            onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
             child: PageView.builder(
               controller: _pageController,
               itemCount: _mediaItems.length,
-              itemBuilder: (context, index) => _buildMediaItem(_mediaItems[index]),
+              itemBuilder: (context, index) => _buildMediaContent(_mediaItems[index]),
             ),
           ),
 
-          // PRICE TAG
           Positioned(
             top: 20,
             left: 20,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.black26.withOpacity(0.5),
+                    color: Colors.white.withOpacity(0.4),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
                   ),
                   child: Text(
                     _formatPrice(product.productPrice),
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -132,91 +116,37 @@ class _PostState extends State<Post> {
             ),
           ),
 
-          // ACTION MENU SIDEBAR
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: screenWidth * 0.20,
-            right: isExpanded ? 0 : -60,
-            child: GestureDetector(
-              onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity! > 300) {
-                  if (isExpanded) _toggleExpanded();
-                } else if (details.primaryVelocity! < -300) {
-                  if (!isExpanded) _toggleExpanded();
-                }
-              },
-              onTap: () {
-                if (!isExpanded) _toggleExpanded();
-              },
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 15,
+            child: Center(
               child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    topLeft: Radius.circular(30)
-                ),
+                borderRadius: BorderRadius.circular(40),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                   child: Container(
-                    width: 90,
-                    height: screenWidth * 0.8,
-                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
-                    padding: const EdgeInsets.only(right: 10, top: 14, bottom: 14, left: 10),
-                    child: Row(
+                    width: 70,
+                    padding: const EdgeInsets.symmetric(vertical: 25),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.4),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        GestureDetector(
-                          onTap: _toggleExpanded,
-                          child: Container(
-                            width: 10,
-                            height: 50,
-                            decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(10)
-                            ),
-                            // Thêm icon để rõ ràng hơn
-                            // child: Center(
-                            //   child: Icon(
-                            //     isExpanded ? Icons.chevron_right : Icons.chevron_left,
-                            //     color: Colors.black54,
-                            //     size: 16,
-                            //   ),
-                            // ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildActionButton(HeroiconsSolid.heart, "Like"),
-                              if (!isOwner)
-                                _buildActionButton(
-                                  HeroiconsSolid.chatBubbleOvalLeftEllipsis,
-                                  "Chat",
-                                  onTap: () {
-                                    if (widget.product.userInfo != null) {
-                                      final partner = ChatPartner(
-                                        userId: widget.product.userInfo!.userId,
-                                        fullName: widget.product.userInfo!.fullName,
-                                        avatarUrl: widget.product.userInfo!.avatarUrl,
-                                        email: widget.product.userInfo!.email,
-                                      );
-                                      smoothPush(
-                                        context,
-                                        ChatScreen(
-                                          conversationId: "",
-                                          partnerUser: partner,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                              if (!isOwner)
-                                _buildActionButton(HeroiconsSolid.phone, "Call"),
-
-                              _buildActionButton(HeroiconsSolid.ellipsisHorizontal, "More"),
-                            ],
-                          ),
-                        ),
+                        _buildAction(HeroiconsSolid.bookmark, "Save"),
+                        const SizedBox(height: 20),
+                        _buildAction(HeroiconsSolid.chatBubbleOvalLeftEllipsis, "Chat", onTap: () {
+                          if (seller != null) {
+                            final partner = ChatPartner(userId: seller.userId, fullName: seller.fullName, avatarUrl: seller.avatarUrl);
+                            smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                          }
+                        }),
+                        const SizedBox(height: 20),
+                        _buildAction(HeroiconsSolid.phone, "Call", onTap: () => _makeCall(seller?.phoneNumber.toString())),
+                        const SizedBox(height: 20),
+                        _buildAction(HeroiconsSolid.ellipsisHorizontal, "More"),
                       ],
                     ),
                   ),
@@ -225,64 +155,40 @@ class _PostState extends State<Post> {
             ),
           ),
 
-          // PRODUCT INFO OVERLAY
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 0, left: 0, right: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 80, 100, 60),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.black.withOpacity(0.3),
+                    Colors.transparent
+                  ],
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(100),
-                          child: SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: _buildSafeAvatar(sellerAvatar),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          sellerName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                            fontFamily: 'QuickSand',
-                            fontWeight: FontWeight.w700,
-                            shadows: [Shadow(blurRadius: 4, color: Colors.black)],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    product.productName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontFamily: 'QuickSand',
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     product.productDescription,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                      fontFamily: 'QuickSand',
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -296,69 +202,43 @@ class _PostState extends State<Post> {
     );
   }
 
-  Widget _buildSafeAvatar(String url) {
-    if (url.isEmpty) {
-      return Image.asset('lib/images/avt.webp', fit: BoxFit.cover);
-    }
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Image.asset('lib/images/avt.webp', fit: BoxFit.cover);
-      },
-    );
-  }
-
-  Widget _buildMediaItem(MediaItem item) {
+  Widget _buildMediaContent(MediaItem item) {
     if (item.type == MediaType.image) {
       return CachedNetworkImage(
         imageUrl: item.url,
         fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        memCacheWidth: 700, // Limit memory cache size (approx 2x screen width usually safe for quality)
-        placeholder: (context, url) => Container(
-          color: Colors.grey[200],
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-        errorWidget: (context, url, error) => Container(
-            color: Colors.grey[300],
-            child: const Center(child: Icon(Icons.image_not_supported, color: Colors.grey))
-        ),
+        placeholder: (context, url) => Container(color: Colors.grey[200]),
+        errorWidget: (context, url, error) => Container(color: Colors.grey[300], child: const Icon(Icons.broken_image)),
       );
-    } else {
-      return VideoPlayerWidget(videoUrl: item.url);
     }
+    return VideoPlayerWidget(videoUrl: item.url);
   }
 
-  Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.25),
-            shape: BoxShape.circle,
+  Widget _buildAction(IconData icon, String label, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            icon: Icon(icon, color: Colors.white, size: 22),
-            onPressed: onTap ?? () {},
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
+          const SizedBox(height: 4),
+          Text(
             label,
             style: const TextStyle(
-                fontSize: 10,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                shadows: [Shadow(blurRadius: 2, color: Colors.black)]
-            )
-        ),
-      ],
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

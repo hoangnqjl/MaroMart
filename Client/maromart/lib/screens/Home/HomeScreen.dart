@@ -6,7 +6,6 @@ import 'package:maromart/components/ProductGridItem.dart';
 import 'package:maromart/components/Filter.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
-
 import '../Search/SearchResult.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,13 +19,13 @@ class HomeScreenState extends State<HomeScreen> {
   final ProductService _productService = ProductService();
   final ScrollController _scrollController = ScrollController();
 
-  // Khởi tạo Overlay an toàn
   late final FilterOverlay _filterOverlay = FilterOverlay(
-    onFilterApplied: (categoryId, province, ward) => updateFilter(
-      categoryId: categoryId,
-      province: province,
-      ward: ward,
-    ),
+    onFilterApplied: (categoryId, province, ward) =>
+        updateFilter(
+          categoryId: categoryId,
+          province: province,
+          ward: ward,
+        ),
   );
 
   final List<Product> _products = [];
@@ -46,7 +45,8 @@ class HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadProducts(isRefresh: true);
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
         _loadProducts(isRefresh: false);
       }
     });
@@ -85,7 +85,8 @@ class HomeScreenState extends State<HomeScreen> {
     });
     try {
       List<Product> newProducts;
-      bool isFiltering = _filterCategoryId != null || _filterProvince != null || _filterWard != null;
+      bool isFiltering = _filterCategoryId != null || _filterProvince != null ||
+          _filterWard != null;
       if (isFiltering) {
         newProducts = await _productService.getProductsByFilter(
           categoryId: _filterCategoryId,
@@ -94,7 +95,8 @@ class HomeScreenState extends State<HomeScreen> {
         );
         _hasMore = false;
       } else {
-        newProducts = await _productService.getProducts(page: _currentPage, limit: _limit);
+        newProducts =
+        await _productService.getProducts(page: _currentPage, limit: _limit);
       }
       if (mounted) {
         setState(() {
@@ -122,15 +124,12 @@ class HomeScreenState extends State<HomeScreen> {
       color: Colors.white,
       child: Column(
         children: [
-          // Thêm Padding Top để không bị sát mép TopBar
           const SizedBox(height: 10),
-          _buildSearchAndFilter(),
-          _buildForYouHeader(),
+          _buildSearchAndFilterHeader(), // Đã gộp Search, Filter và View Toggle
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => _loadProducts(isRefresh: true),
               child: Padding(
-                // Cắt bớt Padding ngang của list để Post tràn ra đẹp hơn nhưng không lỗi
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _products.isEmpty
                     ? (_isInitialLoading
@@ -145,93 +144,124 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSearchAndFilter() {
+  // Widget đã gộp tất cả công cụ lọc và tìm kiếm vào một cụm
+  Widget _buildSearchAndFilterHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 5, 16, 10),
+      child: Column(
         children: [
-          Expanded(
-            child: Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      textInputAction: TextInputAction.search, // Hiển thị nút Search trên bàn phím
-                      onSubmitted: (value) {
-                        if (value.trim().isNotEmpty) {
-                          // Gọi trang kết quả tìm kiếm
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SearchResultScreen(keyword: value.trim()),
-                            ),
-                          );
-                        }
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search...',
-                        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 15),
-                        border: InputBorder.none,
-                      ),
-                    ),
+          Row(
+            children: [
+              // Ô Search
+              Expanded(
+                child: Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  Icon(HeroiconsOutline.camera, color: Colors.grey[400], size: 22),
-                ],
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (value) {
+                            if (value
+                                .trim()
+                                .isNotEmpty) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SearchResultScreen(keyword: value.trim()),
+                                ),
+                              );
+                            }
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Search...',
+                            hintStyle: TextStyle(
+                                color: Colors.grey[400], fontSize: 14),
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      Icon(HeroiconsOutline.camera, color: Colors.grey[400],
+                          size: 20),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              // Nút Lọc (Filter)
+              CompositedTransformTarget(
+                link: _filterOverlay.layerLink,
+                child: GestureDetector(
+                  onTap: () => _filterOverlay.toggle(context),
+                  child: Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(HeroiconsOutline.adjustmentsHorizontal,
+                        color: Colors.black87, size: 20),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          CompositedTransformTarget(
-            link: _filterOverlay.layerLink,
-            child: GestureDetector(
-              onTap: () => _filterOverlay.toggle(context),
-              child: Container(
-                width: 50, height: 50,
+          const SizedBox(height: 12),
+          // Hàng dưới: Chữ For You và Nút Switch Grid/List
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                  "For You",
+                  style: TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'QuickSand')
+              ),
+              Container(
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    _buildViewToggleButton(
+                        Icons.view_agenda_outlined, _isFlashCardMode, true),
+                    _buildViewToggleButton(
+                        Icons.grid_view_outlined, !_isFlashCardMode, false),
                   ],
                 ),
-                child: const Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.black87, size: 22),
-              ),
-            ),
+              )
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildForYouHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text("For You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.view_agenda, color: _isFlashCardMode ? Colors.black : Colors.grey),
-                onPressed: () => setState(() => _isFlashCardMode = true),
-              ),
-              IconButton(
-                icon: Icon(Icons.grid_view, color: !_isFlashCardMode ? Colors.black : Colors.grey),
-                onPressed: () => setState(() => _isFlashCardMode = false),
-              ),
-            ],
-          )
-        ],
+  // Widget con cho nút chuyển đổi giao diện nhìn cho xịn
+  Widget _buildViewToggleButton(IconData icon, bool isSelected,
+      bool isFlashMode) {
+    return GestureDetector(
+      onTap: () => setState(() => _isFlashCardMode = isFlashMode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected ? [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)
+          ] : [],
+        ),
+        child: Icon(
+            icon, size: 20, color: isSelected ? Colors.black : Colors.grey),
       ),
     );
   }
@@ -241,29 +271,61 @@ class HomeScreenState extends State<HomeScreen> {
       return PageView.builder(
         scrollDirection: Axis.vertical,
         controller: PageController(viewportFraction: 1.0),
-        itemCount: _products.length,
+        itemCount: _products.length + 1,
         itemBuilder: (context, index) {
+          if (index == _products.length) {
+            return _buildEndOfListWidget();
+          }
+
           if (index == _products.length - 1 && _hasMore) _loadProducts(isRefresh: false);
+
           return Padding(
-            // Tạo khoảng trống giữa các Post để không dính lẹo
-            padding: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.only(top: 4, bottom: 20),
             child: Post(product: _products[index]),
           );
         },
       );
-    } else {
+  }else {
       return GridView.builder(
-        // Grid giữ nguyên Padding
-        padding: const EdgeInsets.only(top: 10, bottom: 100),
+        padding: const EdgeInsets.only(top: 10, bottom: 120),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.68,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
-        itemCount: _products.length,
-        itemBuilder: (context, index) => ProductGridItem(product: _products[index]),
+        itemCount: _products.length + 1, // Thêm 1 cho Widget thông báo
+        itemBuilder: (context, index) {
+          if (index == _products.length) {
+            return const SizedBox.shrink();
+          }
+          return ProductGridItem(product: _products[index]);
+        },
       );
     }
+  }
+
+  Widget _buildEndOfListWidget() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(HeroiconsOutline.checkCircle, size: 40, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          Text(
+            "Bạn đã xem hết sản phẩm rồi!",
+            style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'QuickSand'
+            ),
+          ),
+          const SizedBox(height: 80), // Khoảng đệm để không bị thanh Nav che
+        ],
+      ),
+    );
   }
 }
