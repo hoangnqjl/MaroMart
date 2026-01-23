@@ -20,10 +20,11 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   final NotificationService _notificationService = NotificationService();
   final SocketService _socketService = SocketService();
+  final Color primaryThemeColor = const Color(0xFF3F4045);
 
   List<NotificationModel> _allNotifications = [];
   bool _isLoading = true;
-  int _selectedTab = 0; // 0: All, 1: New, 2: Read
+  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -43,7 +44,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      print("Lỗi tải thông báo: $e");
     }
   }
 
@@ -61,7 +61,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _onTapNotification(NotificationModel noti) async {
-    // 1. Mark as read
     if (!noti.isRead) {
       _notificationService.markAsRead(noti.id);
       setState(() {
@@ -82,17 +81,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
       });
     }
 
-    // 2. Handle Navigation based on Type
     if (noti.type == 'message' || noti.type == 'new_message') {
       try {
         final data = noti.data ?? {};
         final String conversationId = noti.relatedId ?? data['conversationId'] ?? "";
-        
-        // Extract sender info from data to create ChatPartner
-        // Assuming data contains sender info like senderId, senderName, senderAvatar
+
         if (conversationId.isNotEmpty && data.containsKey('sender')) {
           final senderData = data['sender'];
-           // Adapt based on actual data structure from server
           final partner = ChatPartner(
             userId: senderData['_id'] ?? senderData['id'] ?? "",
             fullName: senderData['fullName'] ?? senderData['name'] ?? "User",
@@ -103,21 +98,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-               builder: (context) => ChatScreen(
-                 conversationId: conversationId,
-                 partnerUser: partner,
-               ),
+              builder: (context) => ChatScreen(
+                conversationId: conversationId,
+                partnerUser: partner,
+              ),
             ),
           );
-          return; // Stop here, don't go to detail screen
+          return;
         }
-      } catch (e) {
-        print("Error navigating to chat: $e");
-        // Fallback to detail screen if parsing fails
-      }
+      } catch (e) {}
     }
 
-    // Default: Navigate to Detail Screen
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -126,14 +117,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // LỌC DANH SÁCH THEO TAB
   List<NotificationModel> get _displayNotifications {
-    if (_selectedTab == 1) {
-      return _allNotifications.where((n) => !n.isRead).toList(); // New
-    } else if (_selectedTab == 2) {
-      return _allNotifications.where((n) => n.isRead).toList(); // Read
-    }
-    return _allNotifications; // All
+    if (_selectedTab == 1) return _allNotifications.where((n) => !n.isRead).toList();
+    if (_selectedTab == 2) return _allNotifications.where((n) => n.isRead).toList();
+    return _allNotifications;
   }
 
   void _deleteAll() {
@@ -146,78 +133,67 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
+      body: Column(
+        children: [
+          // Thêm khoảng đệm 10px để khớp với HomeScreen
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.E2Color,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildTabButton(0, "All"),
+                      _buildTabButton(1, "New", hasDot: true),
+                      _buildTabButton(2, "Read"),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _deleteAll,
+                  child: Container(
+                    width: 44, height: 44,
+                    decoration: const BoxDecoration(
                       color: AppColors.E2Color,
-                      borderRadius: BorderRadius.circular(30),
+                      shape: BoxShape.circle,
                     ),
-                    child: Row(
-                      children: [
-                        _buildTabButton(0, "All"),
-                        _buildTabButton(1, "New", hasDot: true),
-                        _buildTabButton(2, "Read"),
-                      ],
-                    ),
+                    child: Icon(HeroiconsOutline.trash, color: primaryThemeColor, size: 20),
                   ),
-
-                  GestureDetector(
-                    onTap: _deleteAll,
-                    child: Container(
-                      width: 44, height: 44,
-                      decoration: const BoxDecoration(
-                        color: AppColors.E2Color,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(HeroiconsOutline.trash, color: Colors.black, size: 20),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 10),
-
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _displayNotifications.isEmpty
-                  ? Center(child: Text("No notifications", style: TextStyle(color: Colors.grey[400])))
-                  : _buildGroupedList(),
-            ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: primaryThemeColor))
+                : _displayNotifications.isEmpty
+                ? Center(child: Text("No notifications", style: TextStyle(color: Colors.grey[400])))
+                : _buildGroupedList(),
+          ),
+        ],
       ),
     );
   }
 
-  // --- WIDGET XÂY DỰNG DANH SÁCH NHÓM THEO NGÀY ---
   Widget _buildGroupedList() {
     final list = _displayNotifications;
-
     return AnimationLimiter(
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         itemCount: list.length,
         itemBuilder: (context, index) {
           final noti = list[index];
-
           bool showHeader = true;
           if (index > 0) {
             final prevNoti = list[index - 1];
-            if (_isSameDay(prevNoti.createdAt, noti.createdAt)) {
-              showHeader = false;
-            }
+            if (_isSameDay(prevNoti.createdAt, noti.createdAt)) showHeader = false;
           }
 
           return AnimationConfiguration.staggeredList(
@@ -231,10 +207,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   children: [
                     if (showHeader)
                       Padding(
-                        padding: const EdgeInsets.only(top: 20, bottom: 10),
+                        padding: const EdgeInsets.only(top: 15, bottom: 8),
                         child: Text(
                           _getDateHeader(noti.createdAt),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'QuickSand'),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: primaryThemeColor),
                         ),
                       ),
                     _buildNotificationItem(noti),
@@ -250,9 +226,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildNotificationItem(NotificationModel item) {
     final style = _getStyleByType(item.type);
-
     final timeStr = item.createdAt.difference(DateTime.now()).inMinutes.abs() < 60
-        ? "${item.createdAt.difference(DateTime.now()).inMinutes.abs()} phút trước" // Nếu dưới 1 giờ
+        ? "${item.createdAt.difference(DateTime.now()).inMinutes.abs()}m ago"
         : DateFormat('HH:mm').format(item.createdAt);
 
     return GestureDetector(
@@ -262,66 +237,56 @@ class _NotificationScreenState extends State<NotificationScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: style.bgColor,
-          borderRadius: BorderRadius.circular(50),
+          borderRadius: BorderRadius.circular(24),
         ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(style.icon, color: style.iconColor, size: 20),
             ),
-            child: Icon(
-              style.icon,
-              color: style.iconColor,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Nội dung
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.black87,
-                    fontFamily: 'QuickSand',
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  timeStr,
-                  style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500
+                  const SizedBox(height: 4),
+                  Text(
+                    timeStr,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+            if (!item.isRead)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                width: 8, height: 8,
+                decoration: BoxDecoration(color: primaryThemeColor, shape: BoxShape.circle),
+              )
+          ],
+        ),
       ),
     );
   }
 
-  // --- TAB BUTTON ---
   Widget _buildTabButton(int index, String text, {bool hasDot = false}) {
     final isSelected = _selectedTab == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedTab = index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.transparent, // Đen khi chọn
+          color: isSelected ? primaryThemeColor : Colors.transparent,
           borderRadius: BorderRadius.circular(50),
         ),
         child: Row(
@@ -329,7 +294,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             Text(
               text,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black,
+                color: isSelected ? Colors.white : Colors.grey[600],
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -347,10 +312,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   bool get _hasUnread => _allNotifications.any((n) => !n.isRead);
-
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
-  }
+  bool _isSameDay(DateTime date1, DateTime date2) =>
+      date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
 
   String _getDateHeader(DateTime date) {
     final now = DateTime.now();
@@ -360,46 +323,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   _NotiStyle _getStyleByType(String type) {
-    final safeType = type.toLowerCase();
-
-    switch (safeType) {
+    switch (type.toLowerCase()) {
       case 'success':
-        return _NotiStyle(
-            bgColor: const Color(0xFFE8F5E9),
-            iconColor: const Color(0xFF4CAF50),
-            icon: HeroiconsOutline.check
-        );
-
+        return _NotiStyle(bgColor: const Color(0xFFF1F8E9), iconColor: const Color(0xFF4CAF50), icon: HeroiconsOutline.check);
       case 'warning':
       case 'product_refusal':
-        return _NotiStyle(
-            bgColor: const Color(0xFFFFEBEE),
-            iconColor: const Color(0xFFF44336),
-            icon: HeroiconsOutline.xMark
-        );
-
+        return _NotiStyle(bgColor: const Color(0xFFFFF1F0), iconColor: const Color(0xFFF44336), icon: HeroiconsOutline.xMark);
       case 'new':
       case 'message':
-        return _NotiStyle(
-            bgColor: const Color(0xFFE3F2FD),
-            iconColor: const Color(0xFF2196F3),
-            icon: HeroiconsOutline.bell
-        );
-
-      case 'info':
-      case 'report':
-        return _NotiStyle(
-            bgColor: const Color(0xFFFFF3E0),
-            iconColor: const Color(0xFFFF9800),
-            icon: HeroiconsOutline.exclamationTriangle
-        );
-
+        return _NotiStyle(bgColor: const Color(0xFFE3F2FD), iconColor: const Color(0xFF2196F3), icon: HeroiconsOutline.chatBubbleLeft);
       default:
-        return _NotiStyle(
-            bgColor: const Color(0xFFF5F5F5), // Grey 100
-            iconColor: Colors.grey,
-            icon: HeroiconsOutline.informationCircle
-        );
+        return _NotiStyle(bgColor: const Color(0xFFF5F5F5), iconColor: primaryThemeColor, icon: HeroiconsOutline.bell);
     }
   }
 }

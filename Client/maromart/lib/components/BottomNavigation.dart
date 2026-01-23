@@ -24,22 +24,21 @@ class BottomNavigation extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 1. Navigation Pill
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(50),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
-                  height: 70, // Fixed height for alignment
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 4,vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9), // Higher opacity for contrast
                     borderRadius: BorderRadius.circular(50),
                     boxShadow: [
                       BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 5))
                     ],
-                    border: Border.all(color: Colors.white.withOpacity(0.5)),
+                    border: Border.all(color: Colors.black.withOpacity(0.1)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -78,20 +77,19 @@ class BottomNavigation extends StatelessWidget {
           
           const SizedBox(width: 16),
 
-          // 2. Add Button (Floating separately)
           GestureDetector(
-            onTap: onAddPressed, // Action passed from parent
+            onTap: onAddPressed,
             child: Container(
-              height: 70,
-              width: 70,
+              height: 56,
+              width: 56,
               decoration: BoxDecoration(
-                color: Colors.black, // Dark accent
+                color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))
+                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 4))
                 ]
               ),
-              child: const Icon(Icons.add, color: Colors.white, size: 32),
+              child: const Icon(Icons.add, color: Colors.black, size: 26),
             ),
           )
         ],
@@ -111,9 +109,9 @@ class BottomNavigation extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutQuart,
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 10, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 10 : 4, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black.withOpacity(0.05) : Colors.transparent,
+          color: isSelected ? const Color(0xFF3F4045) : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
@@ -125,7 +123,7 @@ class BottomNavigation extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Colors.black : Colors.grey[500],
+                  color: isSelected ? Colors.white : Colors.black,
                   size: 26,
                 ),
                 if (badgeCount > 0)
@@ -141,7 +139,6 @@ class BottomNavigation extends StatelessWidget {
               ],
             ),
             
-            // Text Loop (Hidden when inactive)
             ClipRect(
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 10),
@@ -151,8 +148,8 @@ class BottomNavigation extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 8.0),
                   child: Text(
                     label,
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),

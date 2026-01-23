@@ -128,14 +128,14 @@ class ModalInAvtState extends State<ModalInAvt> {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        _buildMenuItem(
-                          icon: HeroiconsOutline.squares2x2,
-                          label: 'Product management',
-                          onTap: () {
-                            _hideOverlay();
-                            Navigator.pushNamed(context, '/product-manager');
-                          },
-                        ),
+                        // _buildMenuItem(
+                        //   icon: HeroiconsOutline.squares2x2,
+                        //   label: 'Product management',
+                        //   onTap: () {
+                        //     _hideOverlay();
+                        //     Navigator.pushNamed(context, '/product-manager');
+                        //   },
+                        // ),
                         _buildMenuItem(
                           icon: HeroiconsOutline.cog6Tooth,
                           label: 'Settings',

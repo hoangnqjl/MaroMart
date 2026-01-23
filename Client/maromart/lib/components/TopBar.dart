@@ -1,18 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/ButtonWithIcon.dart';
-import 'package:maromart/components/Filter.dart';
 import 'package:maromart/components/ModalInAvt.dart';
 import 'package:maromart/models/User/User.dart';
 import 'package:maromart/services/user_service.dart';
 
 class TopBar extends StatefulWidget implements PreferredSizeWidget {
   final User? user;
-  final Function(String? categoryId, String? province, String? ward)? onFilterSelected;
 
-  const TopBar({Key? key, this.user, this.onFilterSelected}) : super(key: key);
+  const TopBar({Key? key, this.user}) : super(key: key);
 
   @override
   Size get preferredSize => const Size.fromHeight(60);
@@ -23,166 +18,97 @@ class TopBar extends StatefulWidget implements PreferredSizeWidget {
 
 class _TopBarState extends State<TopBar> {
   final GlobalKey<ModalInAvtState> _modalKey = GlobalKey<ModalInAvtState>();
-  late FilterOverlay _filterOverlay;
-
   final UserService _userService = UserService();
-
-  @override
-  void initState() {
-    super.initState();
-    _filterOverlay = FilterOverlay(
-      onFilterApplied: (categoryId, province, ward) {
-        if (widget.onFilterSelected != null) {
-          widget.onFilterSelected!(categoryId, province, ward);
-        }
-      },
-    );
-  }
-
-  String _getDisplayName(User? userToCheck) {
-    if (userToCheck?.fullName != null && userToCheck!.fullName!.isNotEmpty) {
-      return userToCheck.fullName!;
-    }
-    return userToCheck?.email ?? 'Khách';
-  }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<User?>(
       valueListenable: _userService.userNotifier,
       builder: (context, currentUser, child) {
-
         final userToDisplay = currentUser ?? widget.user;
         final String avatarUrl = userToDisplay?.avatarUrl ?? '';
-        final String displayName = _getDisplayName(userToDisplay);
+        final String displayName = userToDisplay?.fullName ?? 'Khách';
 
-        return Stack(
-          children: [
-            ClipRRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                child: Container(
-                  color: Colors.white.withOpacity(0.85),
-                  width: MediaQuery.of(context).size.width,
-                  padding: const EdgeInsets.only(top: 16, bottom: 4, left: 18, right: 18),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          _modalKey.currentState?.show(context);
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(100),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            color: Colors.grey.shade200,
-                            child: _buildSafeAvatar(avatarUrl, displayName),
-                          ),
-                        ),
+        // Lấy địa chỉ và quốc gia từ Model User
+        final String address = userToDisplay?.address ?? 'Quảng Bình';
+        final String country = userToDisplay?.country ?? 'Việt Nam';
+        final String fullLocation = '$address, $country';
+
+        return Container(
+          color: Colors.white.withOpacity(0.9),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Stack(
+            children: [
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => _modalKey.currentState?.show(context),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(100),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        color: Colors.grey.shade200,
+                        child: _buildSafeAvatar(avatarUrl, displayName),
                       ),
-                      const SizedBox(width: 8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[400]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Location',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 12,
+                              fontFamily: 'QuickSand',
+                            ),
+                          ),
+                        ],
+                      ),
                       Text(
-                        displayName,
+                        fullLocation, // Hiển thị địa chỉ động từ Model
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                           fontFamily: 'QuickSand',
-                          fontWeight: FontWeight.w700,
                           color: Colors.black,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      )
+                      ),
                     ],
                   ),
-
-                  Row(
-                    children: [
-                      CompositedTransformTarget(
-                        link: _filterOverlay.layerLink,
-                        child: ButtonWithIcon(
-                          icon: HeroiconsOutline.adjustmentsHorizontal,
-                          onPressed: () {
-                            _filterOverlay.toggle(context);
-                          },
-                          size: 38,
-                          backgroundColor: AppColors.E2Color,
-                          iconColor: Colors.black,
-                          isSelected: true,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      ButtonWithIcon(
-                        icon: HeroiconsOutline.plus,
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/add_product');
-                        },
-                        size: 38,
-                        backgroundColor: AppColors.E2Color,
-                        iconColor: Colors.black,
-                        isSelected: false,
-                      )
-                    ],
-                  )
                 ],
               ),
-            ),
+              ModalInAvt(key: _modalKey),
+            ],
           ),
-        ),
-            ModalInAvt(key: _modalKey),
-          ],
         );
       },
-    );
-  }
-
-
-  Widget _buildLetterAvatar(String name) {
-    String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.blueAccent,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        firstLetter,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'QuickSand',
-          decoration: TextDecoration.none,
-        ),
-      ),
     );
   }
 
   Widget _buildSafeAvatar(String url, String name) {
     if (url.isEmpty) {
-      return _buildLetterAvatar(name);
+      String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+      return Container(
+        color: const Color(0xFF3F4045),
+        alignment: Alignment.center,
+        child: Text(
+          firstLetter,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      );
     }
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return _buildLetterAvatar(name);
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return const Center(
-          child: SizedBox(
-            width: 15,
-            height: 15,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        );
-      },
+      errorBuilder: (c, e, s) => const Icon(Icons.person),
     );
   }
 }

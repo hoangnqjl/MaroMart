@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:intl/intl.dart'; // Cần import intl trong pubspec.yaml để format ngày/giá
+import 'package:intl/intl.dart';
 import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/screens/Product/UpdateProduct.dart';
 import 'package:maromart/screens/Product/ProductDetail.dart';
@@ -20,12 +19,10 @@ class ProductManager extends StatefulWidget {
 
 class _ProductManager extends State<ProductManager> {
   final List<String> _tabs = ['Posted', 'Pending', 'Rejected', 'Removed'];
-
-  // Services
   final ProductService _productService = ProductService();
   final UserService _userService = UserService();
+  final Color primaryThemeColor = const Color(0xFF3F4045);
 
-  // State
   List<Product> _postedProducts = [];
   bool _isLoading = true;
 
@@ -51,37 +48,30 @@ class _ProductManager extends State<ProductManager> {
         });
       }
     } catch (e) {
-      print("Lỗi tải sản phẩm quản lý: $e");
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Helper xử lý URL ảnh
   String _getThumbnailUrl(List<String> media) {
     if (media.isEmpty) return '';
     String url = media[0];
-
-    // Xử lý nếu backend lưu dạng "image:url" hoặc "video:url"
     if (url.contains(':') && !url.startsWith('http')) {
       final parts = url.split(':');
       if (parts.length > 1) url = parts.sublist(1).join(':');
     }
-
     if (url.startsWith('http')) return url;
     return '${ApiConstants.baseUrl}$url';
   }
 
-  // Helper format tiền tệ
   String _formatCurrency(int price) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0).format(price).trim();
+    return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(price).trim();
   }
 
   void _confirmDelete(Product product) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Delete Product"),
         content: const Text("Are you sure you want to delete this product? This action cannot be undone."),
         actions: [
@@ -91,8 +81,8 @@ class _ProductManager extends State<ProductManager> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(ctx); // Đóng dialog xác nhận
-              _deleteProduct(product.productId); // Gọi API
+              Navigator.pop(ctx);
+              _deleteProduct(product.productId);
             },
             child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
@@ -102,7 +92,6 @@ class _ProductManager extends State<ProductManager> {
   }
 
   Future<void> _deleteProduct(String productId) async {
-    // Hiển thị loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -111,28 +100,20 @@ class _ProductManager extends State<ProductManager> {
 
     try {
       await _productService.deleteProduct(productId);
-
       if (mounted) {
         Navigator.pop(context);
         setState(() {
           _postedProducts.removeWhere((p) => p.productId == productId);
         });
-
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Product deleted successfully"), backgroundColor: Colors.green),
+          const SnackBar(content: Text("Product deleted successfully")),
         );
       }
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Tắt loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to delete: $e"), backgroundColor: Colors.red),
-        );
-      }
+      if (mounted) Navigator.pop(context);
     }
   }
 
-  // Helper format ngày giờ
   String _formatDate(String dateString, String format) {
     try {
       final date = DateTime.parse(dateString).toLocal();
@@ -141,26 +122,17 @@ class _ProductManager extends State<ProductManager> {
       return '';
     }
   }
+
   void _showProductOptions(BuildContext context, Product product) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      transitionAnimationController: AnimationController(
-        vsync: Navigator.of(context),
-        duration: const Duration(milliseconds: 300),
-      ),
       builder: (BuildContext ctx) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-          padding: const EdgeInsets.all(20),
+        return Container(
+          padding: const EdgeInsets.all(24),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -168,35 +140,24 @@ class _ProductManager extends State<ProductManager> {
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
+                margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-
               _buildOptionButton(
                 icon: HeroiconsOutline.pencilSquare,
                 label: 'Edit item',
                 iconColor: Colors.orange,
                 bgColor: const Color(0xFFFFF4E5),
                 onTap: () async {
-                  Navigator.pop(ctx); // Đóng Modal trước
-
-                  final result = await smoothPush(
-                    context,
-                    UpdateProduct(productId: product.productId),
-                  );
-
-                  if (result == true) {
-                    _fetchUserProducts();
-                  }
+                  Navigator.pop(ctx);
+                  final result = await smoothPush(context, UpdateProduct(productId: product.productId));
+                  if (result == true) _fetchUserProducts();
                 },
               ),
-
               const SizedBox(height: 12),
-
-              // Nút DELETE (Màu đỏ nhạt)
               _buildOptionButton(
                 icon: HeroiconsOutline.trash,
                 label: 'Delete item',
@@ -221,12 +182,11 @@ class _ProductManager extends State<ProductManager> {
       length: _tabs.length,
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: const TopBarSecond(title: 'Product Manager'),
         body: Column(
           children: [
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             Container(
-              height: 45,
+              height: 48,
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -237,64 +197,28 @@ class _ProductManager extends State<ProductManager> {
                 indicatorSize: TabBarIndicatorSize.tab,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 24),
                 indicator: BoxDecoration(
-                  color: AppColors.ButtonBlackColor,
+                  color: primaryThemeColor,
                   borderRadius: BorderRadius.circular(25),
                 ),
                 dividerColor: Colors.transparent,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.grey[600],
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  fontFamily: 'QuickSand',
-                ),
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 tabs: _tabs.map((name) => Tab(text: name)).toList(),
               ),
             ),
-
             const SizedBox(height: 16),
-
             Expanded(
               child: _isLoading
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: AppColors.ButtonBlackColor.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Padding(
-                              padding: EdgeInsets.all(15),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.ButtonBlackColor),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Loading products...',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? Center(child: CircularProgressIndicator(color: primaryThemeColor))
                   : TabBarView(
                 children: [
-                  _buildPostedList(), // Tab Posted (Dữ liệu thật)
-                  _buildPlaceholderList("No pending products"), // Pending
-                  _buildPlaceholderList("No rejected products"), // Rejected
-                  _buildPlaceholderList("No removed products"), // Removed
+                  _buildPostedList(),
+                  _buildPlaceholderList("No pending products"),
+                  _buildPlaceholderList("No rejected products"),
+                  _buildPlaceholderList("No removed products"),
                 ],
               ),
             ),
@@ -304,31 +228,21 @@ class _ProductManager extends State<ProductManager> {
     );
   }
 
-  // Tab Posted: Hiển thị dữ liệu từ API
   Widget _buildPostedList() {
-    if (_postedProducts.isEmpty) {
-      return _buildPlaceholderList("You haven't posted any products yet");
-    }
-
+    if (_postedProducts.isEmpty) return _buildPlaceholderList("No products posted yet");
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _postedProducts.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: _buildProductCard(_postedProducts[index]),
-        );
-      },
+      itemBuilder: (context, index) => _buildProductCard(_postedProducts[index]),
     );
   }
 
-  // Widget hiển thị danh sách trống cho các tab khác
   Widget _buildPlaceholderList(String message) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(HeroiconsOutline.archiveBox, size: 40, color: Colors.grey[300]),
+          Icon(HeroiconsOutline.archiveBox, size: 40, color: Colors.grey[200]),
           const SizedBox(height: 8),
           Text(message, style: TextStyle(color: Colors.grey[400])),
         ],
@@ -336,20 +250,13 @@ class _ProductManager extends State<ProductManager> {
     );
   }
 
-  // Trong _ProductManager State
-
   Widget _buildProductCard(Product product) {
     final imageUrl = _getThumbnailUrl(product.productMedia);
-
     return GestureDetector(
-      onTap: () {
-        smoothPush(
-          context,
-          ProductDetail(productId: product.productId),
-        );
-      },
+      onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
       child: Container(
         padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.F6Color,
           borderRadius: BorderRadius.circular(20),
@@ -357,185 +264,79 @@ class _ProductManager extends State<ProductManager> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          // ẢNH SẢN PHẨM (Giữ nguyên)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-              imageUrl,
-              width: 90,
-              height: 90,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 90, height: 90, color: Colors.grey[300],
-                child: const Icon(Icons.broken_image, color: Colors.grey),
-              ),
-            )
-                : Container(
-              width: 90, height: 90, color: Colors.grey[300],
-              child: const Icon(Icons.image, color: Colors.grey),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(imageUrl, width: 85, height: 85, fit: BoxFit.cover)
+                  : Container(width: 85, height: 85, color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey)),
             ),
-          ),
-
-          const SizedBox(width: 14),
-
-          // THÔNG TIN CHÍNH (Giữ nguyên)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.productName,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'QuickSand',
-                    color: Colors.black,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.productCategory.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _buildStatTag(
-                      icon: HeroiconsOutline.eye,
-                      text: '0',
-                      bgColor: const Color(0xFFFFF0E3),
-                      textColor: const Color(0xFFFF9C54),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildStatTag(
-                      icon: HeroiconsOutline.currencyDollar,
-                      text: _formatCurrency(product.productPrice),
-                      bgColor: const Color(0xFFFCEEEB),
-                      textColor: const Color(0xFFE55858),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // MENU & NGÀY GIỜ
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  _showProductOptions(context, product);
-                },
-                child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
-              ),
-              const SizedBox(height: 35),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Date',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatDate(product.createdAt, 'dd MMM yyyy'),
-                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-                  ),
-                  Text(
-                    _formatDate(product.createdAt, 'hh:mm a'),
-                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                  Text(product.productName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text(product.productCategory.toUpperCase(), style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildStatTag(icon: HeroiconsOutline.eye, text: '0', bgColor: const Color(0xFFF5F5F5), textColor: Colors.grey),
+                      const SizedBox(width: 8),
+                      _buildStatTag(icon: HeroiconsOutline.banknotes, text: _formatCurrency(product.productPrice), bgColor: const Color(0xFFE8F5E9), textColor: const Color(0xFF2E7D32)),
+                    ],
                   ),
                 ],
-              )
-            ],
-          )
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: () => _showProductOptions(context, product),
+                  child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+                ),
+                const SizedBox(height: 25),
+                Text(_formatDate(product.createdAt, 'dd MMM'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                Text(_formatDate(product.createdAt, 'hh:mm a'), style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+              ],
+            )
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatTag({
-    required IconData icon,
-    required String text,
-    required Color bgColor,
-    required Color textColor
-  }) {
+  Widget _buildStatTag({required IconData icon, required String text, required Color bgColor, required Color textColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
       child: Row(
         children: [
-          Icon(icon, size: 12, color: textColor),
+          Icon(icon, size: 10, color: textColor),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
+          Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor)),
         ],
       ),
     );
   }
-  Widget _buildOptionButton({
-    required IconData icon,
-    required String label,
-    required Color iconColor,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
+
+  Widget _buildOptionButton({required IconData icon, required String label, required Color iconColor, required Color bgColor, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.grey.shade200), // Viền nhẹ
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade100),
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: bgColor, // Màu nền icon
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: iconColor, size: 20),
-            ),
+            Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle), child: Icon(icon, color: iconColor, size: 20)),
             const SizedBox(width: 16),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
+            Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

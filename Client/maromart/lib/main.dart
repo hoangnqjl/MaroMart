@@ -13,7 +13,6 @@ import 'app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Protect against initialization hangs (e.g., storage corruption)
   try {
     await StorageHelper.init().timeout(
       const Duration(seconds: 3),
@@ -23,7 +22,6 @@ void main() async {
     );
   } catch (e) {
     debugPrint("Storage initialization failed: $e");
-    // Continue anyway so the app doesn't stay on a black screen
   }
 
   runApp(const MyApp());
@@ -57,7 +55,6 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.black, brightness: Brightness.light),
         useMaterial3: true,
         fontFamily: 'QuickSand',
-        // iOS-style page transitions for all platforms
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -67,7 +64,6 @@ class MyApp extends StatelessWidget {
             TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
           },
         ),
-        // Smooth scroll physics
         scrollbarTheme: ScrollbarThemeData(
           thumbVisibility: MaterialStateProperty.all(false),
           thickness: MaterialStateProperty.all(4),
@@ -79,7 +75,6 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF121212),
         useMaterial3: true,
         fontFamily: 'QuickSand',
-        // iOS-style page transitions for all platforms
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -90,7 +85,6 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      // Custom smooth scroll behavior
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         physics: const BouncingScrollPhysics(),
       ),
