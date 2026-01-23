@@ -151,7 +151,6 @@ class HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              // Ô Search
               Expanded(
                 child: Container(
                   height: 46,
@@ -270,19 +269,22 @@ class HomeScreenState extends State<HomeScreen> {
         controller: PageController(viewportFraction: 1.0),
         itemCount: _products.length + 1,
         itemBuilder: (context, index) {
-          if (index == _products.length) {
-            return _buildEndOfListWidget();
-          }
+          if (index == _products.length) return _buildEndOfListWidget();
 
           if (index == _products.length - 1 && _hasMore) _loadProducts(isRefresh: false);
 
-          return Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 20),
-            child: Post(product: _products[index]),
+          return Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              height: MediaQuery.of(context).size.width * 1.30,
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Post(product: _products[index]),
+            ),
           );
         },
       );
-  }else {
+    } else {
+      // GridView giữ nguyên
       return GridView.builder(
         padding: const EdgeInsets.only(top: 10, bottom: 120),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -293,9 +295,7 @@ class HomeScreenState extends State<HomeScreen> {
         ),
         itemCount: _products.length + 1,
         itemBuilder: (context, index) {
-          if (index == _products.length) {
-            return const SizedBox.shrink();
-          }
+          if (index == _products.length) return const SizedBox.shrink();
           return ProductGridItem(product: _products[index]);
         },
       );

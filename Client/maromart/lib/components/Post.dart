@@ -26,6 +26,7 @@ class Post extends StatefulWidget {
 class _PostState extends State<Post> {
   late List<MediaItem> _mediaItems;
   final PageController _pageController = PageController();
+  bool isExpanded = false; // Trạng thái đóng/mở thanh trượt
 
   @override
   void initState() {
@@ -58,6 +59,10 @@ class _PostState extends State<Post> {
     return NumberFormat('#,###', 'vi_VN').format(price) + ' đ';
   }
 
+  void _toggleExpanded() {
+    setState(() => isExpanded = !isExpanded);
+  }
+
   void _makeCall(String? phone) async {
     if (phone == null || phone.isEmpty) return;
     final uri = Uri.parse("tel:$phone");
@@ -71,7 +76,7 @@ class _PostState extends State<Post> {
     final seller = product.userInfo;
 
     return Container(
-      height: screenWidth * 1.35,
+      height: screenWidth * 1.05,
       width: double.infinity,
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
@@ -82,6 +87,13 @@ class _PostState extends State<Post> {
         children: [
           GestureDetector(
             onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity! < -300) {
+                if (!isExpanded) _toggleExpanded();
+              } else if (details.primaryVelocity! > 300) {
+                if (isExpanded) _toggleExpanded();
+              }
+            },
             child: PageView.builder(
               controller: _pageController,
               itemCount: _mediaItems.length,
@@ -89,84 +101,89 @@ class _PostState extends State<Post> {
             ),
           ),
 
+          // 2. PRICE TAG
           Positioned(
-            top: 20,
-            left: 20,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.4),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: Text(
-                    _formatPrice(product.productPrice),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            top: 15,
+            left: 15,
+            child: _buildBlurTag(_formatPrice(product.productPrice)),
           ),
 
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 15,
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            top: 40,
+            bottom: 60,
+            right: isExpanded ? 0 : -85,
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: _toggleExpanded,
                   child: Container(
-                    width: 60,
-                    padding: const EdgeInsets.symmetric(vertical: 25),
+                    width: 25,
+                    height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.4),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(15),
+                        bottomLeft: Radius.circular(15),
+                      ),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildAction(HeroiconsSolid.bookmark, "Save"),
-                        const SizedBox(height: 20),
-                        _buildAction(HeroiconsSolid.chatBubbleOvalLeftEllipsis, "Chat", onTap: () {
-                          if (seller != null) {
-                            final partner = ChatPartner(userId: seller.userId, fullName: seller.fullName, avatarUrl: seller.avatarUrl);
-                            smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
-                          }
-                        }),
-                        const SizedBox(height: 20),
-                        _buildAction(HeroiconsSolid.phone, "Call", onTap: () => _makeCall(seller?.phoneNumber.toString())),
-                        const SizedBox(height: 20),
-                        _buildAction(HeroiconsSolid.ellipsisHorizontal, "More"),
-                      ],
+                    child: Center(
+                      child: Container(
+                        width: 4,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: Colors.white70,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    bottomLeft: Radius.circular(30),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(
+                      width: 85,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildAction(HeroiconsSolid.bookmark, "Save"),
+                          _buildAction(HeroiconsSolid.chatBubbleOvalLeftEllipsis, "Chat", onTap: () {
+                            if (seller != null) {
+                              final partner = ChatPartner(userId: seller.userId, fullName: seller.fullName, avatarUrl: seller.avatarUrl);
+                              smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                            }
+                          }),
+                          _buildAction(HeroiconsSolid.phone, "Call", onTap: () => _makeCall(seller?.phoneNumber.toString())),
+                          _buildAction(HeroiconsSolid.ellipsisHorizontal, "More"),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 80, 100, 60),
+              padding: const EdgeInsets.fromLTRB(20, 40, 80, 25),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.7),
-                    Colors.black.withOpacity(0.3),
-                    Colors.transparent
-                  ],
+                  colors: [Colors.black.withOpacity(0.7), Colors.black.withOpacity(0.3), Colors.transparent],
                 ),
               ),
               child: Column(
@@ -174,22 +191,13 @@ class _PostState extends State<Post> {
                 children: [
                   Text(
                     product.productName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      fontFamily: 'QuickSand',
-                    ),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'QuickSand'),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     product.productDescription,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontFamily: 'QuickSand',
-                    ),
-                    maxLines: 2,
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'QuickSand'),
+                    maxLines: 5,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -197,6 +205,24 @@ class _PostState extends State<Post> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+
+  Widget _buildBlurTag(String text) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
       ),
     );
   }
@@ -220,22 +246,11 @@ class _PostState extends State<Post> {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
             child: Icon(icon, color: Colors.white, size: 22),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-            ),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
       ),
     );
