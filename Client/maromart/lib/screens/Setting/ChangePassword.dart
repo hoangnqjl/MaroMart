@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/components/ModernLoader.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
@@ -135,7 +136,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                   ),
                   child: _isProcessing
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const ModernLoader(size: 20, color: Colors.white)
                       : const Text('Change'),
                 ),
               ),

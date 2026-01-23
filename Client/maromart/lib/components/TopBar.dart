@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:maromart/components/ModalInAvt.dart';
 import 'package:maromart/models/User/User.dart';
 import 'package:maromart/services/user_service.dart';
+import 'package:maromart/services/location_service.dart';
 
 class TopBar extends StatefulWidget implements PreferredSizeWidget {
   final User? user;
@@ -19,6 +20,23 @@ class TopBar extends StatefulWidget implements PreferredSizeWidget {
 class _TopBarState extends State<TopBar> {
   final GlobalKey<ModalInAvtState> _modalKey = GlobalKey<ModalInAvtState>();
   final UserService _userService = UserService();
+  final LocationService _locationService = LocationService();
+  String? _detectedLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    String? location = await _locationService.getCurrentAddress();
+    if (mounted && location != null) {
+      setState(() {
+        _detectedLocation = location;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +47,12 @@ class _TopBarState extends State<TopBar> {
         final String avatarUrl = userToDisplay?.avatarUrl ?? '';
         final String displayName = userToDisplay?.fullName ?? 'Khách';
 
-        // Lấy địa chỉ và quốc gia từ Model User
+        // Lấy địa chỉ từ Model User (Fallback) - Only Address, No Country
         final String address = userToDisplay?.address ?? 'Quảng Bình';
-        final String country = userToDisplay?.country ?? 'Việt Nam';
-        final String fullLocation = '$address, $country';
+        final String fallbackLocation = address;
+        
+        // Prioritize detected location
+        final String fullLocation = _detectedLocation ?? fallbackLocation;
 
         return Container(
           color: Colors.white.withOpacity(0.9),
@@ -73,7 +93,7 @@ class _TopBarState extends State<TopBar> {
                         ],
                       ),
                       Text(
-                        fullLocation, // Hiển thị địa chỉ động từ Model
+                        fullLocation, // Hiển thị địa chỉ động (Detected or Fallback)
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

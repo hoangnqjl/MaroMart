@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class ChatTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String name;
@@ -129,11 +130,7 @@ class ChatTopBar extends StatelessWidget implements PreferredSizeWidget {
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return const Center(
-          child: SizedBox(
-            width: 15,
-            height: 15,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          child: ModernLoader(size: 15),
         );
       },
     );

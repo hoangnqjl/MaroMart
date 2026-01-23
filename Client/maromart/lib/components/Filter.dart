@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:maromart/components/ModernLoader.dart';
 import 'package:http/http.dart' as http;
 import 'package:maromart/Colors/AppColors.dart';
 
@@ -198,7 +199,7 @@ class _FilterContentState extends State<_FilterContent> {
             children: [
               // 1. CHỌN TỈNH/THÀNH
               _isLoadingProvinces
-                  ? const SizedBox(height: 50, child: Center(child: CircularProgressIndicator()))
+                  ? SizedBox(height: 50, child: Center(child: ModernLoader()))
                   : _buildCustomDropdown(
                 hint: "Province / City",
                 selectedLabel: _provName,

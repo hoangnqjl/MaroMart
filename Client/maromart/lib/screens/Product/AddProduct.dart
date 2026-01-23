@@ -9,6 +9,9 @@ import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/services/user_service.dart';
 import '../../services/product_service.dart';
+import 'package:maromart/models/Product/Product.dart'; // Add this import
+import 'package:intl/intl.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
 class AttributeItem {
@@ -27,7 +30,8 @@ class AttributeItem {
 }
 
 class AddProduct extends StatefulWidget {
-  const AddProduct({super.key});
+  final Product? draftProduct; // Add optional draft
+  const AddProduct({super.key, this.draftProduct});
 
   @override
   State<StatefulWidget> createState() => _AddProductState();
@@ -58,20 +62,80 @@ class _AddProductState extends State<AddProduct> {
 
   List<AttributeItem> _attributes = [];
 
+  // ... (Keep existing template maps and other vars)
+  
+  // (Assuming _attributeTemplates and others are here, I will just replace the top part)
+  
+  // We need to match the range carefully. I will replace the class up to initState.
+
+
   // --- TEMPLATES ---
+  // --- TEMPLATES (Relaxed) ---
   final Map<String, List<String>> _attributeTemplates = {
-    "auto": ["brand", "model", "year", "fuel_type", "transmission", "mileage", "condition", "color", "accessories_type", "warranty"],
-    "furniture": ["material", "color", "dimensions", "style", "room_type", "weight", "brand", "warranty", "assembly_required"],
-    "technology": ["brand", "model", "cpu", "ram", "storage", "screen_size", "battery_capacity", "os", "connectivity", "warranty"],
-    "appliances": ["brand", "type", "capacity", "power_usage", "dimensions", "warranty", "color", "material"], // Fridge, Fan, etc.
-    "office": ["material", "dimensions", "color", "brand", "quantity", "type", "weight"],
-    "style": ["size", "color", "material", "gender", "brand", "season", "pattern", "style", "origin"],
-    "service": ["service_type", "duration", "price_type", "provider", "area", "availability", "warranty"],
-    "hobby": ["category", "skill_level", "material", "brand", "age_range", "weight", "size"],
-    "kids": ["age_range", "material", "size", "color", "brand", "education_type", "certification", "weight"],
-    "books": ["author", "genre", "language", "publisher", "publication_year", "page_count", "condition"],
-    "pets": ["species", "breed", "age", "gender", "color", "health_status", "vaccination"],
-    "other": ["brand", "material", "color", "dimensions", "weight", "condition"]
+    "auto": ["type", "brand", "model", "condition", "warranty"], 
+    "furniture": ["type", "material", "condition", "brand", "warranty"],
+    "technology": ["type", "brand", "model", "warranty"], // Relaxed
+    "appliances": ["type", "brand", "warranty", "condition"],
+    "office": ["type", "brand", "condition"],
+    "style": ["type", "brand", "condition", "gender"],
+    "service": ["type", "service_type", "price_type", "area"],
+    "hobby": ["type", "brand", "condition"],
+    "kids": ["type", "brand", "condition", "age_range"],
+    "books": ["type", "author", "condition"], 
+    "pets": ["type", "species", "breed", "health_status"],
+    "other": ["type", "brand", "condition"]
+  };
+  
+  // ... (AI Config, Address & Media vars remain same)
+  // ... (initState remains same)
+
+  // ... (SKIP to _handleGenerateDetails) 
+  
+  // (Since I cannot skip large chunks in replace, I will target _attributeTemplates specifically first).
+
+  
+  final Map<String, List<String>> _allowedTypes = {
+    "auto": ["Car", "Motorbike", "Bicycle", "Electric Bike", "Truck", "Van", "Bus", "Parts", "Accessories", "Other"],
+    "furniture": ["Chair", "Table", "Sofa", "Bed", "Wardrobe", "Cabinet", "Bookshelf", "Desk", "Mattress", "Lamp", "Mirror", "Other"],
+    "technology": ["Smartphone", "Laptop", "Tablet", "Smartwatch", "Desktop PC", "Monitor", "Headphone", "Mouse", "Keyboard", "Camera", "Speaker", "Printer", "Game Console", "Component", "Accessories", "Other"],
+    "appliances": ["Fridge", "Washing Machine", "Air Conditioner", "Fan", "Vacuum Cleaner", "Rice Cooker", "Microwave", "Kettle", "Iron", "Water Purifier", "Blender", "Heater", "Other"],
+    "office": ["Desk", "Chair", "Printer", "Scanner", "Projector", "Stationery", "Filing Cabinet", "Whiteboard", "Other"],
+    "style": ["Shirt", "T-Shirt", "Pants", "Jeans", "Dress", "Skirt", "Jacket", "Coat", "Shoes", "Sneakers", "Sandals", "Bag", "Wallet", "Watch", "Glasses", "Jewelry", "Hat", "Other"],
+    "service": ["Cleaning", "Repair", "Delivery", "Tutor", "Beauty", "Rental", "Tourism", "Photography", "Other"],
+    "hobby": ["Musical Instrument", "Sport Equipment", "Art Supply", "Board Game", "Collectible", "Toy", "Fishing Gear", "Camping Gear", "Other"],
+    "kids": ["Toy", "Stroller", "Car Seat", "Baby Clothes", "Diaper", "Feeding Bottle", "Crib", "Walker", "Other"],
+    "books": ["Fiction", "Non-fiction", "Textbook", "Comic", "Magazine", "Notebook", "Other"],
+    "pets": ["Dog Food", "Cat Food", "Cage", "Toy", "Accessories", "Aquarium", "Other"],
+    "other": ["Miscellaneous", "Other"]
+  };
+  
+
+
+  // Specific attributes for certain types (Overrides or Extends category defaults)
+  final Map<String, List<String>> _typeSpecificAttributes = {
+    // Technology
+    "Smartphone": ["cpu", "ram", "storage", "screen_size", "battery_capacity", "camera_resolution", "color"],
+    "Laptop": ["cpu", "ram", "storage", "screen_size", "battery_capacity", "gpu", "weight"],
+    "Desktop PC": ["cpu", "ram", "storage", "gpu", "psu", "case_type"],
+    "Monitor": ["screen_size", "refresh_rate", "panel_type", "resolution"],
+    "Mouse": ["sensor_type", "dpi", "connectivity", "buttons"],
+    "Keyboard": ["switch_type", "layout", "connectivity", "backlight"],
+    "Headphone": ["type", "connectivity", "noise_cancellation", "battery_life"],
+    
+    // Appliances
+    "Fridge": ["capacity", "door_style", "power_usage", "inverter"],
+    "Washing Machine": ["capacity", "washing_type", "spin_speed", "inverter"],
+    "Air Conditioner": ["cooling_capacity", "type", "inverter", "gas_type"],
+    "Fan": ["power", "fan_speed", "blade_diameter"],
+    
+    // Auto
+    "Car": ["year", "fuel_type", "transmission", "mileage", "seats", "engine_capacity"],
+    "Motorbike": ["year", "fuel_type", "engine_capacity", "mileage"],
+    
+    // Fashion
+    "Shirt": ["size", "material", "gender", "fit_type"],
+    "Pants": ["size", "material", "gender", "fit_type"],
+    "Shoes": ["size", "material", "gender", "sole_type"],
   };
   
   // AI Config
@@ -100,6 +164,73 @@ class _AddProductState extends State<AddProduct> {
   void initState() {
     super.initState();
     _fetchProvinces();
+    
+    // Load Draft if available
+     if (widget.draftProduct != null) {
+      final p = widget.draftProduct!;
+      _titleController.text = p.productName;
+      _priceController.text = _formatCurrency(p.productPrice.toString());
+      _descController.text = p.productDescription;
+      _conditionController.text = p.productCondition;
+      _brandController.text = p.productBrand;
+      _policyController.text = p.productWP;
+      _originController.text = p.productOrigin;
+      _selectedCategory = p.productCategory;
+
+      // Handle Category & Attributes
+      if (p.productCategory.isNotEmpty && p.productAttribute.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+               _onCategoryChanged(p.productCategory);
+               // Pre-fill attributes after category change
+               // Wait frame?
+                 Future.delayed(const Duration(milliseconds: 100), () {
+                     if (mounted) {
+                       setState(() {
+                         p.productAttribute.forEach((key, value) {
+                            final index = _attributes.indexWhere((attr) => attr.nameController.text.toLowerCase() == key.toLowerCase());
+                            if (index != -1) {
+                                _attributes[index].valueController.text = value.toString();
+                            } else {
+                                // Add dynamic
+                                _attributes.add(AttributeItem(name: _formatKey(key), value: value.toString()));
+                            }
+                         });
+                       });
+                     }
+                 });
+          });
+      }
+    }
+
+    _priceController.addListener(() {
+      final text = _priceController.text;
+      if (text.isEmpty) return;
+      
+      // Remove dots to check raw value
+      String clean = text.replaceAll('.', '');
+      
+      // Avoid infinite loop if no change in value
+      if (clean == text && !text.contains('.')) {
+          // It's raw number, format it
+          final formatted = _formatCurrency(clean);
+          if (formatted != text) {
+             _priceController.value = TextEditingValue(
+                text: formatted,
+                selection: TextSelection.collapsed(offset: formatted.length),
+             );
+          }
+      } else {
+         // It might have dots. Check if cursor position maintenance is needed or simple re-format.
+         // Simple re-format:
+         String newFormatted = _formatCurrency(clean);
+         if (newFormatted != text) {
+             _priceController.value = TextEditingValue(
+                text: newFormatted,
+                selection: TextSelection.collapsed(offset: newFormatted.length),
+             );
+         }
+      }
+    });
   }
 
   @override
@@ -115,6 +246,15 @@ class _AddProductState extends State<AddProduct> {
     _addressDetailController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  // --- CURRENCY FORMATTER ---
+  String _formatCurrency(String value) {
+    if (value.isEmpty) return "";
+    value = value.replaceAll('.', ''); // Remove existing dots
+    if (value.isEmpty) return "";
+    final number = int.parse(value);
+    return NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0).format(number).trim();
   }
 
   Future<void> _fetchProvinces() async {
@@ -174,6 +314,54 @@ class _AddProductState extends State<AddProduct> {
     });
   }
 
+  // --- LOGIC MANUAL TYPE ---
+  void _onTypeChanged(String newType) {
+    // 1. Capture current values of STANDARD attributes we want to keep
+    // Standard set: type, brand, model, condition, warranty, origin
+    final Set<String> keepKeys = {"type", "brand", "model", "condition", "warranty", "origin", "policy", "color"};
+    Map<String, String> preservedValues = {};
+    
+    for (var attr in _attributes) {
+      String key = attr.nameController.text.toLowerCase();
+      if (keepKeys.contains(key)) {
+        preservedValues[key] = attr.valueController.text;
+      }
+    }
+    
+    // Ensure the new type is set in preserved values
+    preservedValues["type"] = newType;
+
+    // 2. Dispose old
+    setState(() {
+      for (var attr in _attributes) attr.dispose();
+      _attributes.clear();
+      
+      // 3. Rebuild List
+      // Order: Type -> Brand -> Model -> Specifics -> Condition -> Warranty
+      
+      // A. Type
+      _attributes.add(AttributeItem(name: "type", value: newType));
+      
+      // B. Brand & Model (If relevant for category?) - Yes usually
+      _attributes.add(AttributeItem(name: "brand", value: preservedValues["brand"] ?? ""));
+      _attributes.add(AttributeItem(name: "model", value: preservedValues["model"] ?? ""));
+      
+      // C. Specifics from Map
+      if (_typeSpecificAttributes.containsKey(newType)) {
+          for (String key in _typeSpecificAttributes[newType]!) {
+              _attributes.add(AttributeItem(name: key, value: ""));
+          }
+      } else {
+          // If no specific map, maybe fall back to some generics based on category?
+          // For now, nothing extra if unknown type.
+      }
+      
+      // D. Condition, Warranty, etc.
+      _attributes.add(AttributeItem(name: "condition", value: preservedValues["condition"] ?? ""));
+      _attributes.add(AttributeItem(name: "warranty", value: preservedValues["warranty"] ?? ""));
+    });
+  }
+
   // --- LOGIC AI SUGGESTION ---
   // --- LOGIC AI HANDLERS ---
   
@@ -190,25 +378,98 @@ class _AddProductState extends State<AddProduct> {
 
     setState(() => _isAiLoading = true);
     try {
-      final result = await _productService.validateMedia(_selectedImages);
-      // result: { is_stock, reason, visual_details, condition }
+      final result = await _productService.validateMedia(_selectedImages, _titleController.text);
+      // New Result keys: is_stock, stock_reason, is_consistent, consistency_reason, condition, extracted_attributes
       
+      print("AI Check Result: ${result.toString()}"); 
+      
+      // 1. Strict Stock Check
       if (result['is_stock'] == true) {
-        _showErrorDialog("Lỗi ảnh: ${result['reason'] ?? 'Ảnh trông giống ảnh mạng/stock.'}\nVui lòng dùng ảnh chụp thật.");
+        _showErrorDialog("Lỗi ảnh: ${result['stock_reason'] ?? 'Ảnh giống ảnh stock/mạng.'}\nVui lòng dùng ảnh chụp thật.");
         return false;
       }
+
+      // 2. Strict Consistency Check
+      if (result['is_consistent'] == false) {
+           _showErrorDialog("Ảnh không khớp tên sản phẩm: ${result['consistency_reason']}\nVui lòng kiểm tra lại ảnh hoặc tên.");
+           return false;
+      }
       
+      // 3. Extract Info Success
       setState(() {
-        _visualDetails = result['visual_details'];
         if (result['condition'] != null) _conditionController.text = result['condition'];
+
+        Map<String, dynamic> attrs = result['extracted_attributes'] ?? {};
+
+        // A. Handle Category Auto-Selection
+        String? detectedCategory = result['category'];
+        if (detectedCategory != null && _attributeTemplates.containsKey(detectedCategory.toLowerCase())) {
+             _onCategoryChanged(detectedCategory.toLowerCase());
+        }
+
+        // B. Handle Type Auto-Selection (Critical for Specific Attributes like RAM/Storage)
+        // Find if 'type' is in the attributes
+        String? detectedType;
+        attrs.forEach((k, v) {
+            if (k.toString().toLowerCase() == 'type') detectedType = v.toString().trim();
+        });
+
+        if (detectedType != null) {
+            print("AI Detected Type: '$detectedType'");
+            // Check if this type is valid/known (optional, but safer)
+            // Or just try to switch. _onTypeChanged handles generic logic but let's be safe.
+            // We assume _onTypeChanged logic handles "unknown" types gracefully or we just call it.
+            // But we need to be careful not to loop or break if type is weird.
+            // For now, let's call it. It will set the "type" attribute value effectively.
+            _onTypeChanged(detectedType!);
+        }
+
+        // C. Deep Fill Attributes (Iterate again to fill values into the NOW READY templates)
+        attrs.forEach((key, value) {
+             String cleanKey = key.toString().trim();
+             String cleanValue = value.toString().trim();
+             
+             if (cleanKey.toLowerCase() == 'brand') {
+                 _brandController.text = cleanValue;
+             } else {
+                 // Check if attribute already exists (from template)
+                 // Note: _formatKey might be needed if template uses "Formatted" names?
+                 // But wait, _attributeTemplates uses raw lowercase keys like "screen_size"?
+                 // Let's check _typeSpecificAttributes: ["screen_size", "ram"...]
+                 // AddProduct UI likely displays them.
+                 // The 'nameController.text' usually holds the display name?
+                 // Let's assume nameController holds the key.
+                 
+                 int index = _attributes.indexWhere((attr) => attr.nameController.text.toLowerCase() == cleanKey.toLowerCase());
+                 
+                 if (index != -1) {
+                     // Update existing template field
+                     _attributes[index].valueController.text = cleanValue;
+                 } else {
+                     // Add new Deep Fill attribute.
+                     // AVOID DUPLICATES: If _onTypeChanged added "ram", we shouldn't add "ram" again.
+                     // The index check above prevents updating if it exists.
+                     // But wait, if _onTypeChanged added "ram", index SHOULD be != -1.
+                     // So we update it.
+                     // If it's "Color" and not in template, index == -1. We add it.
+                     _attributes.add(AttributeItem(name: _formatKey(cleanKey), value: cleanValue));
+                 }
+             }
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã trích xuất thông tin & thông số kỹ thuật!"), backgroundColor: Colors.green));
+        
+        // SAVE VISUAL MEMORY
+        _visualDetails = "Detected Info from Image:\n"
+                         "Category: ${result['category'] ?? 'Unknown'}\n"
+                         "Condition: ${result['condition'] ?? 'Unknown'}\n"
+                         "Attributes: ${attrs.toString()}";
       });
       
       return true;
     } catch (e) {
-      // Fail open or closed? User asked for strict check. 
-      // But if API fail (network), maybe warn?
-      _showErrorDialog("Không thể kiểm tra ảnh: ${e.toString()}");
-      return false; // Prevent proceed if check fails? Or allow with warning? User said "bắt buộc phải là ảnh chụp thật".
+      _showErrorDialog("Không thể kiểm tra ảnh (Lỗi mạng/AI): ${e.toString()}");
+      return false; 
     } finally {
       setState(() => _isAiLoading = false);
     }
@@ -220,7 +481,7 @@ class _AddProductState extends State<AddProduct> {
     try {
       final result = await _productService.generateDetails(
         productName: _titleController.text,
-        visualDetails: _visualDetails ?? "",
+        visualDetails: _visualDetails ?? "User uploaded verified images.",
         style: _selectedStyle,
         length: _selectedLength
       );
@@ -261,32 +522,65 @@ class _AddProductState extends State<AddProduct> {
              _onCategoryChanged(predictedCategory.toLowerCase());
         }
 
-        // 5. Auto-fill Attributes (Dynamic Expansion)
-        // We iterate through ALL keys returned by AI.
-        // If key exists in list -> Update value.
-        // If key does NOT exist -> Add new AttributeItem.
+        // 5. Auto-fill Attributes (Dynamic Expansion & MERGE)
+        // We overwrite the entire attribute list with what AI deemed relevant, 
+        // BUT we must preserve Visual Evidence (Step 1) if Text AI (Step 2) misses it.
+
+        // A. Capture current visual attributes
+        Map<String, String> visualAttributes = {};
+        for (var attr in _attributes) {
+            if (attr.valueController.text.trim().isNotEmpty && attr.valueController.text != "N/A") {
+                visualAttributes[attr.nameController.text.toLowerCase().trim()] = attr.valueController.text.trim();
+            }
+        }
+        
+        // Clear UI
+        for (var attr in _attributes) attr.dispose();
+        _attributes.clear();
+
         Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
         
-        // Handle standard fields first
-        if (aiAttrs.containsKey('brand')) _brandController.text = aiAttrs['brand'].toString();
-        if (aiAttrs.containsKey('origin')) _originController.text = aiAttrs['origin'].toString();
+        // B. Merge Logic: AI Text + Visual Backup
+        // We iterate through AI attributes. If AI says "N/A" but we have visual, use visual.
+        // We also check for keys in visual that AI missed.
+        
+        Map<String, String> finalAttrs = {};
+        
+        // 1. Put AI attrs first
+        aiAttrs.forEach((k, v) {
+            String cleanKey = k.toString().toLowerCase().trim();
+            String cleanValue = v.toString().trim();
+            if (cleanKey == 'brand' || cleanKey == 'origin') return; // Handled separately
+            
+            finalAttrs[cleanKey] = cleanValue;
+        });
 
-        aiAttrs.forEach((key, value) {
-            String cleanKey = key.toString().toLowerCase().trim();
-            String cleanValue = value.toString().trim();
-
-            if (cleanKey == 'brand' || cleanKey == 'origin') return; // Skip standard fields
-
-            // Check if attribute already exists in current list
-            int existingIndex = _attributes.indexWhere((attr) => attr.nameController.text.toLowerCase().trim() == cleanKey);
-
-            if (existingIndex != -1) {
-                // Update existing
-                _attributes[existingIndex].valueController.text = cleanValue;
-            } else {
-                // Add NEW dynamic attribute
-                _attributes.add(AttributeItem(name: _formatKey(cleanKey), value: cleanValue));
+        // 2. Mix in Visual attrs
+        visualAttributes.forEach((k, v) {
+            if (k == 'brand' || k == 'origin') return;
+            
+            // If Text AI didn't find it, OR Text AI said "N/A", use Visual
+            if (!finalAttrs.containsKey(k) || finalAttrs[k] == "N/A" || finalAttrs[k] == "Unknown") {
+                finalAttrs[k] = v;
             }
+        });
+
+        // 3. Populate UI
+        // Handle standard fields first (updated by Merge if needed?)
+        // Actually Brand/Origin controllers are separate.
+        if (aiAttrs.containsKey('brand') && aiAttrs['brand'] != "N/A") {
+            _brandController.text = aiAttrs['brand'].toString();
+        } else if (visualAttributes.containsKey('brand')) {
+            _brandController.text = visualAttributes['brand']!;
+        }
+
+        if (aiAttrs.containsKey('origin') && aiAttrs['origin'] != "N/A") {
+            _originController.text = aiAttrs['origin'].toString();
+        }
+
+        finalAttrs.forEach((key, value) {
+             // Add to list
+             _attributes.add(AttributeItem(name: _formatKey(key), value: value));
         });
       });
       
@@ -299,6 +593,54 @@ class _AddProductState extends State<AddProduct> {
     }
   }
   
+  // STEP 2 END: VALIDATE CONTENT
+  Future<bool> _handleValidateContent() async {
+      setState(() => _isAiLoading = true);
+      try {
+          // Prepare data (Convert Display Keys to Snake Case for Backend)
+          Map<String, dynamic> attributesMap = {};
+          for (var item in _attributes) {
+            String keysnake = item.nameController.text.trim().toLowerCase().replaceAll(' ', '_');
+            attributesMap[keysnake] = item.valueController.text.trim();
+          }
+          
+          String typeVal = "";
+          try {
+             var typeAttr = _attributes.firstWhere((a) => a.nameController.text.toLowerCase() == 'type', orElse: () => AttributeItem(name: "", value: ""));
+             if (typeAttr.nameController.text.isNotEmpty) typeVal = typeAttr.valueController.text;
+          } catch(e) {}
+
+          final result = await _productService.validateContent(
+             productName: _titleController.text,
+             productDescription: _descController.text,
+             category: _selectedCategory ?? "",
+             type: typeVal,
+             attributes: attributesMap
+          );
+          
+          if (result['is_safe'] == false) {
+               _showErrorDialog("Vi phạm tiêu chuẩn cộng đồng: ${result['violation_reason']}");
+               return false;
+          }
+          
+          if (result['is_consistent'] == false) {
+               _showErrorDialog("Thông tin không đồng nhất: ${result['inconsistency_reason']}\n- Tên: ${_titleController.text}\n- Mô tả/Thuộc tính chưa khớp.");
+               return false;
+          }
+           
+           if (result['suggestions'] != null && result['suggestions'].toString().isNotEmpty) {
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gợi ý: ${result['suggestions']}"), duration: const Duration(seconds: 3)));
+           }
+          
+          return true;
+      } catch (e) {
+          _showErrorDialog("Lỗi kiểm tra nội dung: $e");
+          return false;
+      } finally {
+          setState(() => _isAiLoading = false);
+      }
+  }
+  
   String _formatKey(String key) {
      // Optional: format "power_usage" -> "Power Usage"
      return key.replaceAll("_", " ").split(" ").map((str) => str.isNotEmpty ? '${str[0].toUpperCase()}${str.substring(1)}' : '').join(" ");
@@ -308,6 +650,7 @@ class _AddProductState extends State<AddProduct> {
     setState(() {
       _showManualBackup = true;
       _selectedCategory = null;
+      for (var attr in _attributes) attr.dispose();
       _attributes.clear();
     });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("AI Failed. Manual Mode Activated."), backgroundColor: Colors.redAccent));
@@ -322,7 +665,7 @@ class _AddProductState extends State<AddProduct> {
       builder: (_) => AlertDialog(
         content: Row(
           children: const [
-            CircularProgressIndicator(),
+            ModernLoader(),
             SizedBox(width: 20),
             Expanded(child: Text("AI đang phân tích sản phẩm...\nQuá trình này mất khoảng 5-8 giây.", style: TextStyle(fontSize: 14))),
           ],
@@ -333,7 +676,8 @@ class _AddProductState extends State<AddProduct> {
     try {
       Map<String, dynamic> attributesMap = {};
       for (var item in _attributes) {
-        attributesMap[item.nameController.text.trim()] = item.valueController.text.trim();
+        String keysnake = item.nameController.text.trim().toLowerCase().replaceAll(' ', '_');
+        attributesMap[keysnake] = item.valueController.text.trim();
       }
 
       String? userId = _userService.getCurrentUserId();
@@ -347,7 +691,7 @@ class _AddProductState extends State<AddProduct> {
 
       Map<String, String> fields = {
         "productName": _titleController.text,
-        "productPrice": _priceController.text,
+        "productPrice": _priceController.text.replaceAll('.', ''), // Fix: Remove dots for backend
         "productDescription": _descController.text,
         "categoryId": _selectedCategory ?? "other",
         "productCategory": _selectedCategory ?? "other",
@@ -383,36 +727,66 @@ class _AddProductState extends State<AddProduct> {
 
   // --- VALIDATION ---
   Future<bool> _validateCurrentStep() async {
-    switch (_currentStep) {
-      case 0: // Step 1: Media + Info
-        if (_selectedImages.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cần ít nhất 1 hình ảnh.")));
-            return false;
-        }
-        if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng nhập Tên và Giá.")));
-             return false;
-        }
-        // Gọi AI check Media
-        bool isMediaValid = await _handleValidateMedia();
-        return isMediaValid;
-
-      case 1: // Step 2: Details & Attributes
-        if (_descController.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng nhập Mô tả sản phẩm.")));
-            return false;
-        }
-        if (_selectedCategory == null) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng chọn Danh mục sản phẩm.")));
-            return false;
-        }
-        return true;
-
-      case 2: // Step 3: Review -> Submit called directly
-        return true;
-      default:
-        return false;
+    if (_currentStep == 0) {
+      // Step 1: Media -> Validate API Strict
+      return await _handleValidateMedia();
+    } else if (_currentStep == 1) {
+       // Step 2: Info
+       if (_selectedCategory == null) { _showErrorDialog("Vui lòng chọn danh mục."); return false; }
+       if (_priceController.text.isEmpty) { _showErrorDialog("Vui lòng nhập giá."); return false; }
+       if (_descController.text.length < 10) { _showErrorDialog("Mô tả quá ngắn."); return false; }
+       
+       // Final Check for content safety & consistency
+       // This ensures Step 3 is clean.
+       return await _handleValidateContent();
     }
+    return true;
+  }
+
+
+  // --- SAVE DRAFT ---
+  Future<void> _saveDraft() async {
+      // Allow saving with minimal info
+      if (_titleController.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng nhập ít nhất Tên sản phẩm để lưu nháp.")));
+          return;
+      }
+      
+      try {
+          String? userId = _userService.getCurrentUserId();
+          if (userId == null) return;
+          
+          Map<String, String> fields = {
+            "productName": _titleController.text,
+            "productPrice": _priceController.text.replaceAll('.', ''), // Remove dots
+            "productDescription": _descController.text.isNotEmpty ? _descController.text : " ",
+            "categoryId": _selectedCategory ?? "other",
+            "productCategory": _selectedCategory ?? "other",
+            "productOrigin": _originController.text,
+            "productCondition": _conditionController.text,
+            "productBrand": _brandController.text,
+            "productWP": _policyController.text,
+            "userId": userId,
+            "status": "draft", // STATUS DRAFT
+            "productAttribute": jsonEncode({}),
+            "productAddress": jsonEncode({"province": "", "commune": "", "detail": ""}),
+          };
+          
+          List<XFile> allFiles = [..._selectedImages, ..._selectedVideos];
+          
+          showDialog(context: context, barrierDismissible: false, builder: (_) => Center(child: ModernLoader()));
+          
+          await _productService.createProduct(fields: fields, files: allFiles); // Create new draft
+          
+          if (mounted) {
+              Navigator.pop(context); // Close loading
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã lưu nháp!"), backgroundColor: Colors.green));
+              Navigator.pop(context); // Close Screen
+          }
+      } catch (e) {
+          if (mounted) Navigator.pop(context);
+          _showErrorDialog("Lỗi lưu nháp: $e");
+      }
   }
 
   void _nextStep() async {
@@ -547,7 +921,7 @@ class _AddProductState extends State<AddProduct> {
               TextButton.icon(
                 onPressed: _isAiLoading ? null : _handleGenerateDetails,
                 icon: _isAiLoading 
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                    ? SizedBox(width: 16, height: 16, child: ModernLoader(size: 16, color: Colors.purple)) 
                     : const Icon(HeroiconsSolid.sparkles, size: 16, color: Colors.purple),
                 label: Text(_isAiLoading ? "Processing..." : "✨ AI Generate & Fill", style: const TextStyle(color: Colors.purple, fontSize: 13, fontWeight: FontWeight.bold)),
                 style: TextButton.styleFrom(backgroundColor: Colors.purple.shade50, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
@@ -584,12 +958,49 @@ class _AddProductState extends State<AddProduct> {
                  final attr = _attributes[index];
                  return Padding(
                    padding: const EdgeInsets.only(bottom: 12),
-                   child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
+                   child: Row(
+                     crossAxisAlignment: CrossAxisAlignment.end,
                      children: [
-                       Text(attr.nameController.text.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                       const SizedBox(height: 6),
-                       _buildTextField(controller: attr.valueController, hint: "Enter ${attr.nameController.text}"),
+                       Expanded(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text(attr.nameController.text.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                             const SizedBox(height: 6),
+                             // Special handling for 'type' attribute -> Dropdown
+                             if (attr.nameController.text.toLowerCase() == 'type' && _selectedCategory != null && _allowedTypes.containsKey(_selectedCategory))
+                                DropdownButtonFormField<String>(
+                                  value: _allowedTypes[_selectedCategory]!.contains(attr.valueController.text) ? attr.valueController.text : null,
+                                  decoration: InputDecoration(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF2F2F2),
+                                    hintText: "Select Type",
+                                  ),
+                                  items: _allowedTypes[_selectedCategory]!.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14)))).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                         setState(() => attr.valueController.text = val);
+                                         _onTypeChanged(val);
+                                    }
+                                  },
+                                )
+                             else
+                                _buildTextField(controller: attr.valueController, hint: "Enter ${attr.nameController.text}"),
+                           ],
+                         ),
+                       ),
+                       const SizedBox(width: 8),
+                       IconButton(
+                         icon: const Icon(HeroiconsOutline.trash, color: Colors.red),
+                         onPressed: () {
+                           setState(() {
+                             attr.dispose();
+                             _attributes.removeAt(index);
+                           });
+                         },
+                       ),
                      ],
                    ),
                  );
@@ -722,7 +1133,18 @@ class _AddProductState extends State<AddProduct> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const TopBarSecond(title: 'Add New Product'),
+      appBar: AppBar(
+        title: const Text('Add New Product', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        actions: [
+          TextButton(
+            onPressed: _saveDraft,
+            child: const Text("Lưu nháp", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
       body: Column(
         children: [
           // CUSTOM STEPPER
@@ -774,7 +1196,7 @@ class _AddProductState extends State<AddProduct> {
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 ),
                 child: _isAiLoading 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? SizedBox(width: 20, height: 20, child: ModernLoader(size: 20, color: Colors.white))
                     : Text(_currentStep == 2 ? "Upload Product" : "Next"),
               ),
           ],

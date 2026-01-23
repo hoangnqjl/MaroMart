@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/components/ModernLoader.dart';
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/models/User/User.dart';
@@ -117,7 +118,7 @@ class _ChangeInformationScreenState extends State<ChangeInformationScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: ModernLoader())
             : Form(
           key: _formKey,
           child: Column(
@@ -174,7 +175,7 @@ class _ChangeInformationScreenState extends State<ChangeInformationScreen> {
                       ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      child: const ModernLoader(color: Colors.white, size: 20)
                   )
                       : const Text('Change'),
                 ),

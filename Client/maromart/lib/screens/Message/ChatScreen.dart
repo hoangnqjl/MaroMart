@@ -10,6 +10,7 @@ import 'package:maromart/models/User/ChatPartner.dart';
 import 'package:maromart/services/chat_service.dart';
 import 'package:maromart/utils/storage.dart';
 import 'package:maromart/utils/constants.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -281,7 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) => Center(child: ModernLoader()),
     );
 
     try {
@@ -484,7 +485,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: ModernLoader())
                 : _messages.isEmpty
                 ? Center(child: Text("No messages yet", style: TextStyle(color: Colors.grey[400])))
                 : ListView.builder(

@@ -10,6 +10,8 @@ import 'package:maromart/utils/storage.dart';
 import 'package:maromart/services/socket_service.dart';
 import 'package:maromart/screens/Product/ProductManager.dart';
 
+import 'package:maromart/components/ModernLoader.dart';
+
 class Home extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _HomeState();
@@ -19,6 +21,7 @@ class _HomeState extends State<Home> {
   final UserService _userService = UserService();
   final SocketService _socketService = SocketService();
   final GlobalKey<HomeScreenState> _homeScreenKey = GlobalKey<HomeScreenState>();
+  final GlobalKey<ProductManagerState> _productManagerKey = GlobalKey<ProductManagerState>();
 
   bool _isUserDataLoaded = false;
   int _currentIndex = 0;
@@ -72,10 +75,34 @@ class _HomeState extends State<Home> {
   }
 
   void _onTabSelected(int index) {
-    setState(() {
-      _currentIndex = index;
-      if (index == 1) _unreadNotifications = 0;
-    });
+    if (index == _currentIndex) {
+      // RELOAD LOGIC
+      if (index == 0) {
+        _homeScreenKey.currentState?.reload();
+      } else if (index == 3) {
+        _productManagerKey.currentState?.reload();
+      }
+    } else {
+      setState(() {
+        _currentIndex = index;
+        if (index == 1) _unreadNotifications = 0;
+      });
+    }
+  }
+
+  Widget _getCurrentScreen() {
+    switch (_currentIndex) {
+      case 0:
+        return HomeScreen(key: _homeScreenKey);
+      case 1:
+        return NotificationScreen();
+      case 2:
+        return MessageScreen();
+      case 3:
+        return ProductManager(key: _productManagerKey);
+      default:
+        return HomeScreen(key: _homeScreenKey);
+    }
   }
 
   @override
@@ -83,61 +110,58 @@ class _HomeState extends State<Home> {
     if (!_isUserDataLoaded) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF3F4045))),
+        body: Center(child: ModernLoader(color: Color(0xFF3F4045))),
       );
     }
 
-    final List<Widget> screens = [
-      HomeScreen(key: _homeScreenKey),
-      NotificationScreen(),
-      MessageScreen(),
-      ProductManager(),
-    ];
-
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
+      extendBody: false,
+      body: Column(
         children: [
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 80), // Giảm nhẹ padding top vì TopBar đã gọn hơn
-              child: IndexedStack(
-                index: _currentIndex,
-                children: screens,
+          // Top Bar
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: TopBar(
+                user: _currentUser,
               ),
             ),
           ),
 
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Colors.white,
-              child: SafeArea(
-                bottom: false,
-                child: TopBar(
-                  user: _currentUser,
-                ),
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: BottomNavigation(
-              selectedIndex: _currentIndex,
-              onTabSelected: _onTabSelected,
-              notificationCount: _unreadNotifications,
-              onAddPressed: () {
-                Navigator.pushNamed(context, '/add_product');
+          // Main Content with Smooth Animation
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+                    child: child,
+                  ),
+                );
               },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_currentIndex),
+                child: _getCurrentScreen(),
+              ),
             ),
           ),
         ],
       ),
+      bottomNavigationBar: BottomNavigation(
+        selectedIndex: _currentIndex,
+        onTabSelected: _onTabSelected,
+        notificationCount: _unreadNotifications,
+        onAddPressed: () {
+          Navigator.pushNamed(context, '/add_product');
+        },
+      ),
     );
   }
 }
+

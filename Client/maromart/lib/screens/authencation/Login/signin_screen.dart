@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:maromart/services/auth_service.dart';
 import 'package:maromart/services/socket_service.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -240,13 +241,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                               child: _isLoading
-                                  ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
+                                  ? const ModernLoader(
+                                size: 20,
+                                color: Colors.white,
                               )
                                   : const Text('Sign in'),
                             ),
@@ -271,13 +268,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                               icon: _isGoogleLoading
-                                  ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                                ),
+                                  ? const ModernLoader(
+                                size: 20,
+                                color: Colors.black,
                               )
                                   : SizedBox(
                                 width: 20,

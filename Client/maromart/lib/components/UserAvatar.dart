@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class UserAvatar extends StatelessWidget {
   final String avatarUrl;
@@ -39,10 +40,8 @@ class UserAvatar extends StatelessWidget {
       },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-          ),
+        return Center(
+          child: ModernLoader(size: size * 0.4),
         );
       },
     );

@@ -157,6 +157,8 @@ class Product {
   final String productName;
   final int productPrice;
   final String productDescription;
+  
+  final String status; // Added status field
 
   final String productCondition;
   final String productBrand;
@@ -181,6 +183,8 @@ class Product {
     required this.productName,
     required this.productPrice,
     required this.productDescription,
+    this.status = 'active', // Default status
+
     required this.productCondition,
     required this.productBrand,
     required this.productWP,
@@ -207,6 +211,7 @@ class Product {
           : int.tryParse(json['productPrice'].toString()) ?? 0,
 
       productDescription: json['productDescription']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'active', // Parse status
 
       productCondition: json['productCondition']?.toString() ?? '',
       productBrand: json['productBrand']?.toString() ?? '',
@@ -245,6 +250,7 @@ class Product {
       'productName': productName,
       'productPrice': productPrice,
       'productDescription': productDescription,
+      'status': status,
       'productCondition': productCondition,
       'productBrand': productBrand,
       'productWP': productWP,

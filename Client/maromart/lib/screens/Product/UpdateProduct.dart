@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
+import 'package:maromart/components/ModernLoader.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
 import 'package:maromart/utils/constants.dart';
@@ -250,7 +251,7 @@ class _UpdateProductState extends State<UpdateProduct> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => Center(child: ModernLoader()),
     );
 
     try {
@@ -348,7 +349,7 @@ class _UpdateProductState extends State<UpdateProduct> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          body: Center(child: CircularProgressIndicator())
+          body: Center(child: ModernLoader())
       );
     }
 

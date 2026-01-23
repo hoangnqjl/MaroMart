@@ -4,46 +4,76 @@ import 'package:intl/intl.dart';
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/screens/Product/UpdateProduct.dart';
+import 'package:maromart/screens/Product/AddProduct.dart'; // Add this import
 import 'package:maromart/screens/Product/ProductDetail.dart';
 import 'package:maromart/services/product_service.dart';
 import 'package:maromart/services/user_service.dart';
 import 'package:maromart/utils/constants.dart';
 import 'package:maromart/app_router.dart';
 
+import 'package:maromart/components/ModernLoader.dart'; // Import
+
 class ProductManager extends StatefulWidget {
   const ProductManager({super.key});
 
   @override
-  State<ProductManager> createState() => _ProductManager();
+  State<ProductManager> createState() => ProductManagerState(); // Public State
 }
 
-class _ProductManager extends State<ProductManager> {
-  final List<String> _tabs = ['Posted', 'Pending', 'Rejected', 'Removed'];
+class ProductManagerState extends State<ProductManager> with SingleTickerProviderStateMixin { // Rename
+  late TabController _tabController;
+  final List<String> _tabs = ['Active', 'Drafts', 'Hidden'];
   final ProductService _productService = ProductService();
   final UserService _userService = UserService();
   final Color primaryThemeColor = const Color(0xFF3F4045);
 
-  List<Product> _postedProducts = [];
+  List<Product> _products = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(_handleTabSelection);
     _fetchUserProducts();
   }
+  
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) {
+       _fetchUserProducts();
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // Public Reload
+  void reload() => _fetchUserProducts();
 
   Future<void> _fetchUserProducts() async {
+    setState(() => _isLoading = true);
     try {
       final userId = _userService.getCurrentUserId();
       if (userId == null) {
         setState(() => _isLoading = false);
         return;
       }
-      final products = await _productService.getUserProducts(userId);
+      
+      String status = 'active';
+      switch (_tabController.index) {
+          case 0: status = 'active'; break;
+          case 1: status = 'draft'; break; 
+          case 2: status = 'pending'; break; 
+      }
+
+      final products = await _productService.getUserProducts(userId, status: status);
 
       if (mounted) {
         setState(() {
-          _postedProducts = products;
+          _products = products;
           _isLoading = false;
         });
       }
@@ -95,7 +125,7 @@ class _ProductManager extends State<ProductManager> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) => const Center(child: ModernLoader()),
     );
 
     try {
@@ -103,7 +133,7 @@ class _ProductManager extends State<ProductManager> {
       if (mounted) {
         Navigator.pop(context);
         setState(() {
-          _postedProducts.removeWhere((p) => p.productId == productId);
+          _products.removeWhere((p) => p.productId == productId);
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Product deleted successfully")),
@@ -120,6 +150,139 @@ class _ProductManager extends State<ProductManager> {
       return DateFormat(format).format(date);
     } catch (e) {
       return '';
+    }
+  }
+
+  void _showPushSheet(BuildContext context, Product product) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        int selectedOption = 0;
+        final List<Map<String, dynamic>> pushOptions = [
+          {'days': 3, 'coins': 2, 'label': '3 Ngày'},
+          {'days': 7, 'coins': 4, 'label': '7 Ngày'},
+          {'days': 15, 'coins': 7, 'label': '15 Ngày'},
+          {'days': 30, 'coins': 10, 'label': '30 Ngày'},
+        ];
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+             final user = _userService.userNotifier.value;
+             final currentCoins = user?.coins ?? 0;
+             final cost = pushOptions[selectedOption]['coins'];
+             final canAfford = currentCoins >= cost;
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.6,
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const Text("Đẩy tin / Quảng cáo", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text("Tin của bạn sẽ được ưu tiên hiển thị trên đầu trang.", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Số dư của bạn:", style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text("$currentCoins Coins", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: pushOptions.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final opt = pushOptions[index];
+                        final isSelected = selectedOption == index;
+                        return GestureDetector(
+                          onTap: () => setSheetState(() => selectedOption = index),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
+                              border: Border.all(color: isSelected ? Colors.green : Colors.grey.shade300, width: isSelected ? 2 : 1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(opt['label'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black)),
+                                Text("${opt['coins']} Coins", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black)),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: canAfford ? () async {
+                        Navigator.pop(ctx);
+                        _handlePushProduct(product.productId, pushOptions[selectedOption]['days']);
+                      } : () {
+                        Navigator.pop(ctx);
+                         // Navigate to Coin Manager
+                         Navigator.pushNamed(context, '/coin_manager'); 
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: canAfford ? const Color(0xFF3F4045) : Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: Text(
+                        canAfford ? "Thanh toán & Đẩy tin ($cost Coins)" : "Nạp thêm Coins",
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  Future<void> _handlePushProduct(String productId, int days) async {
+    showDialog(
+      context: context, barrierDismissible: false,
+      builder: (_) => const Center(child: ModernLoader()),
+    );
+    try {
+      await _productService.pushProduct(productId, days);
+      await _userService.getCurrentUser(); // Refresh balance
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đẩy tin thành công!"), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -146,6 +309,17 @@ class _ProductManager extends State<ProductManager> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
+              _buildOptionButton(
+                icon: HeroiconsOutline.rocketLaunch,
+                label: 'Boost / Push Product',
+                iconColor: Colors.blue,
+                bgColor: const Color(0xFFE3F2FD),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showPushSheet(context, product);
+                },
+              ),
+              const SizedBox(height: 12),
               _buildOptionButton(
                 icon: HeroiconsOutline.pencilSquare,
                 label: 'Edit item',
@@ -175,12 +349,10 @@ class _ProductManager extends State<ProductManager> {
       },
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: _tabs.length,
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: Colors.white,
         body: Column(
           children: [
@@ -194,10 +366,9 @@ class _ProductManager extends State<ProductManager> {
                 borderRadius: BorderRadius.circular(25),
               ),
               child: TabBar(
+                controller: _tabController,
                 indicatorSize: TabBarIndicatorSize.tab,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 24),
+                labelPadding: EdgeInsets.zero,
                 indicator: BoxDecoration(
                   color: primaryThemeColor,
                   borderRadius: BorderRadius.circular(25),
@@ -207,33 +378,41 @@ class _ProductManager extends State<ProductManager> {
                 unselectedLabelColor: Colors.grey[600],
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 tabs: _tabs.map((name) => Tab(text: name)).toList(),
+                onTap: (index) {
+                    if (!_tabController.indexIsChanging) {
+                        _fetchUserProducts(); // Force refresh on tap if already selected or not changing via anim
+                    }
+                },
               ),
             ),
             const SizedBox(height: 16),
             Expanded(
               child: _isLoading
-                  ? Center(child: CircularProgressIndicator(color: primaryThemeColor))
+                  ? Center(child: ModernLoader(color: primaryThemeColor)) // Use ModernLoader
                   : TabBarView(
+                controller: _tabController,
                 children: [
-                  _buildPostedList(),
-                  _buildPlaceholderList("No pending products"),
-                  _buildPlaceholderList("No rejected products"),
-                  _buildPlaceholderList("No removed products"),
+                  _buildProductList(), // Active
+                  _buildProductList(), // Drafts
+                  _buildProductList(), // Hidden
                 ],
               ),
             ),
           ],
         ),
-      ),
     );
   }
-
-  Widget _buildPostedList() {
-    if (_postedProducts.isEmpty) return _buildPlaceholderList("No products posted yet");
+  
+  Widget _buildProductList() {
+    if (_products.isEmpty) {
+        String msg = "No products found";
+        if (_tabController.index == 1) msg = "No drafts";
+        return _buildPlaceholderList(msg);
+    }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _postedProducts.length,
-      itemBuilder: (context, index) => _buildProductCard(_postedProducts[index]),
+      itemCount: _products.length,
+      itemBuilder: (context, index) => _buildProductCard(_products[index]),
     );
   }
 
@@ -253,7 +432,13 @@ class _ProductManager extends State<ProductManager> {
   Widget _buildProductCard(Product product) {
     final imageUrl = _getThumbnailUrl(product.productMedia);
     return GestureDetector(
-      onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
+      onTap: () {
+          if (product.status == 'draft') {
+              smoothPush(context, AddProduct(draftProduct: product));
+          } else {
+              smoothPush(context, ProductDetail(productId: product.productId));
+          }
+      },
       child: Container(
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 12),

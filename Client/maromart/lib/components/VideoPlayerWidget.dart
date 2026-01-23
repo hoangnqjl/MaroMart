@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
@@ -64,7 +65,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
     if (!_isInitialized) {
       return const Center(
-        child: CircularProgressIndicator(strokeWidth: 2),
+        child: ModernLoader(size: 30),
       );
     }
 

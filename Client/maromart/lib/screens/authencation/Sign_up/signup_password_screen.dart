@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maromart/services/auth_service.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class SignUpPasswordScreen extends StatefulWidget {
   const SignUpPasswordScreen({super.key});
@@ -200,13 +201,9 @@ class _SignUpPasswordScreenState extends State<SignUpPasswordScreen> {
                             ),
                           ),
                           child: _isProcessing
-                              ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
+                              ? const ModernLoader(
+                            size: 20,
+                            color: Colors.white,
                           )
                               : const Text('Create Account'),
                         ),

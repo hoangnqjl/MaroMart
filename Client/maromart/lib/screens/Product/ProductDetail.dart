@@ -12,6 +12,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/User/ChatPartner.dart';
 import '../Message/ChatScreen.dart';
 import 'package:maromart/app_router.dart';
+import 'package:maromart/services/user_service.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -205,7 +207,7 @@ class ProductDetailState extends State<ProductDetail> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) return Scaffold(body: Center(child: ModernLoader()));
     if (_product == null) return Scaffold(appBar: AppBar(title: const Text('Lỗi')), body: const Center(child: Text('Không tìm thấy thông tin sản phẩm.')));
 
     final product = _product!;
@@ -437,7 +439,7 @@ class ProductDetailState extends State<ProductDetail> {
       return Image.network(item.url, fit: BoxFit.cover, width: double.infinity, height: double.infinity,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
-            return Center(child: CircularProgressIndicator(value: loadingProgress.expectedTotalBytes != null ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1) : null));
+            return const Center(child: ModernLoader(size: 30));
           },
           errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 60))));
     } else {

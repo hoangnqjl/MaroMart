@@ -10,6 +10,8 @@ import 'package:maromart/screens/Message/ChatScreen.dart';
 import 'package:maromart/models/User/ChatPartner.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
+import 'package:maromart/components/ModernLoader.dart';
+
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
@@ -172,7 +174,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: primaryThemeColor))
+                ? Center(child: ModernLoader(color: primaryThemeColor))
                 : _displayNotifications.isEmpty
                 ? Center(child: Text("No notifications", style: TextStyle(color: Colors.grey[400])))
                 : _buildGroupedList(),

@@ -3,6 +3,7 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/components/Post.dart'; // Dùng Post để hiển thị đầy đủ thông tin
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class SearchResultScreen extends StatefulWidget {
   final String keyword;
@@ -84,7 +85,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
   Widget _buildBody() {
     // 1. Trạng thái đang tải
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: ModernLoader());
     }
 
     // 2. Trạng thái lỗi

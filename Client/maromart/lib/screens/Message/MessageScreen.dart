@@ -12,6 +12,7 @@ import 'package:maromart/utils/storage.dart';
 import 'package:maromart/utils/constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class MessageScreen extends StatefulWidget {
   const MessageScreen({super.key});
@@ -177,7 +178,7 @@ class _MessageScreenState extends State<MessageScreen> {
 
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: primaryThemeColor))
+                ? Center(child: ModernLoader(color: primaryThemeColor))
                 : displayList.isEmpty
                 ? Center(child: Text(_selectedTab == 0 ? "No conversations yet" : "No new messages", style: TextStyle(color: Colors.grey[400])))
                 : RefreshIndicator(
@@ -289,7 +290,7 @@ class _MessageScreenState extends State<MessageScreen> {
         width: 52, height: 52,
         decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle),
         child: fullUrl.isNotEmpty
-            ? CachedNetworkImage(imageUrl: fullUrl, fit: BoxFit.cover, placeholder: (context, url) => Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: primaryThemeColor))), errorWidget: (context, url, error) => _buildLetterAvatar(name))
+            ? CachedNetworkImage(imageUrl: fullUrl, fit: BoxFit.cover, placeholder: (context, url) => Center(child: SizedBox(width: 20, height: 20, child: ModernLoader(size: 20, color: primaryThemeColor))), errorWidget: (context, url, error) => _buildLetterAvatar(name))
             : _buildLetterAvatar(name),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:maromart/components/ProductGridItem.dart';
 import 'package:maromart/components/Filter.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
+import 'package:maromart/components/ModernLoader.dart'; 
 import '../Search/SearchResult.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,7 +34,7 @@ class HomeScreenState extends State<HomeScreen> {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
-  final int _limit = 5;
+  final int _limit = 10;
   bool _isFlashCardMode = true;
 
   String? _filterCategoryId;
@@ -58,6 +59,15 @@ class HomeScreenState extends State<HomeScreen> {
     _productService.productChangeNotifier.removeListener(_onProductChanged);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Public method for Home to call
+  void reload() {
+    _loadProducts(isRefresh: true);
+    // Scroll to top
+    if (_scrollController.hasClients) {
+       _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+    }
   }
 
   void _onProductChanged() => _loadProducts(isRefresh: true);
@@ -133,7 +143,7 @@ class HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _products.isEmpty
                     ? (_isInitialLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: ModernLoader()) // Using ModernLoader
                     : const Center(child: Text("No products found.")))
                     : _buildProductList(),
               ),
@@ -217,7 +227,7 @@ class HomeScreenState extends State<HomeScreen> {
             children: [
               const Text(
                   "For You",
-                  style: TextStyle(fontSize: 16,
+                  style: TextStyle(fontSize: 18, // Increased from 16
                       fontWeight: FontWeight.bold,
                       fontFamily: 'QuickSand')
               ),
@@ -248,7 +258,7 @@ class HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => setState(() => _isFlashCardMode = isFlashMode),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // Adjustable padding
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -257,36 +267,41 @@ class HomeScreenState extends State<HomeScreen> {
           ] : [],
         ),
         child: Icon(
-            icon, size: 20, color: isSelected ? Colors.black : Colors.grey),
+            icon, size: 22, color: isSelected ? Colors.black : Colors.grey), // Adjustable size
       ),
     );
   }
 
   Widget _buildProductList() {
     if (_isFlashCardMode) {
-      return PageView.builder(
-        scrollDirection: Axis.vertical,
-        controller: PageController(viewportFraction: 1.0),
-        itemCount: _products.length + 1,
-        itemBuilder: (context, index) {
-          if (index == _products.length) return _buildEndOfListWidget();
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return PageView.builder(
+            scrollDirection: Axis.vertical,
+            controller: PageController(viewportFraction: 1.0),
+            itemCount: _products.length + 1,
+            itemBuilder: (context, index) {
+              if (index == _products.length) return _buildEndOfListWidget();
 
-          if (index == _products.length - 1 && _hasMore) _loadProducts(isRefresh: false);
+              if (index == _products.length - 1 && _hasMore) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _loadProducts(isRefresh: false);
+                });
+              }
 
-          return Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              height: MediaQuery.of(context).size.width * 1.30,
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Post(product: _products[index]),
-            ),
+              // Use the full available height from LayoutBuilder
+              return SizedBox(
+                height: constraints.maxHeight,
+                child: Post(product: _products[index]),
+              );
+            },
           );
         },
       );
     } else {
       // GridView giữ nguyên
       return GridView.builder(
-        padding: const EdgeInsets.only(top: 10, bottom: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.68,

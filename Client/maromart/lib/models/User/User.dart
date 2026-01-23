@@ -11,6 +11,7 @@ class User {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? avatarUrl;
+  final int coins;
 
   User({
     required this.id,
@@ -25,6 +26,7 @@ class User {
     required this.createdAt,
     required this.updatedAt,
     this.avatarUrl,
+    required this.coins,
   });
 
   // --- Parse từ JSON response ---
@@ -46,6 +48,7 @@ class User {
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
       avatarUrl: json['avatarUrl'] as String?,
+      coins: json['coins'] ?? 0,
     );
   }
 
@@ -64,6 +67,7 @@ class User {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'avatarUrl': avatarUrl,
+      'coins': coins,
     };
   }
 
@@ -79,6 +83,7 @@ class User {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? avatarUrl,
+    int? coins,
   }) {
     return User(
       id: id ?? this.id,
@@ -93,6 +98,7 @@ class User {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      coins: coins ?? this.coins,
     );
   }
 
@@ -111,6 +117,6 @@ class User {
 
   @override
   String toString() {
-    return 'User(id: $id, userId: $userId, fullName: $fullName, email: $email, role: $role, avatarUrl: $avatarUrl)';
+    return 'User(id: $id, userId: $userId, fullName: $fullName, email: $email, role: $role, avatarUrl: $avatarUrl, coins: $coins)';
   }
 }

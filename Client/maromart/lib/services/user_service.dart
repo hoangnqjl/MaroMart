@@ -193,4 +193,19 @@ class UserService {
     final role = StorageHelper.getUserRole();
     return role?.toLowerCase() == 'user';
   }
+
+  Future<void> depositCoins(int amountCoins) async {
+    try {
+      final response = await _apiService.post(
+        endpoint: '/users/deposit',
+        body: {'amount': amountCoins},
+        needAuth: true,
+      );
+
+      // Refresh User Data
+      await getCurrentUser();
+    } catch (e) {
+      throw Exception('Nạp coin thất bại: ${e.toString()}');
+    }
+  }
 }

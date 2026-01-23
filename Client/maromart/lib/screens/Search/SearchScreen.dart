@@ -3,6 +3,7 @@ import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/Post.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
+import 'package:maromart/components/ModernLoader.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -87,7 +88,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(32.0),
-                child: CircularProgressIndicator(),
+                child: ModernLoader(),
               ))
               : _products.isEmpty
               ? const Center(

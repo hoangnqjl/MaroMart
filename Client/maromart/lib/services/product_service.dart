@@ -44,11 +44,11 @@ class ProductService {
   }
 
   // --- NEW AI METHODS ---
-  Future<Map<String, dynamic>> validateMedia(List<XFile> files) async {
+  Future<Map<String, dynamic>> validateMedia(List<XFile> files, String productName) async {
     try {
       final response = await _apiService.postMultipart(
         endpoint: '/products/validate-media',
-        fields: {},
+        fields: {'productName': productName},
         files: files,
         fileKey: 'files',
         needAuth: true,
@@ -79,6 +79,31 @@ class ProductService {
       return response['data'] ?? {};
     } catch (e) {
       throw Exception('Lỗi tạo chi tiết sản phẩm: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> validateContent({
+    required String productName,
+    required String productDescription,
+    required String category,
+    required String type,
+    required Map<String, dynamic> attributes,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        endpoint: '/products/validate-content',
+        body: {
+          "productName": productName,
+          "productDescription": productDescription,
+          "category": category,
+          "type": type,
+          "attributes": attributes
+        },
+        needAuth: true,
+      );
+      return response['data'] ?? {};
+    } catch (e) {
+      throw Exception('Lỗi kiểm tra nội dung: $e');
     }
   }
   // ----------------------
@@ -208,13 +233,14 @@ class ProductService {
     }
   }
 
-  Future<List<Product>> getUserProducts(String userId, {int page = 1, int limit = 10}) async {
+  Future<List<Product>> getUserProducts(String userId, {int page = 1, int limit = 10, String? status}) async {
     try {
       final queryParams = {
         'userId': userId,
         'page': page.toString(),
         'limit': limit.toString(),
       };
+      if (status != null) queryParams['status'] = status;
 
       final response = await _apiService.get(
         endpoint: ApiConstants.productsFilterEndpoint,
@@ -325,6 +351,19 @@ class ProductService {
       return [];
     } catch (e) {
       throw Exception('Lỗi tìm kiếm: $e');
+    }
+  }
+
+  Future<void> pushProduct(String productId, int days) async {
+    try {
+      await _apiService.post(
+        endpoint: '/products/push',
+        body: {'productId': productId, 'days': days},
+        needAuth: true,
+      );
+      notifyProductChanges();
+    } catch (e) {
+      throw Exception('Đẩy tin thất bại: ${e.toString()}');
     }
   }
 }

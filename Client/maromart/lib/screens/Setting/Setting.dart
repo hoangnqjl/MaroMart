@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart'; // <--- Import Image Picker
 import 'package:maromart/Colors/AppColors.dart';
+import 'package:maromart/components/ModernLoader.dart';
 import 'package:maromart/components/TopBarSecond.dart';
 import 'package:maromart/components/UserAvatar.dart';
 import 'package:maromart/services/user_service.dart';
@@ -110,6 +111,14 @@ class _Setting extends State<Setting> {
                   Navigator.pushNamed(context, '/change-password');
                 },
               ),
+              const SizedBox(height: 8),
+              _buildMenuItem(
+                icon: HeroiconsOutline.creditCard,
+                label: 'Ví của tôi (Coins)',
+                onTap: () {
+                  Navigator.pushNamed(context, '/coin_manager');
+                },
+              ),
 
               const SizedBox(height: 24),
 
@@ -152,7 +161,7 @@ class _Setting extends State<Setting> {
                 fontSize: 24,
               ),
               if (_isUploading)
-                const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                const ModernLoader(size: 20, color: Colors.white),
             ],
           ),
           const SizedBox(width: 16),
