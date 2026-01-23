@@ -1,163 +1,93 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/Colors/AppColors.dart';
 
 class BottomNavigation extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
   final int notificationCount;
-  final VoidCallback? onAddPressed; // New callback for Add button
+  final VoidCallback onAddPressed;
 
   const BottomNavigation({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onTabSelected,
-    this.notificationCount = 0,
-    this.onAddPressed,
-  }) : super(key: key);
+    required this.notificationCount,
+    required this.onAddPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20, left: 24, right: 24),
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 4,vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9), // Higher opacity for contrast
-                    borderRadius: BorderRadius.circular(50),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 5))
-                    ],
-                    border: Border.all(color: Colors.black.withOpacity(0.1)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildAnimatedNavItem(
-                        icon: HeroiconsOutline.home,
-                        label: "Home",
-                        index: 0,
-                        isSelected: selectedIndex == 0,
-                      ),
-                      _buildAnimatedNavItem(
-                        icon: HeroiconsOutline.bellAlert,
-                        label: "Noti",
-                        index: 1,
-                        isSelected: selectedIndex == 1,
-                        badgeCount: notificationCount,
-                      ),
-                      _buildAnimatedNavItem(
-                        icon: HeroiconsOutline.chatBubbleLeftRight, // Updated icon
-                        label: "Chat",
-                        index: 2,
-                        isSelected: selectedIndex == 2,
-                      ),
-                       _buildAnimatedNavItem(
-                        icon: HeroiconsOutline.cube, // Updated to Cube
-                        label: "Manager",
-                        index: 3,
-                        isSelected: selectedIndex == 3,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(width: 16),
+          _buildNavItem(HeroiconsSolid.home, HeroiconsOutline.home, 0),
+
+          _buildNavItem(HeroiconsSolid.chatBubbleOvalLeft, HeroiconsOutline.chatBubbleOvalLeft, 2),
 
           GestureDetector(
             onTap: onAddPressed,
             child: Container(
-              height: 56,
-              width: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1A1A1A),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 4))
-                ]
               ),
-              child: const Icon(Icons.add, color: Colors.black, size: 26),
+              child: const Icon(HeroiconsOutline.plus, color: Colors.white, size: 20),
             ),
-          )
+          ),
+
+          _buildNavItem(HeroiconsSolid.bell, HeroiconsOutline.bell, 1, badgeCount: notificationCount),
+
+          _buildNavItem(HeroiconsSolid.cube, HeroiconsOutline.cube, 3),
         ],
       ),
     );
   }
 
-  Widget _buildAnimatedNavItem({
-    required IconData icon,
-    required String label,
-    required int index,
-    required bool isSelected,
-    int badgeCount = 0,
-  }) {
+  Widget _buildNavItem(IconData solidIcon, IconData outlineIcon, int index, {int badgeCount = 0}) {
+    bool isSelected = selectedIndex == index;
+
     return GestureDetector(
       onTap: () => onTabSelected(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutQuart,
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 10 : 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3F4045) : Colors.transparent,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min, // Wrap content
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 60,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            // Icon Stack with Badge
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected ? Colors.white : Colors.black,
-                  size: 26,
-                ),
-                if (badgeCount > 0)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    ),
-                  )
-              ],
+            Icon(
+              isSelected ? solidIcon : outlineIcon,
+              color: Colors.black,
+              size: 26,
             ),
-            
-            ClipRect(
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 10),
-                alignment: Alignment.centerLeft,
-                widthFactor: isSelected ? 1.0 : 0.0,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
+            if (badgeCount > 0)
+              Positioned(
+                top: 15,
+                right: 15,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text(
-                    label,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                    '$badgeCount',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold
                     ),
-                    maxLines: 1,
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

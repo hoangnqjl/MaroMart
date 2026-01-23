@@ -125,7 +125,7 @@ class HomeScreenState extends State<HomeScreen> {
       child: Column(
         children: [
           const SizedBox(height: 10),
-          _buildSearchAndFilterHeader(), // Đã gộp Search, Filter và View Toggle
+          _buildSearchAndFilterHeader(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => _loadProducts(isRefresh: true),
@@ -144,7 +144,6 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget đã gộp tất cả công cụ lọc và tìm kiếm vào một cụm
   Widget _buildSearchAndFilterHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 5, 16, 10),
@@ -214,7 +213,6 @@ class HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Hàng dưới: Chữ For You và Nút Switch Grid/List
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -246,7 +244,6 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget con cho nút chuyển đổi giao diện nhìn cho xịn
   Widget _buildViewToggleButton(IconData icon, bool isSelected,
       bool isFlashMode) {
     return GestureDetector(
@@ -294,7 +291,7 @@ class HomeScreenState extends State<HomeScreen> {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
-        itemCount: _products.length + 1, // Thêm 1 cho Widget thông báo
+        itemCount: _products.length + 1,
         itemBuilder: (context, index) {
           if (index == _products.length) {
             return const SizedBox.shrink();
@@ -323,7 +320,7 @@ class HomeScreenState extends State<HomeScreen> {
                 fontFamily: 'QuickSand'
             ),
           ),
-          const SizedBox(height: 80), // Khoảng đệm để không bị thanh Nav che
+          const SizedBox(height: 80),
         ],
       ),
     );

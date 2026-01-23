@@ -80,7 +80,6 @@ class _PostState extends State<Post> {
       ),
       child: Stack(
         children: [
-          // 1. MEDIA VIEWER
           GestureDetector(
             onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
             child: PageView.builder(
@@ -126,7 +125,7 @@ class _PostState extends State<Post> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                   child: Container(
-                    width: 70,
+                    width: 60,
                     padding: const EdgeInsets.symmetric(vertical: 25),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.4),
