@@ -28,13 +28,14 @@ class _BottomNavigationState extends State<BottomNavigation> {
   Widget build(BuildContext context) {
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 70,
+          height: 70 + MediaQuery.of(context).padding.bottom, // Extend height
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom), // Push content up
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.8),
-            border: Border(
-              top: BorderSide(color: Colors.grey.shade200, width: 0.5),
+            color: Colors.white.withOpacity(0.4),
+            border: const Border(
+              top: BorderSide(color: Colors.white, width: 0.5), // Lighter border
             ),
           ),
           child: Row(

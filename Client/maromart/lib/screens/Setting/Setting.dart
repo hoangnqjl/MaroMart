@@ -130,18 +130,72 @@ class _Setting extends State<Setting> {
                 onTap: () => _showLanguageSheet(context),
               ),
               const SizedBox(height: 8),
-              _buildMenuItem(
+              _buildDarkModeToggle(l10n.darkMode, settings),
+              const SizedBox(height: 8),
+               _buildMenuItem(
+                icon: HeroiconsOutline.arrowPath,
+                label: "Kiểm tra cập nhật",
+                onTap: _checkForUpdates,
+              ),
+
+               const SizedBox(height: 24),
+
+              _buildSectionTitle("Thông tin chung"),
+              const SizedBox(height: 12),
+               _buildMenuItem(
                 icon: HeroiconsOutline.informationCircle,
                 label: l10n.aboutUs,
                 onTap: () {
                   Navigator.pushNamed(context, '/about');
                 },
               ),
-              const SizedBox(height: 8),
-              _buildDarkModeToggle(l10n.darkMode, settings),
+              
+              const SizedBox(height: 40),
+              Center(
+                child: Text(
+                  "Phiên bản $_appVersion",
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String _appVersion = "2.0";
+
+  Future<void> _checkForUpdates() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: ModernLoader()),
+    );
+
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+    Navigator.pop(context); // Close loader
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Cập nhật ứng dụng"),
+        content: const Text("Bạn đang sử dụng phiên bản mới nhất."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Đóng", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

@@ -14,6 +14,8 @@ import 'package:maromart/utils/constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/components/ModernLoader.dart';
+import 'package:maromart/components/CommonAppBar.dart';
+import 'package:maromart/components/AppDrawer.dart';
 
 class MessageScreen extends StatefulWidget {
   const MessageScreen({super.key});
@@ -139,9 +141,11 @@ class _MessageScreenState extends State<MessageScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const CommonAppBar(title: "Tin nhắn"),
+      endDrawer: const AppDrawer(),
       body: Column(
         children: [
-          const SizedBox(height: 100),
+          // const SizedBox(height: 50), // Removed manual spacing
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(

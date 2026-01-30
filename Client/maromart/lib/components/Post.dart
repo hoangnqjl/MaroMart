@@ -316,7 +316,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildMediaContent(MediaItem item) {
-    if (item.type == MediaType.image) return CachedNetworkImage(imageUrl: item.url, fit: BoxFit.cover, placeholder: (context, url) => Container(color: Colors.grey[200]));
+    if (item.type == MediaType.image) return CachedNetworkImage(imageUrl: item.url, fit: BoxFit.cover, width: double.infinity, placeholder: (context, url) => Container(color: Colors.grey[200]));
     return VideoPlayerWidget(videoUrl: item.url);
   }
 

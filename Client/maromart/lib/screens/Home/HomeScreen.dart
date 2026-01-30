@@ -1,17 +1,25 @@
+
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:maromart/Colors/AppColors.dart';
+import 'package:maromart/utils/constants.dart';
+import 'package:maromart/screens/Setting/Setting.dart';
+import 'package:maromart/services/auth_service.dart';
 import 'package:maromart/components/Post.dart';
 import 'package:maromart/components/ProductGridItem.dart';
 import 'package:maromart/components/Filter.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
-import 'package:maromart/services/location_service.dart'; // 1. Import LocationService
+import 'package:maromart/services/location_service.dart';
+import 'package:maromart/components/AppDrawer.dart'; // Add import
 import 'package:maromart/components/ModernLoader.dart';
 import '../Search/SearchResult.dart';
+import 'package:maromart/models/User/User.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final User? user;
+  const HomeScreen({Key? key, this.user}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => HomeScreenState();
@@ -19,7 +27,8 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   final ProductService _productService = ProductService();
-  final LocationService _locationService = LocationService(); // 2. Khởi tạo Service
+  final LocationService _locationService = LocationService();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late final FilterOverlay _filterOverlay = FilterOverlay(
     onFilterApplied: (categoryId, province, ward) => updateFilter(
@@ -40,39 +49,31 @@ class HomeScreenState extends State<HomeScreen> {
   String? _filterCategoryId;
   String? _filterProvince;
   String? _filterWard;
-
-  // 3. Biến lưu địa điểm (Mặc định là "bạn" hoặc địa danh mẫu)
-  String _currentLocation = "bạn";
+  String _currentLocation = "đang tải...";
 
   final List<Map<String, dynamic>> _quickCategories = [
-    {'id': '', 'name': 'All', 'icon': HeroiconsOutline.squares2x2, 'color': Colors.blue},
-    {'id': 'auto', 'name': 'Auto', 'icon': HeroiconsOutline.truck, 'color': Colors.orange},
-    {'id': 'furniture', 'name': 'Furniture', 'icon': HeroiconsOutline.home, 'color': Colors.brown},
-    {'id': 'technology', 'name': 'Tech', 'icon': HeroiconsOutline.computerDesktop, 'color': Colors.purple},
-    {'id': 'fashion', 'name': 'Fashion', 'icon': HeroiconsOutline.shoppingBag, 'color': Colors.pink},
-    {'id': 'service', 'name': 'Service', 'icon': HeroiconsOutline.wrenchScrewdriver, 'color': Colors.teal},
-    {'id': 'hobby', 'name': 'Hobby', 'icon': HeroiconsOutline.puzzlePiece, 'color': Colors.red},
-    {'id': 'kids', 'name': 'Kids', 'icon': HeroiconsOutline.faceSmile, 'color': Colors.yellow},
+    {'id': '', 'name': 'Tất cả', 'icon': HeroiconsOutline.squares2x2, 'color': Colors.blue},
+    {'id': 'fashion', 'name': 'Thời trang', 'icon': HeroiconsOutline.shoppingBag, 'color': Colors.pink},
+    {'id': 'technology', 'name': 'Công nghệ', 'icon': HeroiconsOutline.computerDesktop, 'color': Colors.purple},
+    {'id': 'furniture', 'name': 'Nội thất', 'icon': HeroiconsOutline.home, 'color': Colors.brown},
+    {'id': 'service', 'name': 'Dịch vụ', 'icon': HeroiconsOutline.wrenchScrewdriver, 'color': Colors.teal},
+    {'id': 'kids', 'name': 'Mẹ & Bé', 'icon': HeroiconsOutline.faceSmile, 'color': Colors.yellow},
   ];
 
   @override
   void initState() {
     super.initState();
-    _fetchLocation(); // 4. Gọi hàm lấy vị trí ngay khi mở màn hình
+    _fetchLocation();
     _loadProducts(isRefresh: true);
     _productService.productChangeNotifier.addListener(_onProductChanged);
   }
 
-  // 5. Hàm xử lý lấy và rút gọn địa chỉ
   Future<void> _fetchLocation() async {
-    final location = await _locationService.getCurrentAddress();
-    if (mounted && location != null && location.isNotEmpty) {
-      // Chỉ lấy phần đầu tiên của địa chỉ (VD: "An Khê, Đà Nẵng" -> "An Khê")
-      // để hiển thị ngắn gọn, đẹp mắt trên Header
-      String shortLocation = location.split(',')[0].trim();
-      setState(() {
-        _currentLocation = shortLocation;
-      });
+    try {
+      final loc = await _locationService.getCurrentAddress();
+      if (mounted) setState(() => _currentLocation = loc ?? "Không xác định");
+    } catch (e) {
+      print("Location error: $e");
     }
   }
 
@@ -82,9 +83,28 @@ class HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _showTestingFeature() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Tính năng đang thử nghiệm", style: TextStyle(fontFamily: 'QuickSand')),
+        backgroundColor: Colors.grey[800],
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _handleLogout() async {
+    await AuthService().logout();
+    if (mounted) {
+       Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
+    }
+  }
+
   void reload() {
     _loadProducts(isRefresh: true);
-    _fetchLocation(); // Reload lại cả vị trí nếu cần
+    _fetchLocation();
   }
 
   void _onProductChanged() => _loadProducts(isRefresh: true);
@@ -110,6 +130,7 @@ class HomeScreenState extends State<HomeScreen> {
         _isLoadingMore = true;
       }
     });
+
     try {
       List<Product> newProducts;
       bool isFiltering = _filterCategoryId != null || _filterProvince != null || _filterWard != null;
@@ -123,6 +144,7 @@ class HomeScreenState extends State<HomeScreen> {
       } else {
         newProducts = await _productService.getProducts(page: _currentPage, limit: _limit);
       }
+
       if (mounted) {
         setState(() {
           if (newProducts.isEmpty) {
@@ -145,69 +167,290 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double topPadding = 110.0;
-    final double searchBarHeight = 55.0;
-    final double categoriesHeight = 90.0;
-    final double heroImageHeight = 240.0;
-    final double maxHeaderHeight = topPadding + heroImageHeight + categoriesHeight * 0.5;
-    final double minHeaderHeight = topPadding + searchBarHeight + 20;
-
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _fetchLocation(); // Refresh location
-          await _loadProducts(isRefresh: true);
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _HomeCollapsingDelegate(
-                minHeight: minHeaderHeight,
-                maxHeight: 400,
-                topPadding: topPadding,
-                searchBarHeight: searchBarHeight,
-                categoriesHeight: categoriesHeight,
-                filterLink: _filterOverlay.layerLink,
-                onFilterTap: () => _filterOverlay.toggle(context),
-                categories: _quickCategories,
-                selectedCatId: _filterCategoryId,
-                onCategoryTap: (id) => updateFilter(categoryId: id),
-                isFlashCardMode: _isFlashCardMode,
-                onViewModeTap: () => setState(() => _isFlashCardMode = !_isFlashCardMode),
-
-                // 6. Truyền biến vị trí xuống Delegate
-                locationName: _currentLocation,
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 15)),
-
-            _products.isEmpty && !_isInitialLoading
-                ? SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 50),
-                child: Center(
-                  child: Column(
+      key: _scaffoldKey,
+      backgroundColor: Colors.white,
+      endDrawer: AppDrawer(user: widget.user),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            _fetchLocation();
+            await _loadProducts(isRefresh: true);
+          },
+          child: CustomScrollView(
+            slivers: [
+              // 1. Top Header: Avatar + Notification
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
                     children: [
-                      Icon(HeroiconsOutline.faceFrown, size: 48, color: Colors.grey[300]),
-                      const SizedBox(height: 10),
-                      const Text("Không tìm thấy sản phẩm nào.", style: TextStyle(color: Colors.grey)),
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundImage: widget.user != null && (widget.user!.avatarUrl ?? "").isNotEmpty
+                            ? NetworkImage(widget.user!.avatarUrl!)
+                            : const NetworkImage("https://i.pravatar.cc/150?img=12") as ImageProvider, // Fallback/Demo
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Xin chào 👋", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                          Text(
+                            widget.user?.fullName ?? "Khách hàng",
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => _scaffoldKey.currentState?.openEndDrawer(),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          child: const Icon(HeroiconsOutline.bars3, size: 24, color: Colors.black),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            )
-                : _buildSliverProductList(),
 
-            if (_isLoadingMore)
-              const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(20), child: Center(child: ModernLoader()))),
+              // 2. Large Title
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Text(
+                    "Bạn muốn tìm gì\nhôm nay?",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                      letterSpacing: -0.5,
+                      fontFamily: "Outfit", // Request modern font if available, else standard
+                    ),
+                  ),
+                ),
+              ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ],
+              // 3. Search Bar (Pinned)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _StickySearchBarDelegate(
+                  minHeight: 80,
+                  maxHeight: 80,
+                  child: ClipRRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.4),
+                          boxShadow: const [], // Force remove shadow
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 50,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [], // Force remove shadow
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    onSubmitted: (value) {
+                                      if (value.trim().isNotEmpty) {
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => SearchResultScreen(keyword: value.trim())));
+                                      }
+                                    },
+                                    decoration: const InputDecoration(
+                                      hintText: "Tìm kiếm sản phẩm...",
+                                      border: InputBorder.none,
+                                      hintStyle: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        InkWell(
+                          onTap: () => _filterOverlay.toggle(context),
+                          child: CompositedTransformTarget(
+                            link: _filterOverlay.layerLink,
+                            child: Container(
+                              height: 50, width: 50,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [], // Force remove shadow
+                                ),
+                              child: const Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+              // 4. Banner
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      image: const DecorationImage(
+                        image: AssetImage("assets/images/hero.png"), // Use existing assets
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            gradient: const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [Colors.black87, Colors.transparent],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text("Khám phá\nBộ sưu tập mới", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                ),
+                                child: const Text("Xem ngay", style: TextStyle(fontWeight: FontWeight.bold)),
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 5. Categories Header + View Toggle
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Danh mục", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      GestureDetector(
+                         onTap: () => setState(() => _isFlashCardMode = !_isFlashCardMode),
+                         child: Row(
+                           children: [
+                             Text(_isFlashCardMode ? "Lưới" : "Thẻ", style: const TextStyle(color: AppColors.primary)),
+                             const SizedBox(width: 4),
+                             Icon(_isFlashCardMode ? Icons.grid_view_rounded : Icons.view_agenda_rounded, color: AppColors.primary, size: 20),
+                           ],
+                         ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 6. Categories List (Horizontal Cards)
+              SliverToBoxAdapter(
+                child: Container(
+                  height: 60,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _quickCategories.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final cat = _quickCategories[index];
+                      final isSelected = _filterCategoryId == cat['id'];
+                      return GestureDetector(
+                        onTap: () => updateFilter(categoryId: cat['id']),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary : Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: isSelected ? Colors.transparent : Colors.grey[200]!),
+                            boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(cat['icon'], color: isSelected ? Colors.white : Colors.grey, size: 20),
+                              const SizedBox(width: 8),
+                              Text(cat['name'], style: TextStyle(color: isSelected ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // 7. Product List (Grid/List)
+              _products.isEmpty && !_isInitialLoading
+                  ? SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 50),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(HeroiconsOutline.faceFrown, size: 48, color: Colors.grey[300]),
+                              const SizedBox(height: 10),
+                              const Text("Không tìm thấy sản phẩm nào.", style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : _buildSliverProductList(),
+
+               if (_isLoadingMore)
+                const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(20), child: Center(child: ModernLoader()))),
+
+               const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
+    return ListTile(
+      leading: Icon(icon, color: isDestructive ? Colors.red : Colors.black87),
+      title: Text(title, style: TextStyle(color: isDestructive ? Colors.red : Colors.black87, fontWeight: FontWeight.w600)),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
     );
   }
 
@@ -215,12 +458,17 @@ class HomeScreenState extends State<HomeScreen> {
     if (_isFlashCardMode) {
       return SliverList(
         delegate: SliverChildBuilderDelegate(
-              (context, index) {
-            if (index == _products.length && _hasMore) { _loadProducts(isRefresh: false); return const SizedBox(); }
+          (context, index) {
+            if (index == _products.length && _hasMore) {
+              WidgetsBinding.instance.addPostFrameCallback((_) => _loadProducts(isRefresh: false));
+              return const SizedBox();
+            }
             if (index >= _products.length) return null;
+            // Simplified FlashCard Height logic
+             final double cardHeight = MediaQuery.of(context).size.height * 0.6; // Approximate nice height
             return Padding(
-              padding: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
-              child: SizedBox(height: MediaQuery.of(context).size.width * 1.05, child: Post(product: _products[index])),
+              padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+              child: SizedBox(height: cardHeight, child: Post(product: _products[index])),
             );
           },
           childCount: _products.length + (_hasMore ? 1 : 0),
@@ -228,12 +476,20 @@ class HomeScreenState extends State<HomeScreen> {
       );
     } else {
       return SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.68, crossAxisSpacing: 12, mainAxisSpacing: 12),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.7,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
           delegate: SliverChildBuilderDelegate(
-                (context, index) {
-              if (index == _products.length && _hasMore) { _loadProducts(isRefresh: false); return const SizedBox(); }
+            (context, index) {
+              if (index == _products.length && _hasMore) {
+                WidgetsBinding.instance.addPostFrameCallback((_) => _loadProducts(isRefresh: false));
+                return const SizedBox();
+              }
               if (index >= _products.length) return null;
               return ProductGridItem(product: _products[index]);
             },
@@ -245,245 +501,20 @@ class HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- DELEGATE ---
-class _HomeCollapsingDelegate extends SliverPersistentHeaderDelegate {
+class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
-  final double topPadding;
-  final double searchBarHeight;
-  final double categoriesHeight;
-  final LayerLink filterLink;
-  final VoidCallback onFilterTap;
-  final List<Map<String, dynamic>> categories;
-  final String? selectedCatId;
-  final Function(String?) onCategoryTap;
-  final bool isFlashCardMode;
-  final VoidCallback onViewModeTap;
+  final Widget child;
 
-  // 7. Nhận biến locationName
-  final String locationName;
-
-  _HomeCollapsingDelegate({
-    required this.minHeight,
-    required this.maxHeight,
-    required this.topPadding,
-    required this.searchBarHeight,
-    required this.categoriesHeight,
-    required this.filterLink,
-    required this.onFilterTap,
-    required this.categories,
-    required this.selectedCatId,
-    required this.onCategoryTap,
-    required this.isFlashCardMode,
-    required this.onViewModeTap,
-    required this.locationName, // Required
-  });
+  _StickySearchBarDelegate({required this.minHeight, required this.maxHeight, required this.child});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final double scrollRange = maxHeight - minHeight;
-    final double progress = (shrinkOffset / scrollRange).clamp(0.0, 1.0);
-    final double heroOpacity = (1.0 - progress * 2).clamp(0.0, 1.0);
-    final double currentCatHeight = (categoriesHeight * (1.0 - progress)).clamp(0.0, categoriesHeight);
-    final double catOpacity = (1.0 - progress * 3).clamp(0.0, 1.0);
-    final double whiteSheetHeight = searchBarHeight + 20 + currentCatHeight + 10;
-
-    return Container(
-      color: Colors.grey[50],
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0, left: 0, right: 0,
-            bottom: whiteSheetHeight - 30,
-            child: Opacity(
-              opacity: heroOpacity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset("assets/images/hero.png", fit: BoxFit.cover),
-                  Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(0.0), Colors.black.withOpacity(0.2)]))),
-                  Positioned(
-                    top: 100, left: 20, right: 20,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 8. Hiển thị Text động theo locationName
-                        Text(
-                          "Tìm đồ gia dụng\ngiá tốt tại $locationName!",
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              fontFamily: 'QuickSand',
-                              height: 1.2,
-                              shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4, color: Colors.black45)]
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))]),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.monetization_on, color: Colors.white, size: 16), SizedBox(width: 5), Text("Deal Hot: 250.000 đ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            height: whiteSheetHeight,
-            child: Container(
-              decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -5))]
-              ),
-            ),
-          ),
-
-          Positioned(
-            bottom: currentCatHeight + 10,
-            left: 20, right: 20,
-            height: searchBarHeight,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 55,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey, size: 22),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            onSubmitted: (value) {
-                              if (value.trim().isNotEmpty) {
-                                Navigator.push(context, MaterialPageRoute(builder: (context) => SearchResultScreen(keyword: value.trim())));
-                              }
-                            },
-                            decoration: const InputDecoration(hintText: 'Tìm kiếm...', hintStyle: TextStyle(color: Colors.grey, fontSize: 14), border: InputBorder.none),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                CompositedTransformTarget(
-                  link: filterLink,
-                  child: GestureDetector(
-                    onTap: onFilterTap,
-                    child: Container(
-                      height: 55, width: 55,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Icon(HeroiconsSolid.adjustmentsHorizontal, color: Colors.blue[700], size: 26),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            height: currentCatHeight,
-            child: Opacity(
-              opacity: catOpacity,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: categoriesHeight,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(left: 10),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: categories.length,
-                          itemBuilder: (context, index) {
-                            final cat = categories[index];
-                            final isSelected = selectedCatId == cat['id'];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: GestureDetector(
-                                onTap: () => onCategoryTap(cat['id']),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 50, height: 50,
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? Colors.blue : Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(18),
-                                        border: isSelected ? null : Border.all(color: Colors.transparent),
-                                      ),
-                                      child: Icon(cat['icon'], color: isSelected ? Colors.white : cat['color'], size: 24),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(cat['name'], style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? Colors.blue[800] : Colors.black87)),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      Container(width: 1, height: 40, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 5)),
-
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16, left: 5),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: onViewModeTap,
-                              child: Container(
-                                width: 50, height: 50,
-                                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(18)),
-                                child: Icon(isFlashCardMode ? Icons.grid_view_rounded : Icons.view_agenda_rounded, color: Colors.black87),
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            const Text("View", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => SizedBox.expand(child: child);
 
   @override
   double get maxExtent => maxHeight;
   @override
   double get minExtent => minHeight;
   @override
-  bool shouldRebuild(covariant _HomeCollapsingDelegate oldDelegate) {
-    return maxHeight != oldDelegate.maxExtent ||
-        minHeight != oldDelegate.minExtent ||
-        isFlashCardMode != oldDelegate.isFlashCardMode ||
-        selectedCatId != oldDelegate.selectedCatId ||
-        locationName != oldDelegate.locationName;
-  }
+  bool shouldRebuild(covariant _StickySearchBarDelegate oldDelegate) => false;
 }

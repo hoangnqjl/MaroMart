@@ -13,6 +13,8 @@ import 'package:maromart/utils/constants.dart';
 import 'package:maromart/app_router.dart';
 
 import 'package:maromart/components/ModernLoader.dart'; // Import
+import 'package:maromart/components/CommonAppBar.dart';
+import 'package:maromart/components/AppDrawer.dart';
 
 class ProductManager extends StatefulWidget {
   const ProductManager({super.key});
@@ -355,9 +357,11 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Colors.white,
+        appBar: const CommonAppBar(title: "Quản lý sản phẩm"),
+        endDrawer: const AppDrawer(),
         body: Column(
           children: [
-            const SizedBox(height: 100),
+            // const SizedBox(height: 50),
             Container(
               height: 48,
               margin: const EdgeInsets.symmetric(horizontal: 16),

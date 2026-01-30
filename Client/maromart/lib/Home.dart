@@ -94,7 +94,7 @@ class _HomeState extends State<Home> {
   Widget _getCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return HomeScreen(key: _homeScreenKey);
+        return HomeScreen(key: _homeScreenKey, user: _currentUser);
       case 1:
         return NotificationScreen();
       case 2:
@@ -102,7 +102,7 @@ class _HomeState extends State<Home> {
       case 3:
         return ProductManager(key: _productManagerKey);
       default:
-        return HomeScreen(key: _homeScreenKey);
+        return HomeScreen(key: _homeScreenKey, user: _currentUser);
     }
   }
 
@@ -144,20 +144,21 @@ class _HomeState extends State<Home> {
             ),
           ),
 
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Colors.white.withOpacity(0.0),
-              child: SafeArea(
-                bottom: false,
-                child: TopBar(
-                  user: _currentUser,
-                ),
-              ),
-            ),
-          ),
+          // TopBar Removed for now to avoid overlap
+          // Positioned(
+          //   top: 0,
+          //   left: 0,
+          //   right: 0,
+          //   child: Container(
+          //     color: Colors.white.withOpacity(0.0),
+          //     child: SafeArea(
+          //       bottom: false,
+          //       child: TopBar(
+          //         user: _currentUser,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
       bottomNavigationBar: BottomNavigation(

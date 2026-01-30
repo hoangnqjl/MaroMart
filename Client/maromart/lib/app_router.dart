@@ -12,6 +12,7 @@ import '../screens/authencation/Sign_up/signup_info_screen.dart';
 import '../screens/authencation/Sign_up/signup_password_screen.dart';
 import 'package:maromart/screens/Product/SuccessPostScreen.dart';
 import 'package:maromart/screens/Coin/CoinManagerScreen.dart';
+import 'package:maromart/screens/Setting/AboutScreen.dart'; // Add import
 
 
 // iOS-style smooth route transition
@@ -104,6 +105,8 @@ Route? onGenerateRoute(RouteSettings settings) {
       return smoothRoute(const SuccessPostScreen(), settings);
     case '/coin_manager':
       return smoothRoute(const CoinManagerScreen(), settings);
+    case '/about': // Add cases
+      return smoothRoute(const AboutScreen(), settings);
     default:
       return null;
   }

@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
           return MaterialApp(
-            title: 'MaroMart',
+            title: 'Aura',
             debugShowCheckedModeBanner: false,
             themeMode: settings.themeMode,
             locale: settings.locale,

@@ -12,6 +12,8 @@ import 'package:maromart/models/User/ChatPartner.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:maromart/components/ModernLoader.dart';
+import 'package:maromart/components/CommonAppBar.dart';
+import 'package:maromart/components/AppDrawer.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -136,9 +138,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const CommonAppBar(title: "Thông báo"),
+      endDrawer: const AppDrawer(),
       body: Column(
         children: [
-          const SizedBox(height: 100),
+          // const SizedBox(height: 50),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
