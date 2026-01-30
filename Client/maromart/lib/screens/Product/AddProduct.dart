@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/components/TopBarSecond.dart';
@@ -269,13 +270,70 @@ class _AddProductState extends State<AddProduct> {
   }
 
   Future<void> _pickImages() async {
-    final List<XFile> images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) setState(() => _selectedImages.addAll(images));
+    // Check Permissions based on Android Version logic implicit in permission_handler
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.storage, 
+      Permission.photos,
+    ].request();
+
+    // If any relevant permission is granted or limited, proceed. 
+    // Note: Android 13+ uses photos, older uses storage. 
+    // Logic: If Photos is permanently denied OR Storage is permanently denied (depending on OS), show error.
+    
+    // Simple check: Just try to pick. If it fails, maybe show warning?
+    // Better: Check standard permissions.
+    
+    if (await Permission.storage.isPermanentlyDenied || await Permission.photos.isPermanentlyDenied) {
+        _showPermissionDialog();
+        return;
+    }
+
+    try {
+      final List<XFile> images = await _picker.pickMultiImage();
+      if (images.isNotEmpty) setState(() => _selectedImages.addAll(images));
+    } catch (e) {
+      print("Pick Error: $e");
+      // Handle known error: "photo_access_denied"
+      if (e.toString().contains("photo_access_denied")) {
+          _showPermissionDialog();
+      }
+    }
   }
 
   Future<void> _pickVideo() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-    if (video != null) setState(() => _selectedVideos.add(video));
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.storage, 
+      Permission.videos, // Android 13+
+    ].request();
+
+    if (await Permission.storage.isPermanentlyDenied || await Permission.videos.isPermanentlyDenied) {
+        _showPermissionDialog();
+        return;
+    }
+
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+      if (video != null) setState(() => _selectedVideos.add(video));
+    } catch (e) {
+       print("Pick Video Error: $e");
+       if (e.toString().contains("photo_access_denied")) {
+          _showPermissionDialog();
+      }
+    }
+  }
+
+  void _showPermissionDialog() {
+      showDialog(
+        context: context, 
+        builder: (ctx) => AlertDialog(
+          title: const Text("Cần quyền truy cập"),
+          content: const Text("Vui lòng cấp quyền truy cập thư viện ảnh/video trong Cài đặt để sử dụng tính năng này."),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
+            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Mở Cài đặt")),
+          ],
+        )
+      );
   }
 
   void _removeImage(int index) => setState(() => _selectedImages.removeAt(index));
