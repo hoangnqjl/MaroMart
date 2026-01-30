@@ -62,11 +62,7 @@ class _AddProductState extends State<AddProduct> {
 
   List<AttributeItem> _attributes = [];
 
-  // ... (Keep existing template maps and other vars)
-  
-  // (Assuming _attributeTemplates and others are here, I will just replace the top part)
-  
-  // We need to match the range carefully. I will replace the class up to initState.
+
 
 
   // --- TEMPLATES ---
@@ -379,8 +375,7 @@ class _AddProductState extends State<AddProduct> {
     setState(() => _isAiLoading = true);
     try {
       final result = await _productService.validateMedia(_selectedImages, _titleController.text);
-      // New Result keys: is_stock, stock_reason, is_consistent, consistency_reason, condition, extracted_attributes
-      
+
       print("AI Check Result: ${result.toString()}"); 
       
       // 1. Strict Stock Check

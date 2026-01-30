@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/components/Post.dart'; // Dùng Post để hiển thị đầy đủ thông tin
+import 'package:maromart/components/Post.dart';
 import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/services/product_service.dart';
 import 'package:maromart/components/ModernLoader.dart';
@@ -83,12 +83,10 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
   }
 
   Widget _buildBody() {
-    // 1. Trạng thái đang tải
     if (_isLoading) {
       return Center(child: ModernLoader());
     }
 
-    // 2. Trạng thái lỗi
     if (_errorMessage.isNotEmpty) {
       return Center(
         child: Column(
@@ -119,13 +117,18 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
       );
     }
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
       itemCount: _products.length,
       itemBuilder: (context, index) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Post(product: _products[index]),
+          padding: const EdgeInsets.only(bottom: 20),
+          child: SizedBox(
+            height: screenWidth * 1.05,
+            child: Post(product: _products[index]),
+          ),
         );
       },
     );

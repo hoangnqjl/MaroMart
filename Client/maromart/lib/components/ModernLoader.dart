@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:maromart/Colors/AppColors.dart';
 
 class ModernLoader extends StatefulWidget {
   final Color? color;
@@ -39,7 +40,7 @@ class _ModernLoaderState extends State<ModernLoader> with SingleTickerProviderSt
         builder: (_, child) {
           return CustomPaint(
             painter: _LoaderPainter(
-              color: widget.color ?? const Color(0xFF3F4045), // Default dark theme
+              color: widget.color ?? AppColors.primary, // Default to primary color
               animationValue: _controller.value,
             ),
           );

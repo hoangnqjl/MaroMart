@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:maromart/services/auth_service.dart';
 import 'package:maromart/services/socket_service.dart';
 import 'package:maromart/components/ModernLoader.dart';
+import 'package:maromart/Colors/AppColors.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -145,14 +146,14 @@ class _SignInScreenState extends State<SignInScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+            decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color.fromARGB(255, 212, 187, 249),
-              Color.fromARGB(255, 242, 204, 196),
-              Color.fromARGB(255, 195, 219, 245),
+              AppColors.primaryLight,
+              AppColors.primary,
+              AppColors.primaryDark,
             ],
           ),
         ),
@@ -230,7 +231,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             child: ElevatedButton(
                               onPressed: (_isLoading || _isGoogleLoading) ? null : _handleSignIn,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: const StadiumBorder(),

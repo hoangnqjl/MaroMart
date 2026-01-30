@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/Colors/AppColors.dart';
 
 
 class GetStartedScreen extends StatelessWidget {
@@ -20,9 +21,9 @@ class GetStartedScreen extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color.fromARGB(255, 212, 187, 249), // tím cực nhạt
-              Color.fromARGB(255, 242, 204, 196), // cam/hồng rất nhạt
-              Color.fromARGB(255, 195, 219, 245), // xanh lam nhạt
+              AppColors.primaryLight,
+              AppColors.primary,
+              AppColors.primaryDark,
             ],
           ),
         ),
@@ -95,7 +96,7 @@ class GetStartedScreen extends StatelessWidget {
                           // TODO: điều hướng sang trang đăng ký
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: const StadiumBorder(),

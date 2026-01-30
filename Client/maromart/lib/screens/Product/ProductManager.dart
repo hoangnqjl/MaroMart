@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/Colors/AppColors.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:maromart/Colors/AppColors.dart';
@@ -25,7 +26,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   final List<String> _tabs = ['Active', 'Drafts', 'Hidden'];
   final ProductService _productService = ProductService();
   final UserService _userService = UserService();
-  final Color primaryThemeColor = const Color(0xFF3F4045);
+  final Color primaryThemeColor = AppColors.primary;
 
   List<Product> _products = [];
   bool _isLoading = true;
@@ -356,7 +357,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
         backgroundColor: Colors.white,
         body: Column(
           children: [
-            const SizedBox(height: 10),
+            const SizedBox(height: 100),
             Container(
               height: 48,
               margin: const EdgeInsets.symmetric(horizontal: 16),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/Colors/AppColors.dart';
 import 'package:intl/intl.dart';
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/models/Notification/Notification.dart';
@@ -22,7 +23,7 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   final NotificationService _notificationService = NotificationService();
   final SocketService _socketService = SocketService();
-  final Color primaryThemeColor = const Color(0xFF3F4045);
+  final Color primaryThemeColor = AppColors.primary;
 
   List<NotificationModel> _allNotifications = [];
   bool _isLoading = true;
@@ -137,8 +138,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Thêm khoảng đệm 10px để khớp với HomeScreen
-          const SizedBox(height: 10),
+          const SizedBox(height: 100),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(

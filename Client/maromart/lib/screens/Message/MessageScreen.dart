@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maromart/Colors/AppColors.dart';
 import 'package:intl/intl.dart';
 import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/models/Conversation/Conversation.dart';
@@ -25,7 +26,7 @@ class _MessageScreenState extends State<MessageScreen> {
   final ChatService _chatService = ChatService();
   final UserService _userService = UserService();
   final SocketService _socketService = SocketService();
-  final Color primaryThemeColor = const Color(0xFF3F4045);
+  final Color primaryThemeColor = AppColors.primary;
 
   int _selectedTab = 0;
   List<Conversation> _conversations = [];
@@ -140,7 +141,7 @@ class _MessageScreenState extends State<MessageScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: 100),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(

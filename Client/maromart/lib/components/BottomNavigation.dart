@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'dart:ui'; // Required for ImageFilter
+import 'package:maromart/Colors/AppColors.dart';
 
 class BottomNavigation extends StatefulWidget {
   final int selectedIndex;
@@ -31,7 +32,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.white.withOpacity(0.8),
             border: Border(
               top: BorderSide(color: Colors.grey.shade200, width: 0.5),
             ),
@@ -71,7 +72,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
           width: 36,
           height: 36,
           decoration: const BoxDecoration(
-            color: Color(0xFF1A1A1A),
+            color: AppColors.primary,
             shape: BoxShape.circle,
           ),
           child: const Icon(HeroiconsOutline.plus, color: Colors.white, size: 20),
@@ -106,7 +107,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
               children: [
                 Icon(
                   isSelected ? solidIcon : outlineIcon,
-                  color: Colors.black,
+                  color: isSelected ? AppColors.primary : Colors.black,
                   size: 26,
                 ),
                 if (badgeCount > 0)

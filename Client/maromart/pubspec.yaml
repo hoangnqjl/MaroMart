@@ -78,7 +78,7 @@ flutter:
   uses-material-design: true
   generate: true
   assets: 
-    - lib/images/
+    - assets/images/
   fonts:
     - family: QuickSand
       fonts:

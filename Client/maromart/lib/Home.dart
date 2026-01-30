@@ -9,6 +9,7 @@ import 'package:maromart/services/user_service.dart';
 import 'package:maromart/utils/storage.dart';
 import 'package:maromart/services/socket_service.dart';
 import 'package:maromart/screens/Product/ProductManager.dart';
+import 'package:maromart/Colors/AppColors.dart';
 
 import 'package:maromart/components/ModernLoader.dart';
 
@@ -110,44 +111,50 @@ class _HomeState extends State<Home> {
     if (!_isUserDataLoaded) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: ModernLoader(color: Color(0xFF3F4045))),
+      body: Center(child: ModernLoader(color: AppColors.primary)),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      extendBody: false,
-      body: Column(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      extendBody: true,
+      body: Stack(
         children: [
-          // Top Bar
-          Container(
-            color: Colors.white,
-            child: SafeArea(
-              bottom: false,
-              child: TopBar(
-                user: _currentUser,
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 0),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeInOut,
+                switchOutCurve: Curves.easeInOut,
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: KeyedSubtree(
+                  key: ValueKey<int>(_currentIndex),
+                  child: _getCurrentScreen(),
+                ),
               ),
             ),
           ),
 
-          // Main Content with Smooth Animation
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeInOut,
-              switchOutCurve: Curves.easeInOut,
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
-                    child: child,
-                  ),
-                );
-              },
-              child: KeyedSubtree(
-                key: ValueKey<int>(_currentIndex),
-                child: _getCurrentScreen(),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              color: Colors.white.withOpacity(0.0),
+              child: SafeArea(
+                bottom: false,
+                child: TopBar(
+                  user: _currentUser,
+                ),
               ),
             ),
           ),

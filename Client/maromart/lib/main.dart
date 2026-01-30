@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:maromart/providers/settings_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:maromart/l10n/app_localizations.dart';
+import 'package:maromart/Colors/AppColors.dart';
 import 'app_router.dart';
 
 void main() async {
@@ -52,7 +53,7 @@ class MyApp extends StatelessWidget {
               Locale('vi'), // Vietnamese
             ],
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.black, brightness: Brightness.light),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary, brightness: Brightness.light),
         useMaterial3: true,
         fontFamily: 'QuickSand',
         pageTransitionsTheme: const PageTransitionsTheme(
@@ -71,7 +72,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.white, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary, brightness: Brightness.dark),
         scaffoldBackgroundColor: const Color(0xFF121212),
         useMaterial3: true,
         fontFamily: 'QuickSand',

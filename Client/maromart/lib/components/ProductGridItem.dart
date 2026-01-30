@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:maromart/models/Product/Product.dart';
+import 'package:maromart/Colors/AppColors.dart';
 import 'package:maromart/models/User/ChatPartner.dart';
 import 'package:maromart/screens/Message/ChatScreen.dart';
 import 'package:maromart/screens/Product/ProductDetail.dart';
@@ -13,7 +14,7 @@ class ProductGridItem extends StatelessWidget {
   final Product product;
   const ProductGridItem({super.key, required this.product});
 
-  final Color primaryColor = const Color(0xFF3F4045);
+  final Color primaryColor = AppColors.primary;
 
   String _formatPrice(int price) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(price);
