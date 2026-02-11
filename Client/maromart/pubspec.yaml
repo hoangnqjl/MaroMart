@@ -79,6 +79,7 @@ flutter:
   generate: true
   assets: 
     - assets/images/
+    - assets/videos/
   fonts:
     - family: QuickSand
       fonts:

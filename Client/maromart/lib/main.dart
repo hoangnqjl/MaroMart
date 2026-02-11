@@ -9,6 +9,7 @@ import 'package:maromart/providers/settings_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:maromart/l10n/app_localizations.dart';
 import 'package:maromart/Colors/AppColors.dart';
+import 'package:maromart/screens/splash/video_splash_screen.dart';
 import 'app_router.dart';
 
 void main() async {
@@ -89,7 +90,7 @@ class MyApp extends StatelessWidget {
       scrollBehavior: const MaterialScrollBehavior().copyWith(
         physics: const BouncingScrollPhysics(),
       ),
-            home: StorageHelper.isLoggedIn() ? Home() : const GetStartedScreen(),
+            home: const VideoSplashScreen(),
             onGenerateRoute: onGenerateRoute,
           );
         },
