@@ -21,9 +21,8 @@ class _SearchScreenState extends State<SearchScreen> {
     CategoryItem(icon: '', label: 'All', id: ''),
     CategoryItem(icon: 'lib/images/Automotive.png', label: 'Auto', id: 'auto'),
     CategoryItem(icon: 'lib/images/Furniture Household.png', label: 'Furniture', id: 'furniture'),
-    CategoryItem(icon: 'lib/images/Computer & Accessory.png', label: 'Tech', id: 'technology'), // Sửa ID cho khớp với backend nếu cần
-    CategoryItem(icon: 'lib/images/Office Stationary.png', label: 'Office', id: 'office'),
-    CategoryItem(icon: 'lib/images/Men Fashion.png', label: 'Style', id: 'style'),
+    CategoryItem(icon: 'lib/images/Computer & Accessory.png', label: 'Tech', id: 'technology'),
+    CategoryItem(icon: 'lib/images/Men Fashion.png', label: 'Fashion', id: 'style'),
     CategoryItem(icon: 'lib/images/Hijab.png', label: 'Service', id: 'service'),
     CategoryItem(icon: 'lib/images/Sport.png', label: 'Hobby', id: 'hobby'),
     CategoryItem(icon: 'lib/images/Baby.png', label: 'Kids', id: 'kids'),

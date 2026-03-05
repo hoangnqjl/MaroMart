@@ -10,6 +10,7 @@ import 'package:maromart/models/Product/Product.dart';
 import 'package:maromart/models/User/ChatPartner.dart';
 import 'package:maromart/screens/Message/ChatScreen.dart';
 import 'package:maromart/screens/Product/ProductDetail.dart';
+import 'package:maromart/screens/Profile/UserProfileScreen.dart';
 import 'package:maromart/utils/constants.dart';
 import 'package:maromart/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,6 +26,7 @@ class Post extends StatefulWidget {
 class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   late List<MediaItem> _mediaItems;
   final PageController _pageController = PageController();
+  int _currentMediaIndex = 0;
   bool isExpanded = false;
 
   // Flip Animation Variables
@@ -145,14 +147,27 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
             child: PageView.builder(
               controller: _pageController,
               itemCount: _mediaItems.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentMediaIndex = index;
+                });
+              },
               itemBuilder: (context, index) => _buildMediaContent(_mediaItems[index]),
             ),
           ),
 
+          // Price Tag (Top Left)
           Positioned(
             top: 15, left: 15,
             child: _buildBlurTag(_formatPrice(product.productPrice)),
           ),
+
+          // Image Indicator (Top Right)
+          if (_mediaItems.length > 1)
+            Positioned(
+              top: 15, right: 15,
+              child: _buildBlurTag('${_currentMediaIndex + 1}/${_mediaItems.length}'),
+            ),
 
           // Sidebar Action Bar
           AnimatedPositioned(
@@ -192,15 +207,19 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            _buildAction(Icons.person, "Hồ sơ", isAvatar: true, avatarUrl: seller?.avatarUrl, onTap: () {
+                              smoothPush(context, UserProfileScreen(userId: widget.product.userId));
+                            }),
+                            const SizedBox(height: 16),
                             _buildAction(HeroiconsSolid.chatBubbleOvalLeftEllipsis, "Chat", onTap: () {
                               if (seller != null) {
                                 final partner = ChatPartner(userId: seller.userId, fullName: seller.fullName, avatarUrl: seller.avatarUrl);
                                 smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
                               }
                             }),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 18),
                             _buildAction(HeroiconsSolid.phone, "Call", onTap: () => _makeCall(seller?.phoneNumber.toString())),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 18),
                             _buildMoreAction(), // Nút More chứa Save bên trong
                           ],
                         ),
@@ -227,12 +246,31 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      const Icon(HeroiconsOutline.user, color: Colors.white70, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        seller?.fullName ?? "Người dùng",
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     product.productName,
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'QuickSand', shadows: [Shadow(offset: Offset(0, 1), blurRadius: 3.0, color: Colors.black)]),
                   ),
                   const SizedBox(height: 6),
-                  _buildConditionTag(product.productCondition),
+                  Row(
+                    children: [
+                      _buildConditionTag(product.productCondition),
+                      const SizedBox(width: 8),
+                      // Hiển thị một tag địa điểm ngắn gọn nếu có
+                      if (product.productAddress?.province != null)
+                        _buildLocationTag(product.productAddress!.province),
+                    ],
+                  )
                 ],
               ),
             ),
@@ -244,17 +282,17 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
 
   Widget _buildMoreAction() {
     return PopupMenuButton<String>(
-      offset: const Offset(-85, 0),
+      offset: const Offset(-150, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      icon: Column(
+      child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.3), shape: BoxShape.circle),
-            child: const Icon(HeroiconsSolid.ellipsisHorizontal, color: Colors.white, size: 26),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+            child: const Icon(HeroiconsSolid.ellipsisHorizontal, color: Colors.white, size: 24),
           ),
-          const SizedBox(height: 6),
-          const Text("More", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'QuickSand')),
+          const SizedBox(height: 4),
+          const Text("More", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'QuickSand', shadows: [Shadow(blurRadius: 2, color: Colors.black)])),
         ],
       ),
       onSelected: (value) {
@@ -283,21 +321,103 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildBackSide() {
+  Widget _buildLocationTag(String location) {
     return Container(
-      width: double.infinity, height: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: const Color(0xFFF0F1F5), borderRadius: BorderRadius.circular(30)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white.withOpacity(0.3))),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("Chi tiết sản phẩm", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87, fontFamily: 'QuickSand')),
-          const Divider(height: 30),
-          Expanded(child: SingleChildScrollView(physics: const BouncingScrollPhysics(), child: Text(widget.product.productDescription, style: const TextStyle(fontSize: 15, height: 1.6, color: Colors.black87, fontFamily: 'QuickSand')))),
-          const SizedBox(height: 10),
-          const Center(child: Text("Nhấn 2 lần để quay lại", style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'QuickSand', fontStyle: FontStyle.italic))),
+          const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 12),
+          const SizedBox(width: 4),
+          Text(location, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'QuickSand')),
         ],
       ),
+    );
+  }
+
+  Widget _buildBackSide() {
+    final seller = widget.product.userInfo;
+    String bgUrl = _mediaItems.isNotEmpty ? _mediaItems[0].url : '';
+    
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(30), color: Colors.black),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Blurred background image
+           if (bgUrl.isNotEmpty)
+             CachedNetworkImage(
+                imageUrl: bgUrl,
+                fit: BoxFit.cover,
+                errorWidget: (context, url, err) => Container(color: Colors.grey[800]),
+             ),
+           // Glassmorphism overlay
+           BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(color: Colors.black.withOpacity(0.6)),
+           ),
+           
+           // Content
+           Padding(
+             padding: const EdgeInsets.all(24),
+             child: Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 GestureDetector(
+                   onTap: () {
+                     smoothPush(context, UserProfileScreen(userId: widget.product.userId));
+                   },
+                   child: Row(
+                     children: [
+                       CircleAvatar(
+                         radius: 20,
+                         backgroundColor: Colors.white24,
+                         backgroundImage: (seller?.avatarUrl != null && seller!.avatarUrl.isNotEmpty)
+                             ? CachedNetworkImageProvider(_getFullUrl(seller.avatarUrl))
+                             : null,
+                         child: (seller?.avatarUrl == null || seller!.avatarUrl.isEmpty) 
+                            ? const Icon(Icons.person, color: Colors.white) : null,
+                       ),
+                       const SizedBox(width: 12),
+                       Expanded(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text(seller?.fullName ?? "Người dùng ẩn danh", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                             const Text("Người bán", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                           ],
+                         ),
+                       ),
+                     ],
+                   ),
+                 ),
+                 
+                 const SizedBox(height: 20),
+                 const Text("CHI TIẾT MÔ TẢ", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white54, letterSpacing: 1.2)),
+                 const Divider(height: 24, color: Colors.white24),
+                 
+                 Expanded(
+                   child: SingleChildScrollView(
+                     physics: const BouncingScrollPhysics(), 
+                     child: Text(widget.product.productDescription, style: const TextStyle(fontSize: 15, height: 1.6, color: Colors.white, fontFamily: 'QuickSand'))
+                   )
+                 ),
+                 
+                 const SizedBox(height: 10),
+                 Center(
+                   child: Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                     decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(20)),
+                     child: const Text("Nhấn đúp để quay lại ảnh", style: TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'QuickSand')),
+                   )
+                 ),
+               ],
+             ),
+           ),
+        ],
+      )
     );
   }
 
@@ -320,14 +440,32 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
     return VideoPlayerWidget(videoUrl: item.url);
   }
 
-  Widget _buildAction(IconData icon, String label, {VoidCallback? onTap}) {
+  Widget _buildAction(IconData icon, String label, {VoidCallback? onTap, bool isAvatar = false, String? avatarUrl}) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.3), shape: BoxShape.circle), child: Icon(icon, color: Colors.white, size: 26)),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'QuickSand')),
+          if (isAvatar)
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.white24,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? CachedNetworkImageProvider(_getFullUrl(avatarUrl)) : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(icon, color: Colors.white, size: 24) : null,
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(10), 
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle), 
+              child: Icon(icon, color: Colors.white, size: 24)
+            ),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'QuickSand', shadows: [Shadow(blurRadius: 2, color: Colors.black)])),
         ],
       ),
     );

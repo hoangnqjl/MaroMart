@@ -222,14 +222,14 @@ class _UpdateProductState extends State<UpdateProduct> {
 
   // --- MEDIA ---
   Future<void> _pickImages() async {
-    final List<XFile> images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) {
-      setState(() => _selectedImages.addAll(images));
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      setState(() => _selectedImages.add(image));
     }
   }
 
   Future<void> _pickVideo() async {
-    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+    final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
     if (video != null) {
       setState(() => _selectedVideos.add(video));
     }

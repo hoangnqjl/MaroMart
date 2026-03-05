@@ -138,7 +138,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const CommonAppBar(title: "Thông báo"),
+      appBar: const CommonAppBar(title: "Thông báo", showBackButton: true),
       endDrawer: const AppDrawer(),
       body: Column(
         children: [

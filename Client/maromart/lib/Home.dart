@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:maromart/components/BottomNavigation.dart';
 import 'package:maromart/components/TopBar.dart';
 import 'package:maromart/screens/Home/HomeScreen.dart';
+import 'package:maromart/components/AppDrawer.dart';
 import 'package:maromart/screens/Message/MessageScreen.dart';
-import 'package:maromart/screens/Notification/NotificationScreen.dart';
+import 'package:maromart/screens/Setting/Setting.dart';
 import 'package:maromart/models/User/User.dart';
 import 'package:maromart/services/user_service.dart';
 import 'package:maromart/utils/storage.dart';
@@ -21,8 +22,11 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   final UserService _userService = UserService();
   final SocketService _socketService = SocketService();
-  final GlobalKey<HomeScreenState> _homeScreenKey = GlobalKey<HomeScreenState>();
-  final GlobalKey<ProductManagerState> _productManagerKey = GlobalKey<ProductManagerState>();
+  final GlobalKey<HomeScreenState> _homeScreenKey =
+      GlobalKey<HomeScreenState>();
+  final GlobalKey<ProductManagerState> _productManagerKey =
+      GlobalKey<ProductManagerState>();
+  final GlobalKey<ScaffoldState> _homeScaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _isUserDataLoaded = false;
   int _currentIndex = 0;
@@ -51,7 +55,11 @@ class _HomeState extends State<Home> {
     final userId = StorageHelper.getUserId();
     if (userId == null || userId.isEmpty) {
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/get_started', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/get_started',
+          (route) => false,
+        );
       }
       return;
     }
@@ -76,6 +84,11 @@ class _HomeState extends State<Home> {
   }
 
   void _onTabSelected(int index) {
+    if (index == 3) {
+      _homeScaffoldKey.currentState?.openDrawer();
+      return;
+    }
+
     if (index == _currentIndex) {
       // RELOAD LOGIC
       if (index == 0) {
@@ -96,11 +109,11 @@ class _HomeState extends State<Home> {
       case 0:
         return HomeScreen(key: _homeScreenKey, user: _currentUser);
       case 1:
-        return NotificationScreen();
+        return ProductManager(key: _productManagerKey);
       case 2:
         return MessageScreen();
       case 3:
-        return ProductManager(key: _productManagerKey);
+        return const Setting();
       default:
         return HomeScreen(key: _homeScreenKey, user: _currentUser);
     }
@@ -111,11 +124,13 @@ class _HomeState extends State<Home> {
     if (!_isUserDataLoaded) {
       return const Scaffold(
         backgroundColor: Colors.white,
-      body: Center(child: ModernLoader(color: AppColors.primary)),
+        body: Center(child: ModernLoader(color: AppColors.primary)),
       );
     }
 
     return Scaffold(
+      key: _homeScaffoldKey,
+      drawer: AppDrawer(user: _currentUser),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
       body: Stack(
@@ -131,7 +146,10 @@ class _HomeState extends State<Home> {
                   return FadeTransition(
                     opacity: animation,
                     child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+                      scale: Tween<double>(
+                        begin: 0.95,
+                        end: 1.0,
+                      ).animate(animation),
                       child: child,
                     ),
                   );
@@ -172,4 +190,3 @@ class _HomeState extends State<Home> {
     );
   }
 }
-

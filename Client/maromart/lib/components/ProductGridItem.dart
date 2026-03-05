@@ -32,99 +32,106 @@ class ProductGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     String imageUrl = product.productMedia.isNotEmpty ? product.productMedia[0] : '';
     if (imageUrl.startsWith('image:')) imageUrl = imageUrl.substring(6).trim();
+    
+    // Fallback format for time if needed (Chotot often shows "x hours ago" or similar)
+    // Assuming product doesn't have a time/date field explicitly shown here, we might just put a placeholder 
+    // or use empty string if we don't have it. We'll omit it or put a simple location.
+    
+    // Location formatting
+    String locationText = product.productAddress?.province ?? "Chưa có địa chỉ";
+    if (product.productAddress?.commute != null && product.productAddress!.commute.isNotEmpty) {
+      locationText = "${product.productAddress!.commute}, ${locationText}";
+    }
 
     return GestureDetector(
       onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))
-          ],
+          borderRadius: BorderRadius.circular(8), 
         ),
+        clipBehavior: Clip.antiAlias, // Ensures image is clipped to the 8px border radius
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ẢNH SẢN PHẨM
-            Expanded(
-              flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image)),
-                ),
+            // ẢNH SẢN PHẨM (Top)
+            AspectRatio(
+              aspectRatio: 1.25, // Changed from 1.0 to make height shorter
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                   CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey)),
+                    placeholder: (context, url) => Container(color: Colors.grey[100]),
+                  ),
+                  // Heart icon overlay (top right)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Icon(HeroiconsOutline.heart, color: Colors.white, size: 24),
+                  ),
+                  // Image/Video count overlay (bottom right)
+                  if (product.productMedia.length > 1)
+                     Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Row(
+                        children: [
+                          Text("${product.productMedia.length}", style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 4),
+                          const Icon(HeroiconsOutline.photo, color: Colors.white, size: 14),
+                        ],
+                      ),
+                    ),
+                ]
               ),
             ),
 
-            // THÔNG TIN VÀ NÚT BẤM
-            Padding(
-              padding: const EdgeInsets.all(10),
+            // THÔNG TIN SẢN PHẨM (Bottom)
+            Container(
+              constraints: const BoxConstraints(minHeight: 100),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product.productName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatPrice(product.productPrice),
-                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.w800, fontSize: 13),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // HÀNG NÚT BẤM (CHAT & CALL)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Nút Chat
-                      _buildSmallActionBtn(
-                        icon: HeroiconsOutline.chatBubbleLeftRight,
-                        onTap: () {
-                          if (product.userInfo != null) {
-                            final partner = ChatPartner(
-                              userId: product.userInfo!.userId,
-                              fullName: product.userInfo!.fullName,
-                              avatarUrl: product.userInfo!.avatarUrl,
-                            );
-                            smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      // Nút Call
-                      _buildSmallActionBtn(
-                        icon: HeroiconsOutline.phone,
-                        onTap: () => _makeCall(product.userInfo?.phoneNumber),
-                      ),
-                    ],
-                  ),
+                    // Tên sản phẩm
+                    Text(
+                      product.productName,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    // Giá sản phẩm
+                    Text(
+                      _formatPrice(product.productPrice),
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Vị trí & Thời gian (Optional detail)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(HeroiconsOutline.mapPin, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                         Expanded(
+                             child: Text(
+                               locationText,
+                               style: const TextStyle(color: Colors.grey, fontSize: 11),
+                               maxLines: 2,
+                               overflow: TextOverflow.ellipsis,
+                               textAlign: TextAlign.left,
+                             ),
+                         ),
+                      ],
+                    ),
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSmallActionBtn({required IconData icon, required VoidCallback onTap}) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 16, color: primaryColor),
         ),
       ),
     );

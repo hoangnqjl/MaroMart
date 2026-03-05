@@ -5,10 +5,12 @@ import 'package:maromart/Colors/AppColors.dart';
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onSearch;
+  final bool showBackButton;
 
   const CommonAppBar({
     super.key,
     required this.title,
+    this.showBackButton = false,
     this.onSearch,
   });
 
@@ -19,7 +21,13 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false, // Title on Left
-      automaticallyImplyLeading: false, // No back button unless manual
+      automaticallyImplyLeading: false, // No default back button
+      leading: showBackButton 
+        ? IconButton(
+            icon: const Icon(HeroiconsOutline.arrowLeft, color: Colors.black, size: 24),
+            onPressed: () => Navigator.of(context).pop(),
+          )
+        : null,
       title: Text(
         title,
         style: const TextStyle(

@@ -270,31 +270,21 @@ class _AddProductState extends State<AddProduct> {
   }
 
   Future<void> _pickImages() async {
-    // Check Permissions based on Android Version logic implicit in permission_handler
     Map<Permission, PermissionStatus> statuses = await [
-      Permission.storage, 
-      Permission.photos,
+      Permission.camera, 
     ].request();
 
-    // If any relevant permission is granted or limited, proceed. 
-    // Note: Android 13+ uses photos, older uses storage. 
-    // Logic: If Photos is permanently denied OR Storage is permanently denied (depending on OS), show error.
-    
-    // Simple check: Just try to pick. If it fails, maybe show warning?
-    // Better: Check standard permissions.
-    
-    if (await Permission.storage.isPermanentlyDenied || await Permission.photos.isPermanentlyDenied) {
+    if (await Permission.camera.isPermanentlyDenied) {
         _showPermissionDialog();
         return;
     }
 
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
-      if (images.isNotEmpty) setState(() => _selectedImages.addAll(images));
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      if (image != null) setState(() => _selectedImages.add(image));
     } catch (e) {
       print("Pick Error: $e");
-      // Handle known error: "photo_access_denied"
-      if (e.toString().contains("photo_access_denied")) {
+      if (e.toString().contains("access_denied")) {
           _showPermissionDialog();
       }
     }
@@ -302,21 +292,20 @@ class _AddProductState extends State<AddProduct> {
 
   Future<void> _pickVideo() async {
     Map<Permission, PermissionStatus> statuses = await [
-      Permission.storage, 
-      Permission.videos, // Android 13+
+      Permission.camera, 
     ].request();
 
-    if (await Permission.storage.isPermanentlyDenied || await Permission.videos.isPermanentlyDenied) {
+    if (await Permission.camera.isPermanentlyDenied) {
         _showPermissionDialog();
         return;
     }
 
     try {
-      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
       if (video != null) setState(() => _selectedVideos.add(video));
     } catch (e) {
        print("Pick Video Error: $e");
-       if (e.toString().contains("photo_access_denied")) {
+       if (e.toString().contains("access_denied")) {
           _showPermissionDialog();
       }
     }
@@ -327,7 +316,7 @@ class _AddProductState extends State<AddProduct> {
         context: context, 
         builder: (ctx) => AlertDialog(
           title: const Text("Cần quyền truy cập"),
-          content: const Text("Vui lòng cấp quyền truy cập thư viện ảnh/video trong Cài đặt để sử dụng tính năng này."),
+          content: const Text("Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này."),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
             TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Mở Cài đặt")),

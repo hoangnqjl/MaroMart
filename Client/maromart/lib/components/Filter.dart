@@ -60,12 +60,9 @@ class FilterOverlay {
               ),
               ),
             ),
-            Positioned(
-              width: 280,
-              child: CompositedTransformFollower(
-                link: layerLink,
-                showWhenUnlinked: false,
-                offset: const Offset(-230, 50),
+            Center(
+              child: SizedBox(
+                width: 320,
                 child: Material(
                   color: Colors.transparent,
                   child: _FilterContent(

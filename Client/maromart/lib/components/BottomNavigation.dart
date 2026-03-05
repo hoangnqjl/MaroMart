@@ -30,26 +30,51 @@ class _BottomNavigationState extends State<BottomNavigation> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 70 + MediaQuery.of(context).padding.bottom, // Extend height
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom), // Push content up
+          height: 60 + MediaQuery.of(context).padding.bottom, // Extend height
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom,
+          ), // Push content up
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.4),
             border: const Border(
-              top: BorderSide(color: Colors.white, width: 0.5), // Lighter border
+              top: BorderSide(
+                color: Colors.white,
+                width: 0.5,
+              ), // Lighter border
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(HeroiconsSolid.home, HeroiconsOutline.home, 0),
+              _buildNavItem(
+                HeroiconsSolid.home,
+                HeroiconsOutline.home,
+                0,
+                'Trang chủ',
+              ),
 
-              _buildNavItem(HeroiconsSolid.chatBubbleOvalLeft, HeroiconsOutline.chatBubbleOvalLeft, 2),
+              _buildNavItem(
+                HeroiconsSolid.chatBubbleOvalLeft,
+                HeroiconsOutline.chatBubbleOvalLeft,
+                2,
+                'Tin nhắn',
+              ),
 
               _buildAddButton(),
 
-              _buildNavItem(HeroiconsSolid.bell, HeroiconsOutline.bell, 1, badgeCount: widget.notificationCount),
+              _buildNavItem(
+                HeroiconsSolid.cube,
+                HeroiconsOutline.cube,
+                1,
+                'Sản phẩm',
+              ),
 
-              _buildNavItem(HeroiconsSolid.cube, HeroiconsOutline.cube, 3),
+              _buildNavItem(
+                HeroiconsOutline.bars3,
+                HeroiconsOutline.bars3,
+                3,
+                'Menu',
+              ),
             ],
           ),
         ),
@@ -70,19 +95,36 @@ class _BottomNavigationState extends State<BottomNavigation> {
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
         child: Container(
-          width: 36,
-          height: 36,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.blue,
             shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: const Icon(HeroiconsOutline.plus, color: Colors.white, size: 20),
+          child: const Icon(
+            HeroiconsOutline.plus,
+            color: Colors.white,
+            size: 24,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(IconData solidIcon, IconData outlineIcon, int index, {int badgeCount = 0}) {
+  Widget _buildNavItem(
+    IconData solidIcon,
+    IconData outlineIcon,
+    int index,
+    String label, {
+    int badgeCount = 0,
+  }) {
     bool isSelected = widget.selectedIndex == index;
     bool isTapped = _tappedIndex == index;
 
@@ -101,37 +143,55 @@ class _BottomNavigationState extends State<BottomNavigation> {
         child: AnimatedOpacity(
           opacity: isTapped ? 0.6 : 1.0,
           duration: const Duration(milliseconds: 150),
-          child: SizedBox(
-            width: 60,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  isSelected ? solidIcon : outlineIcon,
-                  color: isSelected ? AppColors.primary : Colors.black,
-                  size: 26,
-                ),
-                if (badgeCount > 0)
-                  Positioned(
-                    top: 15,
-                    right: 15,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text(
-                        '$badgeCount',
-                        style: const TextStyle(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    isSelected ? solidIcon : outlineIcon,
+                    color: isSelected ? AppColors.primary : Colors.black,
+                    size: 24,
+                  ),
+                  if (badgeCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$badgeCount',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-              ],
-            ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isSelected ? AppColors.primary : Colors.black,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
