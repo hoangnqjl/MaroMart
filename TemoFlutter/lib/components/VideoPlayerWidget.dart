@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;

@@ -1,6 +1,6 @@
-import 'package:maromart/utils/constants.dart';
+import 'package:temo/utils/constants.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/utils/storage.dart';
 
 class SocketService {
   static final SocketService _instance = SocketService._internal();

@@ -2,18 +2,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/VideoPlayerWidget.dart';
-import 'package:maromart/models/Media/MediaItem.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/services/product_service.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/VideoPlayerWidget.dart';
+import 'package:temo/models/Media/MediaItem.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/services/product_service.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/User/ChatPartner.dart';
 import '../Message/ChatScreen.dart';
-import 'package:maromart/app_router.dart';
-import 'package:maromart/services/user_service.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/app_router.dart';
+import 'package:temo/services/user_service.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;

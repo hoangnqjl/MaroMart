@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/services/auth_service.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/services/auth_service.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class SignUpPasswordScreen extends StatefulWidget {
   const SignUpPasswordScreen({super.key});

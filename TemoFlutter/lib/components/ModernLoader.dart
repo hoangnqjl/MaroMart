@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 class ModernLoader extends StatefulWidget {
   final Color? color;

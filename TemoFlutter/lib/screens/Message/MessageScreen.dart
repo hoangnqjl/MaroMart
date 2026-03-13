@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:intl/intl.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/models/Conversation/Conversation.dart';
-import 'package:maromart/models/Message/Message.dart';
-import 'package:maromart/models/User/ChatPartner.dart';
-import 'package:maromart/screens/Message/ChatScreen.dart';
-import 'package:maromart/services/chat_service.dart';
-import 'package:maromart/services/user_service.dart';
-import 'package:maromart/services/socket_service.dart';
-import 'package:maromart/utils/storage.dart';
-import 'package:maromart/utils/constants.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/models/Conversation/Conversation.dart';
+import 'package:temo/models/Message/Message.dart';
+import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/screens/Message/ChatScreen.dart';
+import 'package:temo/services/chat_service.dart';
+import 'package:temo/services/user_service.dart';
+import 'package:temo/services/socket_service.dart';
+import 'package:temo/utils/storage.dart';
+import 'package:temo/utils/constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/components/ModernLoader.dart';
-import 'package:maromart/components/CommonAppBar.dart';
-import 'package:maromart/components/AppDrawer.dart';
+import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/CommonAppBar.dart';
+import 'package:temo/components/AppDrawer.dart';
 
 class MessageScreen extends StatefulWidget {
   const MessageScreen({super.key});

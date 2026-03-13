@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:maromart/components/TopBarSecond.dart';
-import 'package:maromart/models/Notification/Notification.dart';
+import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/models/Notification/Notification.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 
 class NotificationDetailScreen extends StatelessWidget {

@@ -6,13 +6,13 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/TopBarSecond.dart';
-import 'package:maromart/services/user_service.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/services/user_service.dart';
 import '../../services/product_service.dart';
-import 'package:maromart/models/Product/Product.dart'; // Add this import
+import 'package:temo/models/Product/Product.dart'; // Add this import
 import 'package:intl/intl.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
 class AttributeItem {

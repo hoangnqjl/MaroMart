@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:maromart/models/User/User.dart';
-import 'package:maromart/services/user_service.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/models/User/User.dart';
+import 'package:temo/services/user_service.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class CoinManagerScreen extends StatefulWidget {
   const CoinManagerScreen({super.key});

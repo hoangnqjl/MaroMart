@@ -1,11 +1,11 @@
 
 import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:maromart/models/Login/login_request.dart';
-import 'package:maromart/models/Login/login_response.dart';
-import 'package:maromart/models/User/User.dart';
-import 'package:maromart/utils/constants.dart';
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/models/Login/login_request.dart';
+import 'package:temo/models/Login/login_response.dart';
+import 'package:temo/models/User/User.dart';
+import 'package:temo/utils/constants.dart';
+import 'package:temo/utils/storage.dart';
 
 import 'api_service.dart';
 

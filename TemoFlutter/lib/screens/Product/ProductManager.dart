@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/screens/Product/UpdateProduct.dart';
-import 'package:maromart/screens/Product/AddProduct.dart'; // Add this import
-import 'package:maromart/screens/Product/ProductDetail.dart';
-import 'package:maromart/services/product_service.dart';
-import 'package:maromart/services/user_service.dart';
-import 'package:maromart/utils/constants.dart';
-import 'package:maromart/app_router.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/screens/Product/UpdateProduct.dart';
+import 'package:temo/screens/Product/AddProduct.dart'; // Add this import
+import 'package:temo/screens/Product/ProductDetail.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/services/user_service.dart';
+import 'package:temo/utils/constants.dart';
+import 'package:temo/app_router.dart';
 
-import 'package:maromart/components/ModernLoader.dart'; // Import
-import 'package:maromart/components/CommonAppBar.dart';
-import 'package:maromart/components/AppDrawer.dart';
+import 'package:temo/components/ModernLoader.dart'; // Import
+import 'package:temo/components/CommonAppBar.dart';
+import 'package:temo/components/AppDrawer.dart';
 
 class ProductManager extends StatefulWidget {
   const ProductManager({super.key});

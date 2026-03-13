@@ -1,24 +1,24 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/utils/constants.dart';
-import 'package:maromart/screens/Setting/Setting.dart';
-import 'package:maromart/services/auth_service.dart';
-import 'package:maromart/components/Post.dart';
-import 'package:maromart/components/ProductGridItem.dart';
-import 'package:maromart/components/Filter.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/services/product_service.dart';
-import 'package:maromart/services/location_service.dart';
-import 'package:maromart/components/AppDrawer.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/utils/constants.dart';
+import 'package:temo/screens/Setting/Setting.dart';
+import 'package:temo/services/auth_service.dart';
+import 'package:temo/components/Post.dart';
+import 'package:temo/components/ProductGridItem.dart';
+import 'package:temo/components/Filter.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/services/location_service.dart';
+import 'package:temo/components/AppDrawer.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; // Add import
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/ModernLoader.dart';
 import '../Search/SearchResult.dart';
 import 'dart:async';
-import 'package:maromart/models/User/User.dart';
-import 'package:maromart/screens/Notification/NotificationScreen.dart';
-import 'package:maromart/screens/Home/CategoryProductsScreen.dart';
+import 'package:temo/models/User/User.dart';
+import 'package:temo/screens/Notification/NotificationScreen.dart';
+import 'package:temo/screens/Home/CategoryProductsScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User? user;

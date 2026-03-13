@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:maromart/models/User/User.dart';
+import 'package:temo/models/User/User.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageHelper {

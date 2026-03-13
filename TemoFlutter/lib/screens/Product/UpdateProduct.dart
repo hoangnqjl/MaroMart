@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/TopBarSecond.dart';
-import 'package:maromart/components/ModernLoader.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/services/product_service.dart';
-import 'package:maromart/utils/constants.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/utils/constants.dart';
 
 class AttributeItem {
   TextEditingController nameController = TextEditingController();

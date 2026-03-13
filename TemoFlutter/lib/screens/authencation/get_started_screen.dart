@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 
 class GetStartedScreen extends StatelessWidget {
@@ -51,7 +51,7 @@ class GetStartedScreen extends StatelessWidget {
 
                     // Mô tả
                     Text(
-                      'MaroMart, the easy way for people to buy, sell, and connect with each other.',
+                      'Temo, the easy way for people to buy, sell, and connect with each other.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 14,

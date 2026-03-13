@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/components/TopBarSecond.dart';
+import 'package:temo/components/TopBarSecond.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});

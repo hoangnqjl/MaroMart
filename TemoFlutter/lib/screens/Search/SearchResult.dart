@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/components/Post.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/services/product_service.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/Post.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class SearchResultScreen extends StatefulWidget {
   final String keyword;

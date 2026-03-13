@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/screens/Search/SearchResult.dart';
-import 'package:maromart/app_router.dart';
+import 'package:temo/screens/Search/SearchResult.dart';
+import 'package:temo/app_router.dart';
 
 class SearchItem extends StatefulWidget {
   const SearchItem({super.key});

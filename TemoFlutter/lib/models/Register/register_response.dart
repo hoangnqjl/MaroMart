@@ -1,5 +1,5 @@
 
-import 'package:maromart/models/User/User.dart';
+import 'package:temo/models/User/User.dart';
 
 class RegisterResponse {
   final bool success;

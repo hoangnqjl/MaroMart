@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:maromart/Home.dart';
-import 'package:maromart/screens/authencation/get_started_screen.dart';
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/Home.dart';
+import 'package:temo/screens/authencation/get_started_screen.dart';
+import 'package:temo/utils/storage.dart';
 
 class VideoSplashScreen extends StatefulWidget {
   const VideoSplashScreen({super.key});

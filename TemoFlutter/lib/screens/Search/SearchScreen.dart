@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/Post.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/services/product_service.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/Post.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class SearchScreen extends StatefulWidget {
   @override

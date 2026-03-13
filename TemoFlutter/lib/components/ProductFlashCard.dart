@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:maromart/models/Product/Product.dart';
+import 'package:temo/models/Product/Product.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 

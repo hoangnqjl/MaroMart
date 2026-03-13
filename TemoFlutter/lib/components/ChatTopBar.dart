@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class ChatTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String name;

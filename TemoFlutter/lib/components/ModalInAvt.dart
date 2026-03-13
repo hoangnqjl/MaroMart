@@ -1,11 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/ButtonWithIcon.dart';
-import 'package:maromart/components/UserAvatar.dart'; // Import component mới
-import 'package:maromart/services/user_service.dart';
-import 'package:maromart/services/auth_service.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/ButtonWithIcon.dart';
+import 'package:temo/components/UserAvatar.dart'; // Import component mới
+import 'package:temo/services/user_service.dart';
+import 'package:temo/services/auth_service.dart';
 
 class ModalInAvt extends StatefulWidget {
   const ModalInAvt({Key? key}) : super(key: key);

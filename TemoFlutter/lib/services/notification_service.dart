@@ -1,5 +1,5 @@
-import 'package:maromart/models/Notification/Notification.dart';
-import 'package:maromart/services/api_service.dart';
+import 'package:temo/models/Notification/Notification.dart';
+import 'package:temo/services/api_service.dart';
 
 class NotificationService {
   final ApiService _apiService = ApiService();

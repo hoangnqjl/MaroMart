@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'dart:ui'; // Required for ImageFilter
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 class BottomNavigation extends StatefulWidget {
   final int selectedIndex;

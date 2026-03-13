@@ -32,7 +32,10 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       if (_selectedGender == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select your gender'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Please select your gender'),
+            backgroundColor: Colors.red,
+          ),
         );
         return;
       }
@@ -94,7 +97,10 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
                           CircleAvatar(
                             radius: 26,
                             backgroundColor: Colors.white.withOpacity(.9),
-                            child: const Icon(Icons.person_add_alt, color: Colors.black),
+                            child: const Icon(
+                              Icons.person_add_alt,
+                              color: Colors.black,
+                            ),
                           ),
                           InkWell(
                             onTap: () => Navigator.maybePop(context),
@@ -102,14 +108,18 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
                             child: CircleAvatar(
                               radius: 18,
                               backgroundColor: Colors.white.withOpacity(.9),
-                              child: const Icon(Icons.close, size: 18, color: Colors.black),
+                              child: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Join MaroMart',
+                        'Join Temo',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: Colors.black,
@@ -129,7 +139,9 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
                         controller: _fullNameController,
                         hint: 'Full Name...',
                         icon: Icons.person_outline,
-                        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Fullname is required' : null,
+                        validator: (v) => (v?.trim().isEmpty ?? true)
+                            ? 'Fullname is required'
+                            : null,
                       ),
                       const SizedBox(height: 14),
 
@@ -138,7 +150,9 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
                         hint: 'Email...',
                         icon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
-                        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Email is required' : null,
+                        validator: (v) => (v?.trim().isEmpty ?? true)
+                            ? 'Email is required'
+                            : null,
                       ),
                       const SizedBox(height: 14),
 
@@ -152,7 +166,10 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
 
                       // Gender Dropdown
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(.92),
                           borderRadius: BorderRadius.circular(28),
@@ -165,17 +182,27 @@ class _SignUpInfoScreenState extends State<SignUpInfoScreen> {
                               children: [
                                 Icon(Icons.wc, size: 20, color: Colors.black54),
                                 SizedBox(width: 12),
-                                Text('Select Gender...', style: TextStyle(color: Colors.black54, fontSize: 16)),
+                                Text(
+                                  'Select Gender...',
+                                  style: TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 16,
+                                  ),
+                                ),
                               ],
                             ),
-                            icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                            icon: const Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.black54,
+                            ),
                             items: _genders.map((String item) {
                               return DropdownMenuItem<String>(
                                 value: item,
                                 child: Text(item),
                               );
                             }).toList(),
-                            onChanged: (val) => setState(() => _selectedGender = val),
+                            onChanged: (val) =>
+                                setState(() => _selectedGender = val),
                           ),
                         ),
                       ),
@@ -241,7 +268,10 @@ class _RoundedField extends StatelessWidget {
         hintText: hint,
         filled: true,
         fillColor: Colors.white.withOpacity(.92),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         enabledBorder: _border(),
         focusedBorder: _border(),
         errorBorder: _border(color: Colors.red),

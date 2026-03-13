@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/models/Message/Message.dart';
-import 'package:maromart/models/User/ChatPartner.dart';
-import 'package:maromart/services/chat_service.dart';
-import 'package:maromart/utils/storage.dart';
-import 'package:maromart/utils/constants.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/models/Message/Message.dart';
+import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/services/chat_service.dart';
+import 'package:temo/utils/storage.dart';
+import 'package:temo/utils/constants.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;

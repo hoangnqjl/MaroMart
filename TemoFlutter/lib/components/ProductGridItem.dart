@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/models/User/ChatPartner.dart';
-import 'package:maromart/screens/Message/ChatScreen.dart';
-import 'package:maromart/screens/Product/ProductDetail.dart';
-import 'package:maromart/app_router.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/screens/Message/ChatScreen.dart';
+import 'package:temo/screens/Product/ProductDetail.dart';
+import 'package:temo/app_router.dart';
 import 'package:intl/intl.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:url_launcher/url_launcher.dart'; // Để thực hiện cuộc gọi

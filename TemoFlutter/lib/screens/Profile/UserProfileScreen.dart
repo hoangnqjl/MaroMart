@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/components/CommonAppBar.dart';
-import 'package:maromart/components/ModernLoader.dart';
-import 'package:maromart/components/ProductGridItem.dart';
-import 'package:maromart/models/Product/Product.dart';
-import 'package:maromart/models/User/User.dart';
-import 'package:maromart/services/product_service.dart';
-import 'package:maromart/services/user_service.dart';
+import 'package:temo/components/CommonAppBar.dart';
+import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/ProductGridItem.dart';
+import 'package:temo/models/Product/Product.dart';
+import 'package:temo/models/User/User.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/services/user_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import 'package:maromart/utils/constants.dart';
+import 'package:temo/utils/constants.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class UserProfileScreen extends StatefulWidget {

@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:intl/intl.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/models/Notification/Notification.dart';
-import 'package:maromart/services/notification_service.dart';
-import 'package:maromart/services/socket_service.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/models/Notification/Notification.dart';
+import 'package:temo/services/notification_service.dart';
+import 'package:temo/services/socket_service.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/screens/Notification/NotificationDetailScreen.dart';
-import 'package:maromart/screens/Message/ChatScreen.dart';
-import 'package:maromart/models/User/ChatPartner.dart';
+import 'package:temo/screens/Notification/NotificationDetailScreen.dart';
+import 'package:temo/screens/Message/ChatScreen.dart';
+import 'package:temo/models/User/ChatPartner.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
-import 'package:maromart/components/ModernLoader.dart';
-import 'package:maromart/components/CommonAppBar.dart';
-import 'package:maromart/components/AppDrawer.dart';
+import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/CommonAppBar.dart';
+import 'package:temo/components/AppDrawer.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});

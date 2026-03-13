@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/ModernLoader.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/TopBarSecond.dart';
-import 'package:maromart/services/user_service.dart';
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/services/user_service.dart';
+import 'package:temo/utils/storage.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});

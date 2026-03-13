@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/services/auth_service.dart';
-import 'package:maromart/services/socket_service.dart';
-import 'package:maromart/components/ModernLoader.dart';
-import 'package:maromart/Colors/AppColors.dart';
+import 'package:temo/services/auth_service.dart';
+import 'package:temo/services/socket_service.dart';
+import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -194,7 +194,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                           const SizedBox(height: 20),
                           Text(
-                            'MaroMart',
+                            'Temo',
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                               color: Colors.black,
@@ -202,7 +202,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'MaroMart, the easy way for people to buy, sell, and connect with each other.',
+                            'Temo, the easy way for people to buy, sell, and connect with each other.',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: const Color(0xFF7A7A7A),
                               height: 1.5,

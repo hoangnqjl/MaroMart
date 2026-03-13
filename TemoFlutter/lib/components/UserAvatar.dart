@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:maromart/components/ModernLoader.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class UserAvatar extends StatelessWidget {
   final String avatarUrl;

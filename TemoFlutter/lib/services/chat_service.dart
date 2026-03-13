@@ -1,9 +1,9 @@
 import 'package:image_picker/image_picker.dart';
-import 'package:maromart/models/Conversation/Conversation.dart';
-import 'package:maromart/models/Message/Message.dart';
-import 'package:maromart/services/api_service.dart';
-import 'package:maromart/services/socket_service.dart';
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/models/Conversation/Conversation.dart';
+import 'package:temo/models/Message/Message.dart';
+import 'package:temo/services/api_service.dart';
+import 'package:temo/services/socket_service.dart';
+import 'package:temo/utils/storage.dart';
 
 class ChatService {
   final ApiService _apiService = ApiService();

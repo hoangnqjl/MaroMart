@@ -4,14 +4,14 @@ import 'package:flutter/foundation.dart'; // Để check kIsWeb
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart'; // <--- Import Image Picker
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/components/ModernLoader.dart';
-import 'package:maromart/components/TopBarSecond.dart';
-import 'package:maromart/components/UserAvatar.dart';
-import 'package:maromart/services/user_service.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/components/UserAvatar.dart';
+import 'package:temo/services/user_service.dart';
 import 'package:provider/provider.dart';
-import 'package:maromart/providers/settings_provider.dart';
-import 'package:maromart/l10n/app_localizations.dart';
+import 'package:temo/providers/settings_provider.dart';
+import 'package:temo/l10n/app_localizations.dart';
 
 class Setting extends StatefulWidget {
   const Setting({Key? key}) : super(key: key);

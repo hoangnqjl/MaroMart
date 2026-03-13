@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:maromart/models/User/User.dart';
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/models/User/User.dart';
+import 'package:temo/utils/storage.dart';
 import 'api_service.dart';
 
 class UserService {

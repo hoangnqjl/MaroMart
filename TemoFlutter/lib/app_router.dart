@@ -1,18 +1,18 @@
 
 import 'package:flutter/material.dart';
-import 'package:maromart/Home.dart';
-import 'package:maromart/screens/Product/AddProduct.dart';
-import 'package:maromart/screens/Product/ProductManager.dart';
-import 'package:maromart/screens/Setting/ChangeInfomation.dart';
-import 'package:maromart/screens/Setting/ChangePassword.dart';
-import 'package:maromart/screens/Setting/Setting.dart';
-import 'package:maromart/screens/authencation/get_started_screen.dart';
+import 'package:temo/Home.dart';
+import 'package:temo/screens/Product/AddProduct.dart';
+import 'package:temo/screens/Product/ProductManager.dart';
+import 'package:temo/screens/Setting/ChangeInfomation.dart';
+import 'package:temo/screens/Setting/ChangePassword.dart';
+import 'package:temo/screens/Setting/Setting.dart';
+import 'package:temo/screens/authencation/get_started_screen.dart';
 import '../screens/authencation/Login/signin_screen.dart';
 import '../screens/authencation/Sign_up/signup_info_screen.dart';
 import '../screens/authencation/Sign_up/signup_password_screen.dart';
-import 'package:maromart/screens/Product/SuccessPostScreen.dart';
-import 'package:maromart/screens/Coin/CoinManagerScreen.dart';
-import 'package:maromart/screens/Setting/AboutScreen.dart'; // Add import
+import 'package:temo/screens/Product/SuccessPostScreen.dart';
+import 'package:temo/screens/Coin/CoinManagerScreen.dart';
+import 'package:temo/screens/Setting/AboutScreen.dart'; // Add import
 
 
 // iOS-style smooth route transition

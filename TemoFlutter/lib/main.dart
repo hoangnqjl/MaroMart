@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:maromart/Home.dart';
-import 'package:maromart/screens/authencation/get_started_screen.dart';
-import 'package:maromart/services/socket_service.dart';
-import 'package:maromart/utils/storage.dart';
+import 'package:temo/Home.dart';
+import 'package:temo/screens/authencation/get_started_screen.dart';
+import 'package:temo/services/socket_service.dart';
+import 'package:temo/utils/storage.dart';
 import 'package:provider/provider.dart';
-import 'package:maromart/providers/settings_provider.dart';
+import 'package:temo/providers/settings_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:maromart/l10n/app_localizations.dart';
-import 'package:maromart/Colors/AppColors.dart';
-import 'package:maromart/screens/splash/video_splash_screen.dart';
+import 'package:temo/l10n/app_localizations.dart';
+import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/screens/splash/video_splash_screen.dart';
 import 'app_router.dart';
 
 void main() async {
@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
           return MaterialApp(
-            title: 'Aura',
+            title: 'Temo',
             debugShowCheckedModeBanner: false,
             themeMode: settings.themeMode,
             locale: settings.locale,
