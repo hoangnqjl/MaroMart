@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'dart:ui'; // Required for ImageFilter
+import 'dart:ui';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class BottomNavigation extends StatefulWidget {
   final int selectedIndex;
@@ -30,50 +31,44 @@ class _BottomNavigationState extends State<BottomNavigation> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 60 + MediaQuery.of(context).padding.bottom, // Extend height
+          // Chiều cao cố định 60 + phần padding dưới của iPhone (nếu có)
+          height: 60 + MediaQuery.of(context).padding.bottom,
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).padding.bottom,
-          ), // Push content up
+          ),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.4),
             border: const Border(
               top: BorderSide(
                 color: Colors.white,
                 width: 0.5,
-              ), // Lighter border
+              ),
             ),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(
-                HeroiconsSolid.home,
-                HeroiconsOutline.home,
-                0,
-                'Trang chủ',
+              // 2 Tab bên trái
+              Expanded(
+                child: _buildNavItem('assets/images/HomeIcon.svg', 0, 'Home'),
+              ),
+              Expanded(
+                child: _buildNavItem('assets/images/ItemIcon.svg', 1, 'Items'),
               ),
 
-              _buildNavItem(
-                HeroiconsSolid.chatBubbleOvalLeft,
-                HeroiconsOutline.chatBubbleOvalLeft,
-                2,
-                'Tin nhắn',
-              ),
-
+              // Nút ADD nằm chính giữa tuyệt đối
               _buildAddButton(),
 
-              _buildNavItem(
-                HeroiconsSolid.cube,
-                HeroiconsOutline.cube,
-                1,
-                'Sản phẩm',
+              // 2 Tab bên phải
+              Expanded(
+                child: _buildNavItem(
+                    'assets/images/MessageIcon.svg',
+                    2,
+                    'Message',
+                    badgeCount: widget.notificationCount
+                ),
               ),
-
-              _buildNavItem(
-                HeroiconsOutline.bars3,
-                HeroiconsOutline.bars3,
-                3,
-                'Menu',
+              Expanded(
+                child: _buildNavItem('assets/images/ProfileIcon.svg', 3, 'Profile'),
               ),
             ],
           ),
@@ -97,12 +92,13 @@ class _BottomNavigationState extends State<BottomNavigation> {
         child: Container(
           width: 44,
           height: 44,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-            color: Colors.blue,
+            gradient: AppColors.primaryGradient,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.withOpacity(0.3),
+                color: AppColors.primary.withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -119,14 +115,16 @@ class _BottomNavigationState extends State<BottomNavigation> {
   }
 
   Widget _buildNavItem(
-    IconData solidIcon,
-    IconData outlineIcon,
-    int index,
-    String label, {
-    int badgeCount = 0,
-  }) {
+      String iconPath,
+      int index,
+      String label, {
+        int badgeCount = 0,
+      }) {
     bool isSelected = widget.selectedIndex == index;
     bool isTapped = _tappedIndex == index;
+
+    // Màu sắc chuyển đổi: Cam nhạt khi chọn, Xám khi không chọn
+    Color currentColor = isSelected ? AppColors.primaryLight : Colors.grey;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _tappedIndex = index),
@@ -140,59 +138,60 @@ class _BottomNavigationState extends State<BottomNavigation> {
         scale: isTapped ? 0.85 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
-        child: AnimatedOpacity(
-          opacity: isTapped ? 0.6 : 1.0,
-          duration: const Duration(milliseconds: 150),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    isSelected ? solidIcon : outlineIcon,
-                    color: isSelected ? AppColors.primary : Colors.black,
-                    size: 24,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                SvgPicture.asset(
+                  iconPath,
+                  width: 22,
+                  height: 22,
+                  colorFilter: ColorFilter.mode(
+                      currentColor,
+                      BlendMode.srcIn
                   ),
-                  if (badgeCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$badgeCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: currentColor,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontFamily: 'Roboto', // Roboto cho thanh điều hướng
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isSelected ? AppColors.primary : Colors.black,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

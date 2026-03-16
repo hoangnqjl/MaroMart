@@ -12,17 +12,21 @@ import 'package:temo/models/Product/Product.dart';
 import 'package:temo/services/product_service.dart';
 import 'package:temo/services/location_service.dart';
 import 'package:temo/components/AppDrawer.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; // Add import
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:temo/components/ModernLoader.dart';
 import '../Search/SearchResult.dart';
 import 'dart:async';
 import 'package:temo/models/User/User.dart';
 import 'package:temo/screens/Notification/NotificationScreen.dart';
 import 'package:temo/screens/Home/CategoryProductsScreen.dart';
+import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HomeScreen extends StatefulWidget {
   final User? user;
-  const HomeScreen({Key? key, this.user}) : super(key: key);
+  final VoidCallback? onMenuTap;
+  const HomeScreen({Key? key, this.user, this.onMenuTap}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => HomeScreenState();
@@ -31,12 +35,6 @@ class HomeScreen extends StatefulWidget {
 class HomeScreenState extends State<HomeScreen> {
   final ProductService _productService = ProductService();
   final LocationService _locationService = LocationService();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  late final FilterOverlay _filterOverlay = FilterOverlay(
-    onFilterApplied: (categoryId, province, ward) =>
-        updateFilter(categoryId: categoryId, province: province, ward: ward),
-  );
 
   final List<Product> _products = [];
   bool _isInitialLoading = true;
@@ -44,17 +42,16 @@ class HomeScreenState extends State<HomeScreen> {
   bool _hasMore = true;
   int _currentPage = 1;
   final int _limit = 10;
-  bool _isFlashCardMode = false;
 
   final PageController _bannerController = PageController();
   Timer? _bannerTimer;
   int _currentBannerIndex = 0;
 
   final List<String> _searchHints = [
-    "Bạn muốn tìm gì hôm nay?",
-    "Tìm kiếm voucher...",
-    "Tìm kiếm vé tham quan...",
-    "Tìm kiếm sản phẩm..."
+    "What are you looking for today?",
+    "Search for vouchers...",
+    "Search for tickets...",
+    "Search for products...",
   ];
   int _currentHintIndex = 0;
   Timer? _hintTimer;
@@ -62,53 +59,21 @@ class HomeScreenState extends State<HomeScreen> {
   String? _filterCategoryId;
   String? _filterProvince;
   String? _filterWard;
-  String _currentLocation = "đang tải...";
-  String _activeQuickFilter = "Dành cho bạn";
 
   final List<Map<String, dynamic>> _quickCategories = [
-    {
-      'id': 'auto',
-      'name': 'Xe cộ',
-      'image': 'assets/images/xeco.png',
-    },
-    {
-      'id': 'furniture',
-      'name': 'Nội thất',
-      'image': 'assets/images/noithat.png',
-    },
-    {
-      'id': 'technology',
-      'name': 'Công nghệ',
-      'image': 'assets/images/congnghe.png',
-    },
-    {
-      'id': 'style',
-      'name': 'Thời trang',
-      'image': 'assets/images/thoitrang.png',
-    },
-    {
-      'id': 'service',
-      'name': 'Dịch vụ',
-      'image': 'assets/images/dichvu.png',
-    },
-    {
-      'id': 'hobby',
-      'name': 'Sở thích',
-      'image': 'assets/images/sothich.png',
-    },
-    {
-      'id': 'kids',
-      'name': 'Mẹ & Bé',
-      'image': 'assets/images/mevabe.png',
-    },
+    {'id': 'auto', 'name': 'Autos', 'image': 'assets/images/auto.png'},
+    {'id': 'furniture', 'name': 'Appliances', 'image': 'assets/images/appliances.png'},
+    {'id': 'technology', 'name': 'Electronics', 'image': 'assets/images/electronics.png'},
+    {'id': 'style', 'name': 'Fashion', 'image': 'assets/images/fashion.png'},
+    {'id': 'service', 'name': 'Services', 'image': 'assets/images/service.png'},
+    {'id': 'hobby', 'name': 'Hobbies', 'image': 'assets/images/hobbies.png'},
+    {'id': 'kids', 'name': 'Kids', 'image': 'assets/images/kids.png'},
   ];
 
-  final List<String> _trendingKeywords = [
-    '#laptop',
-    '#điện thoại',
-    '#ô tô',
-    '#đồ chơi',
-  ];
+  late final FilterOverlay _filterOverlay = FilterOverlay(
+    onFilterApplied: (categoryId, province, ward) =>
+        updateFilter(categoryId: categoryId, province: province, ward: ward),
+  );
 
   @override
   void initState() {
@@ -116,13 +81,10 @@ class HomeScreenState extends State<HomeScreen> {
     _fetchLocation();
     _loadProducts(isRefresh: true);
     _productService.productChangeNotifier.addListener(_onProductChanged);
-    
+
     _bannerTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
       if (_bannerController.hasClients) {
-        _currentBannerIndex++;
-        if (_currentBannerIndex >= 4) { // Assuming 4 banners
-          _currentBannerIndex = 0;
-        }
+        _currentBannerIndex = (_currentBannerIndex + 1) % 4;
         _bannerController.animateToPage(
           _currentBannerIndex,
           duration: const Duration(milliseconds: 350),
@@ -142,10 +104,9 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchLocation() async {
     try {
-      final loc = await _locationService.getCurrentAddress();
-      if (mounted) setState(() => _currentLocation = loc ?? "Không xác định");
+      await _locationService.getCurrentAddress();
     } catch (e) {
-      print("Location error: $e");
+      debugPrint("Location error: $e");
     }
   }
 
@@ -156,30 +117,6 @@ class HomeScreenState extends State<HomeScreen> {
     _hintTimer?.cancel();
     _productService.productChangeNotifier.removeListener(_onProductChanged);
     super.dispose();
-  }
-
-  void _showTestingFeature() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          "Tính năng đang thử nghiệm",
-          style: TextStyle(fontFamily: 'QuickSand'),
-        ),
-        backgroundColor: Colors.grey[800],
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  void _handleLogout() async {
-    await AuthService().logout();
-    if (mounted) {
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil('/signin', (route) => false);
-    }
   }
 
   void reload() {
@@ -213,10 +150,7 @@ class HomeScreenState extends State<HomeScreen> {
 
     try {
       List<Product> newProducts;
-      bool isFiltering =
-          _filterCategoryId != null ||
-          _filterProvince != null ||
-          _filterWard != null;
+      bool isFiltering = _filterCategoryId != null || _filterProvince != null || _filterWard != null;
       if (isFiltering) {
         newProducts = await _productService.getProductsByFilter(
           categoryId: _filterCategoryId == '' ? null : _filterCategoryId,
@@ -225,10 +159,7 @@ class HomeScreenState extends State<HomeScreen> {
         );
         _hasMore = false;
       } else {
-        newProducts = await _productService.getProducts(
-          page: _currentPage,
-          limit: _limit,
-        );
+        newProducts = await _productService.getProducts(page: _currentPage, limit: _limit);
       }
 
       if (mounted) {
@@ -240,15 +171,6 @@ class HomeScreenState extends State<HomeScreen> {
             if (!isFiltering) {
               _currentPage++;
               if (newProducts.length < _limit) _hasMore = false;
-            }
-            
-            // Xử lý Quick Filters
-            if (!isFiltering) {
-               if (_activeQuickFilter == "Mới nhất") {
-                 _products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-               } else if (_activeQuickFilter == "Dành cho bạn") {
-                 _products.shuffle();
-               }
             }
           }
           _isInitialLoading = false;
@@ -263,7 +185,7 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Slightly darker background
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -272,252 +194,293 @@ class HomeScreenState extends State<HomeScreen> {
           },
           child: CustomScrollView(
             slivers: [
-              // 1. Top Bar (AppBar)
-              SliverAppBar(
-                pinned: true,
-                floating: true,
-                backgroundColor: Colors.white,
-                elevation: 0,
-                titleSpacing: 16,
-                automaticallyImplyLeading: false,
-                title: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primary, width: 1.5),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        HeroiconsOutline.magnifyingGlass,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          onSubmitted: (value) {
-                            if (value.trim().isNotEmpty) {
-                              setState(() {
-                                final keyword = '#\${value.trim()}';
-                                if (!_trendingKeywords.contains(keyword)) {
-                                  _trendingKeywords.insert(0, keyword);
-                                }
-                              });
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      SearchResultScreen(keyword: value.trim()),
-                                ),
-                              );
-                            }
-                          },
-                          decoration: InputDecoration(
-                            hintText: _searchHints[_currentHintIndex],
-                            border: InputBorder.none,
-                            hintStyle: const TextStyle(
-                              color: Colors.grey, // Updated color here
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            contentPadding: const EdgeInsets.only(bottom: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(
-                      HeroiconsOutline.bell,
-                      color: Colors.black87,
-                      size: 26,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Setting(),
-                        ),
-                      );
-                    },
-                    child: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: widget.user?.avatarUrl != null
-                          ? NetworkImage(widget.user!.avatarUrl!)
-                          : null,
-                      child: widget.user?.avatarUrl == null
-                          ? const Icon(HeroiconsOutline.user, size: 20, color: Colors.black54) 
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                ],
-              ),
-
-              // 2. Horizontal Image List (Banners)
               SliverToBoxAdapter(
-                child: Container(
-                  height: 180, // Increased banner height
-                  child: PageView.builder(
-                    controller: _bannerController,
-                    onPageChanged: (int index) {
-                      setState(() {
-                         _currentBannerIndex = index;
-                      });
-                    },
-                    itemCount: 4,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        width: MediaQuery.of(context).size.width,
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage("assets/images/banner${index + 1}.png"),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              // 3. Horizontal Categories
-              SliverToBoxAdapter(
-                child: Container(
-                  height: 90, // Set fixed height for the horizontal list
-                  margin: EdgeInsets.zero,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary.withOpacity(0.15),
-                        Colors.white,
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: const [0.0, 1.0],
-                    ),
-                  ),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    itemCount: _quickCategories.length,
-                    itemBuilder: (context, index) {
-                      final cat = _quickCategories[index];
-                      final isSelected = _filterCategoryId == cat['id'];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CategoryProductsScreen(category: cat),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          width: 72, // Reduced width for tighter spacing
-                          margin: const EdgeInsets.only(right: 6), // Reduced margin
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                                Image.asset(
-                                  cat['image'],
-                                  width: 44,
-                                  height: 44,
-                                  fit: BoxFit.contain,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  cat['name'],
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isSelected ? AppColors.primary : Colors.black87,
-                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold, // Bolder text
-                                  ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        Positioned.fill(child: Container(color: Colors.white)),
+                        // Gradient & Fade giữ nguyên
+                        Positioned.fill(
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xFFFFB86A), Color(0xFFFFAD86), Color(0xFFFFA2A2), Color(0xFFFFA2A2)],
+                                stops: [0.0, 0.39, 0.77, 1.0],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.white.withOpacity(0.0), Colors.white.withOpacity(0.0), Colors.white.withOpacity(0.6), Colors.white, Colors.white],
+                                stops: const [0.0, 0.15, 0.40, 0.70, 1.0],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Column(
+                          children: [
+                            // 1. Top Bar
+                            Padding(
+                              padding: const EdgeInsets.only(left: 14, right: 14, top: 10, bottom: 0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => widget.onMenuTap?.call(),
+                                    child: SvgPicture.asset('assets/images/Iconmenu.svg', width: 30, height: 30, fit: BoxFit.contain),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildCircleIcon('assets/images/Iconluu.svg'),
+                                      const SizedBox(width: 12),
+                                      GestureDetector(
+                                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen())),
+                                        child: _buildCircleIcon('assets/images/Iconbell.svg'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // 2. Search Bar
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(25),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                                ),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 16),
+                                    const Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey, size: 22),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: TextField(
+                                        decoration: InputDecoration(
+                                          hintText: _searchHints[_currentHintIndex],
+                                          border: InputBorder.none,
+                                          hintStyle: const TextStyle(
+                                            color: Color(0x66000000), // Đen 40%
+                                            fontSize: 14,
+                                            fontFamily: 'Roboto',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Filter Button
+                                    GestureDetector(
+                                      onTap: () => _filterOverlay.toggle(context),
+                                      child: Container(
+                                        width: 44, height: 44, margin: const EdgeInsets.only(right: 3),
+                                        decoration: const BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
+                                        child: const Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.white, size: 20),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // 3. Categories List
+                            Container(
+                              height: 90,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                itemCount: _quickCategories.length,
+                                itemBuilder: (context, index) {
+                                  final cat = _quickCategories[index];
+                                  return Container(
+                                    width: 72, margin: const EdgeInsets.only(right: 6),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(cat['image'], width: 44, height: 44, fit: BoxFit.contain),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          cat['name'],
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0x99000000), // Đen 60%
+                                              fontFamily: 'Roboto',
+                                              fontWeight: FontWeight.bold
+                                          ),
+                                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
-              // 3.5 Trending Keywords
-              if (_trendingKeywords.isNotEmpty)
+              if (_products.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 10),
+                    child: const Text(
+                        "Recommended",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xB3000000), // Đen 70%
+                            fontFamily: 'Roboto'
+                        )
+                    ),
+                  ),
+                ),
+
+              if (_products.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Container(
-                    height: 52, // height 36 + padding 8 * 2
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: Colors.grey[200]!, width: 1),
-                        bottom: BorderSide(color: Colors.grey[200]!, width: 1),
-                      ),
-                    ),
+                    height: 328, margin: const EdgeInsets.only(bottom: 20),
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       scrollDirection: Axis.horizontal,
-                      itemCount: _trendingKeywords.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemCount: _products.take(6).length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 16),
+
                       itemBuilder: (context, index) {
+                        final product = _products[index];
+                        String imageUrl = product.productMedia.isNotEmpty ? product.productMedia[0] : '';
+                        if (imageUrl.startsWith('image:')) imageUrl = imageUrl.substring(6).trim();
+
+                        final String formattedPrice = NumberFormat.currency(
+                            locale: 'vi_VN',
+                            symbol: 'đ',
+                            decimalDigits: 0
+                        ).format(product.productPrice);
+
                         return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SearchResultScreen(
-                                  keyword: _trendingKeywords[index].replaceAll('#', ''),
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _trendingKeywords[index],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                          onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: product.productId),
+                          child: SizedBox(
+                            width: 245,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(26),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // Background Image
+                                  CachedNetworkImage(
+                                    imageUrl: imageUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(color: Colors.white),
+                                    errorWidget: (context, url, error) => Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.image)
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.arrow_right_alt,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                              ],
+                                  // Dark Overlay
+                                  Container(color: Colors.black.withOpacity(0.3)),
+
+                                  // Content
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Product Name & Price
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                                product.productName,
+                                                style: const TextStyle(
+                                                    fontFamily: 'Quicksand', // Font Quicksand
+                                                    color: Colors.white,      // Trắng 100%
+                                                    fontSize: 18,             // Size 18
+                                                    fontWeight: FontWeight.bold
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                                formattedPrice,
+                                                style: const TextStyle(
+                                                    fontFamily: 'Quicksand', // Font Quicksand
+                                                    color: Colors.white,
+                                                    fontSize: 14,             // Size 14
+                                                    fontWeight: FontWeight.w700
+                                                )
+                                            ),
+                                          ],
+                                        ),
+                                        // Bottom Location and Message Pill
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                decoration: BoxDecoration(
+                                                    color: Colors.white.withOpacity(0.4),
+                                                    borderRadius: BorderRadius.circular(20)
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 14),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                        child: Text(
+                                                            product.productAddress?.province ?? 'Location unknown',
+                                                            style: const TextStyle(
+                                                                fontFamily: 'Quicksand', // Font Quicksand
+                                                                color: Colors.white,
+                                                                fontSize: 12,             // Size 12
+                                                                fontWeight: FontWeight.w700
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis
+                                                        )
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                                width: 36,
+                                                height: 36,
+                                                decoration: BoxDecoration(
+                                                    color: Colors.white.withOpacity(0.4),
+                                                    shape: BoxShape.circle
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: const Icon(HeroiconsOutline.chatBubbleOvalLeft, color: Colors.white, size: 18)
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -526,239 +489,42 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-              // 4. Top Rated Sellers Header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 0,
-                    bottom: 10,
-                  ),
-                  child: Text(
-                    "Người bán được đánh giá cao",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                ),
-              ),
-
-              // 5. Top Rated Sellers List
-              SliverToBoxAdapter(
-                child: Container(
-                  height: 150,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 5,
-                    separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) {
-                      return Container(
-                        width: 140,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[200]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(12),
-                                  topRight: Radius.circular(12),
-                                ),
-                                child: Image.asset(
-                                  'assets/images/background.jpg',
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          "L'FEMME",
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          "Thương hiệu xuất sắc 2024",
-                                          style: TextStyle(color: Colors.red[300], fontSize: 10),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Colors.black,
-                                    child: Text(
-                                      "ESTHER",
-                                      style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              // 5.5 + 6 Combined: Quick Filters and View Toggle
-              SliverToBoxAdapter(
-                child: Container(
-                  height: 40,
-                  margin: const EdgeInsets.only(bottom: 10, top: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      // Quick Filters (Single Button Toggle)
-                      Expanded(
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _activeQuickFilter = _activeQuickFilter == "Dành cho bạn" ? "Mới nhất" : "Dành cho bạn";
-                                });
-                                _loadProducts(isRefresh: true);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppColors.primary, width: 1),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      _activeQuickFilter,
-                                      style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      HeroiconsOutline.chevronUpDown,
-                                      color: AppColors.primary,
-                                      size: 16,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+              if (_products.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
+                    child: const Text(
+                      "Explore more",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xB3000000), // Black 70%
+                        fontFamily: 'Roboto',
                       ),
-                      
-                      // View Toggle & Filter
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GestureDetector(
-                            onTap: () => _filterOverlay.toggle(context),
-                            child: CompositedTransformTarget(
-                              link: _filterOverlay.layerLink,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Text("Lọc", style: TextStyle(color: AppColors.primary, fontSize: 13)),
-                                    const SizedBox(width: 4),
-                                    const Icon(HeroiconsOutline.adjustmentsHorizontal, color: AppColors.primary, size: 16),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () => setState(
-                              () => _isFlashCardMode = !_isFlashCardMode,
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    _isFlashCardMode ? "Lưới" : "Thẻ",
-                                    style: const TextStyle(color: AppColors.primary, fontSize: 13),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    _isFlashCardMode
-                                        ? Icons.grid_view_rounded
-                                        : Icons.view_agenda_rounded,
-                                    color: AppColors.primary,
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
 
-              // 7. Product List (Grid/List)
               _products.isEmpty && !_isInitialLoading
-                  ? SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 50),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                HeroiconsOutline.faceFrown,
-                                size: 48,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                "Không tìm thấy sản phẩm nào.",
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                  : _buildSliverProductList(),
+                  ? SliverToBoxAdapter(child: Center(child: Padding(padding: const EdgeInsets.only(top: 50), child: Text("No products found.", style: TextStyle(color: Colors.grey)))))
+                  : SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverMasonryGrid.count(
+                  crossAxisCount: 2, mainAxisSpacing: 16, crossAxisSpacing: 16,
+                  childCount: _products.length + (_hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _products.length && _hasMore) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) => _loadProducts(isRefresh: false));
+                      return const SizedBox();
+                    }
+                    if (index >= _products.length) return const SizedBox();
+                    return ProductGridItem(product: _products[index]);
+                  },
+                ),
+              ),
 
               if (_isLoadingMore)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: ModernLoader()),
-                  ),
-                ),
+                const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(20), child: Center(child: ModernLoader()))),
 
               const SliverToBoxAdapter(child: SizedBox(height: 80)),
             ],
@@ -768,96 +534,12 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDrawerItem(
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: isDestructive ? Colors.red : Colors.black87),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isDestructive ? Colors.red : Colors.black87,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+  Widget _buildCircleIcon(String assetPath) {
+    return Container(
+      width: 40, height: 40,
+      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: SvgPicture.asset(assetPath, width: 20, height: 20, color: Colors.black87),
     );
   }
-
-  Widget _buildSliverProductList() {
-    if (_isFlashCardMode) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _products.length && _hasMore) {
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _loadProducts(isRefresh: false),
-            );
-            return const SizedBox();
-          }
-          if (index >= _products.length) return null;
-          // Simplified FlashCard Height logic
-          final double cardHeight =
-              MediaQuery.of(context).size.height *
-              0.6; // Approximate nice height
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-            child: SizedBox(
-              height: cardHeight,
-              child: Post(product: _products[index]),
-            ),
-          );
-        }, childCount: _products.length + (_hasMore ? 1 : 0)),
-      );
-    } else {
-      return SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        sliver: SliverMasonryGrid.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childCount: _products.length + (_hasMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == _products.length && _hasMore) {
-              WidgetsBinding.instance.addPostFrameCallback(
-                (_) => _loadProducts(isRefresh: false),
-              );
-              return const SizedBox();
-            }
-            if (index >= _products.length) return const SizedBox();
-            return ProductGridItem(product: _products[index]);
-          },
-        ),
-      );
-    }
-  }
-}
-
-class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
-  final double minHeight;
-  final double maxHeight;
-  final Widget child;
-
-  _StickySearchBarDelegate({
-    required this.minHeight,
-    required this.maxHeight,
-    required this.child,
-  });
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) => SizedBox.expand(child: child);
-
-  @override
-  double get maxExtent => maxHeight;
-  @override
-  double get minExtent => minHeight;
-  @override
-  bool shouldRebuild(covariant _StickySearchBarDelegate oldDelegate) => false;
 }

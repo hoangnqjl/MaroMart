@@ -107,7 +107,11 @@ class _HomeState extends State<Home> {
   Widget _getCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return HomeScreen(key: _homeScreenKey, user: _currentUser);
+        return HomeScreen(
+          key: _homeScreenKey,
+          user: _currentUser,
+          onMenuTap: () => _homeScaffoldKey.currentState?.openDrawer(),
+        );
       case 1:
         return ProductManager(key: _productManagerKey);
       case 2:
@@ -115,7 +119,11 @@ class _HomeState extends State<Home> {
       case 3:
         return const Setting();
       default:
-        return HomeScreen(key: _homeScreenKey, user: _currentUser);
+        return HomeScreen(
+          key: _homeScreenKey,
+          user: _currentUser,
+          onMenuTap: () => _homeScaffoldKey.currentState?.openDrawer(),
+        );
     }
   }
 
