@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:temo/models/Product/Product.dart';
@@ -5,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/screens/Product/ProductDetail.dart';
 import 'package:temo/app_router.dart';
+import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/screens/Message/ChatScreen.dart';
 
 class ProductGridItem extends StatelessWidget {
   final Product product;
@@ -89,29 +92,42 @@ class ProductGridItem extends StatelessWidget {
                     const SizedBox(height: 2), // Khoảng cách hẹp để tên và địa chỉ đi liền nhau
 
                     // Địa chỉ: Size 10, Màu 50%, hiển thị 2 hàng
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start, // Căn icon theo dòng đầu của text
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Icon(HeroiconsOutline.mapPin, size: 10, color: baseColor.withOpacity(0.5)),
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            locationText,
-                            style: TextStyle(
-                              fontFamily: 'Quicksand',
-                              color: baseColor.withOpacity(0.5),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              height: 1.2, // Chỉnh khoảng cách dòng cho địa chỉ
-                            ),
-                            maxLines: 2, // SỬA: Cho phép hiển thị 2 hàng
-                            overflow: TextOverflow.ellipsis,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start, // Căn icon theo dòng đầu của text
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Icon(HeroiconsOutline.mapPin, size: 10, color: baseColor.withOpacity(0.5)),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  locationText,
+                                  style: TextStyle(
+                                    fontFamily: 'Quicksand',
+                                    color: baseColor.withOpacity(0.5),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.2, // Chỉnh khoảng cách dòng cho địa chỉ
+                                  ),
+                                  maxLines: 2, // SỬA: Cho phép hiển thị 2 hàng
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
 
                     const Spacer(), // Đẩy phần giá xuống đáy card
@@ -140,17 +156,37 @@ class ProductGridItem extends StatelessWidget {
                           ),
                         ),
                         // Nút Chat MaroMart
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFFB86A),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            HeroiconsSolid.chatBubbleOvalLeft,
-                            color: Colors.white,
-                            size: 16,
+                        GestureDetector(
+                          onTap: () {
+                            if (product.userInfo != null) {
+                              final userInfo = product.userInfo!;
+                              final partner = ChatPartner(
+                                userId: userInfo.userId,
+                                fullName: userInfo.fullName,
+                                avatarUrl: userInfo.avatarUrl,
+                                email: userInfo.email,
+                              );
+                              smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Không tìm thấy thông tin người bán')),
+                              );
+                            }
+                          },
+                          child: ClipOval(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                color: const Color(0xFFFFB86A).withOpacity(0.9), // Added slight transparency for blur
+                                child: const Icon(
+                                  HeroiconsSolid.chatBubbleOvalLeft,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],

@@ -13,15 +13,18 @@ import 'package:temo/services/product_service.dart';
 import 'package:temo/services/location_service.dart';
 import 'package:temo/components/AppDrawer.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'dart:async';
 import 'package:temo/components/ModernLoader.dart';
 import '../Search/SearchResult.dart';
-import 'dart:async';
 import 'package:temo/models/User/User.dart';
 import 'package:temo/screens/Notification/NotificationScreen.dart';
 import 'package:temo/screens/Home/CategoryProductsScreen.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/screens/Message/ChatScreen.dart';
+import 'package:temo/app_router.dart';
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -270,6 +273,12 @@ class HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: TextField(
+                                        textInputAction: TextInputAction.search,
+                                        onSubmitted: (value) {
+                                          if (value.trim().isNotEmpty) {
+                                            smoothPush(context, SearchResultScreen(keyword: value.trim()));
+                                          }
+                                        },
                                         decoration: InputDecoration(
                                           hintText: _searchHints[_currentHintIndex],
                                           border: InputBorder.none,
@@ -286,7 +295,7 @@ class HomeScreenState extends State<HomeScreen> {
                                       onTap: () => _filterOverlay.toggle(context),
                                       child: Container(
                                         width: 44, height: 44, margin: const EdgeInsets.only(right: 3),
-                                        decoration: const BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
+                                        decoration: const BoxDecoration(color: Color(0xFFFFB86A), shape: BoxShape.circle),
                                         child: const Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.white, size: 20),
                                       ),
                                     ),
@@ -306,24 +315,34 @@ class HomeScreenState extends State<HomeScreen> {
                                 itemCount: _quickCategories.length,
                                 itemBuilder: (context, index) {
                                   final cat = _quickCategories[index];
-                                  return Container(
-                                    width: 72, margin: const EdgeInsets.only(right: 6),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Image.asset(cat['image'], width: 44, height: 44, fit: BoxFit.contain),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          cat['name'],
-                                          style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Color(0x99000000), // Đen 60%
-                                              fontFamily: 'Roboto',
-                                              fontWeight: FontWeight.bold
-                                          ),
-                                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  return GestureDetector(
+                                    onTap: () {
+                                      smoothPush(
+                                        context,
+                                        CategoryProductsScreen(
+                                          category: cat,
                                         ),
-                                      ],
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 72, margin: const EdgeInsets.only(right: 6),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(cat['image'], width: 44, height: 44, fit: BoxFit.contain),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            cat['name'],
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: Color(0x99000000), // Đen 60%
+                                                fontFamily: 'Roboto',
+                                                fontWeight: FontWeight.bold
+                                            ),
+                                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   );
                                 },
@@ -348,7 +367,7 @@ class HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: Color(0xB3000000), // Đen 70%
+                            color: Color(0xB3000000),
                             fontFamily: 'Roboto'
                         )
                     ),
@@ -436,43 +455,72 @@ class HomeScreenState extends State<HomeScreen> {
                                         Row(
                                           children: [
                                             Expanded(
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                decoration: BoxDecoration(
-                                                    color: Colors.white.withOpacity(0.4),
-                                                    borderRadius: BorderRadius.circular(20)
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 14),
-                                                    const SizedBox(width: 4),
-                                                    Expanded(
-                                                        child: Text(
-                                                            product.productAddress?.province ?? 'Location unknown',
-                                                            style: const TextStyle(
-                                                                fontFamily: 'Quicksand', // Font Quicksand
-                                                                color: Colors.white,
-                                                                fontSize: 12,             // Size 12
-                                                                fontWeight: FontWeight.w700
-                                                            ),
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis
-                                                        )
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(20),
+                                                child: BackdropFilter(
+                                                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                    decoration: BoxDecoration(
+                                                        color: Colors.white.withOpacity(0.4),
+                                                        borderRadius: BorderRadius.circular(20)
                                                     ),
-                                                  ],
+                                                    child: Row(
+                                                      children: [
+                                                        const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 14),
+                                                        const SizedBox(width: 4),
+                                                        Expanded(
+                                                            child: Text(
+                                                                product.productAddress?.province ?? 'Location unknown',
+                                                                style: const TextStyle(
+                                                                    fontFamily: 'Quicksand', // Font Quicksand
+                                                                    color: Colors.white,
+                                                                    fontSize: 12,             // Size 12
+                                                                    fontWeight: FontWeight.w700
+                                                                ),
+                                                                maxLines: 1,
+                                                                overflow: TextOverflow.ellipsis
+                                                            )
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
                                             const SizedBox(width: 8),
-                                            Container(
-                                                width: 36,
-                                                height: 36,
-                                                decoration: BoxDecoration(
-                                                    color: Colors.white.withOpacity(0.4),
-                                                    shape: BoxShape.circle
+                                            GestureDetector(
+                                              onTap: () {
+                                                if (product.userInfo != null) {
+                                                  final userInfo = product.userInfo!;
+                                                  final partner = ChatPartner(
+                                                    userId: userInfo.userId,
+                                                    fullName: userInfo.fullName,
+                                                    avatarUrl: userInfo.avatarUrl,
+                                                    email: userInfo.email,
+                                                  );
+                                                  smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                                                } else {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Không tìm thấy thông tin người bán')),
+                                                  );
+                                                }
+                                              },
+                                              child: ClipOval(
+                                                child: BackdropFilter(
+                                                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                                  child: Container(
+                                                      width: 36,
+                                                      height: 36,
+                                                      decoration: BoxDecoration(
+                                                          color: Colors.white.withOpacity(0.4),
+                                                          shape: BoxShape.circle
+                                                      ),
+                                                      alignment: Alignment.center,
+                                                      child: const Icon(HeroiconsOutline.chatBubbleOvalLeft, color: Colors.white, size: 18)
+                                                  ),
                                                 ),
-                                                alignment: Alignment.center,
-                                                child: const Icon(HeroiconsOutline.chatBubbleOvalLeft, color: Colors.white, size: 18)
+                                              ),
                                             ),
                                           ],
                                         ),

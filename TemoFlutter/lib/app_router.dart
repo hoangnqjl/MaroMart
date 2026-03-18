@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:temo/Home.dart';
 import 'package:temo/screens/Product/AddProduct.dart';
@@ -6,13 +5,15 @@ import 'package:temo/screens/Product/ProductManager.dart';
 import 'package:temo/screens/Setting/ChangeInfomation.dart';
 import 'package:temo/screens/Setting/ChangePassword.dart';
 import 'package:temo/screens/Setting/Setting.dart';
+import 'package:temo/screens/authencation/Sign_up/SignUpStep1Screen.dart';
+import 'package:temo/screens/authencation/Sign_up/SignUpStep2PasswordScreen.dart';
+import 'package:temo/screens/authencation/Sign_up/SignUpStep3AddressScreen.dart';
 import 'package:temo/screens/authencation/get_started_screen.dart';
 import '../screens/authencation/Login/signin_screen.dart';
-import '../screens/authencation/Sign_up/signup_info_screen.dart';
-import '../screens/authencation/Sign_up/signup_password_screen.dart';
 import 'package:temo/screens/Product/SuccessPostScreen.dart';
 import 'package:temo/screens/Coin/CoinManagerScreen.dart';
-import 'package:temo/screens/Setting/AboutScreen.dart'; // Add import
+import 'package:temo/screens/Setting/AboutScreen.dart';
+import 'package:temo/screens/Product/ProductDetail.dart';
 
 
 // iOS-style smooth route transition
@@ -23,7 +24,6 @@ Route smoothRoute(Widget page, RouteSettings settings) {
     reverseTransitionDuration: const Duration(milliseconds: 350),
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      // Smooth iOS-style slide from right with fade
       const begin = Offset(1.0, 0.0);
       const end = Offset.zero;
       const curve = Curves.easeInOutCubic;
@@ -85,12 +85,18 @@ Route? onGenerateRoute(RouteSettings settings) {
       return smoothRoute(const GetStartedScreen(), settings);
     case '/signin':
       return smoothRoute(const SignInScreen(), settings);
+
+  // ── 3 bước đăng ký mới ──────────────────────────────────────────────
     case '/signup':
-      return smoothRoute(const SignUpInfoScreen(), settings);
+      return smoothRoute(const SignUpStep1Screen(), settings);
     case '/signup/password':
-      return smoothRoute(const SignUpPasswordScreen(), settings);
+      return smoothRoute(const SignUpStep2PasswordScreen(), settings);
+    case '/signup/address':
+      return smoothRoute(const SignUpStep3AddressScreen(), settings);
+  // ─────────────────────────────────────────────────────────────────────
+
     case '/home':
-      return smoothRoute( Home(), settings);
+      return smoothRoute(Home(), settings);
     case '/add_product':
       return smoothRoute(const AddProduct(), settings);
     case '/settings':
@@ -105,8 +111,11 @@ Route? onGenerateRoute(RouteSettings settings) {
       return smoothRoute(const SuccessPostScreen(), settings);
     case '/coin_manager':
       return smoothRoute(const CoinManagerScreen(), settings);
-    case '/about': // Add cases
+    case '/about':
       return smoothRoute(const AboutScreen(), settings);
+    case '/product_detail':
+      final productId = settings.arguments as String? ?? '';
+      return smoothRoute(ProductDetail(productId: productId), settings);
     default:
       return null;
   }
