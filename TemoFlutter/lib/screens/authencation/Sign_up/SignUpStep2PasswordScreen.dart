@@ -18,7 +18,7 @@ class _SignUpStep2PasswordScreenState
   bool _showPw = false;
   bool _showCf = false;
 
-  static const String kBg = 'assets/images/backgroundauthen.jpg';
+  static const String kBg = 'assets/images/backgroundauthen.png';
 
   @override
   void dispose() {

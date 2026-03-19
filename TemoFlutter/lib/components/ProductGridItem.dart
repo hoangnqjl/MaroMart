@@ -40,14 +40,13 @@ class ProductGridItem extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: const Color(0x26000000), // Đen 15%
-            width: 1,
+            color: const Color(0xFFD9D9D9),
+            width: 0.5,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Ảnh hình vuông (1:1)
             Padding(
               padding: const EdgeInsets.all(6.0),
               child: AspectRatio(
@@ -76,7 +75,6 @@ class ProductGridItem extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     const SizedBox(height: 4),
-                    // Tên sản phẩm: Size 12
                     Text(
                       product.productName,
                       style: TextStyle(
@@ -89,9 +87,8 @@ class ProductGridItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    const SizedBox(height: 2), // Khoảng cách hẹp để tên và địa chỉ đi liền nhau
+                    const SizedBox(height: 2),
 
-                    // Địa chỉ: Size 10, Màu 50%, hiển thị 2 hàng
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: BackdropFilter(
@@ -130,7 +127,7 @@ class ProductGridItem extends StatelessWidget {
                       ),
                     ),
 
-                    const Spacer(), // Đẩy phần giá xuống đáy card
+                    const Spacer(),
 
                     // Giá tiền: Size 10
                     Row(

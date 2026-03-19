@@ -19,7 +19,7 @@ class _SignUpStep3AddressScreenState
   final _streetController = TextEditingController();
   bool _isLoading = false;
 
-  static const String kBg = 'assets/images/backgroundauthen.jpg';
+  static const String kBg = 'assets/images/backgroundauthen.png';
 
   @override
   void dispose() {

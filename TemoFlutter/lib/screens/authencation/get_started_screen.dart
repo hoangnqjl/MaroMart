@@ -12,8 +12,8 @@ class GetStartedScreen extends StatefulWidget {
 }
 
 class _GetStartedScreenState extends State<GetStartedScreen> {
-  static const String kIllustrationUrl = 'assets/images/backgroundauthen.jpg';
-  static const String kGoogleAsset = 'lib/images/logogg.png';
+  static const String kIllustrationUrl = 'assets/images/backgroundauthen.png';
+  static const String kGoogleAsset = 'assets/images/icongoogle.png';
 
   final _authService = AuthService();
   bool _isGoogleLoading = false;
@@ -70,14 +70,12 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Layer 1: Ảnh gốc (blur sẽ áp lên layer này) ─────────────────
           Image.asset(
             kIllustrationUrl,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
           ),
 
-          // ── Layer 2: Blur TOÀN MÀN HÌNH ──────────────────────────────────
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
@@ -85,11 +83,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
             ),
           ),
 
-          // ── Layer 3: Ảnh gốc đè lên phần trên, fade dần xuống dưới ──────
-          // Đây là kỹ thuật then chốt:
-          // - Phần trên: ảnh rõ nét (che blur)
-          // - Phần dưới: ảnh fade out (để blur lộ ra)
-          // → Tạo cảm giác blur tăng dần từ trên xuống, không gợn sóng
+
           Positioned.fill(
             child: ShaderMask(
               shaderCallback: (bounds) => LinearGradient(
@@ -97,13 +91,13 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                 end: Alignment.bottomCenter,
                 stops: const [0.0, 0.34, 0.65, 1.0],
                 colors: [
-                  Colors.white,                      // trên: ảnh hiện 100%
-                  Colors.white,                      // giữ rõ đến 28%
-                  Colors.white.withOpacity(0.0),     // fade bắt đầu
-                  Colors.white.withOpacity(0.0),     // dưới: ảnh ẩn → blur lộ
+                  Colors.white,
+                  Colors.white,
+                  Colors.white.withOpacity(0.0),
+                  Colors.white.withOpacity(0.0),
                 ],
               ).createShader(bounds),
-              blendMode: BlendMode.dstIn, // gradient làm alpha của ảnh
+              blendMode: BlendMode.dstIn,
               child: Image.asset(
                 kIllustrationUrl,
                 fit: BoxFit.cover,
@@ -113,7 +107,6 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
             ),
           ),
 
-          // ── Layer 4: Dark overlay chung (áp sau khi fade) ────────────────
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -127,11 +120,9 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
             ),
           ),
 
-          // ── Layer 5: UI Content ───────────────────────────────────────────
           SafeArea(
             child: Column(
               children: [
-                // ── Top Bar ────────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -141,11 +132,16 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
-                        children: const [
-                          Icon(
-                            Icons.shopping_bag_outlined,
-                            color: Colors.white,
-                            size: 20,
+                        children: [
+                          Image.asset(
+                            'assets/images/logotemoauthen.png',
+                            height: 20,
+                            width: 20,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.shopping_bag_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                           SizedBox(width: 8),
                           Text(
@@ -172,7 +168,6 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                   ),
                 ),
 
-                // ── Center Slogan ──────────────────────────────────────────
                 const Expanded(
                   child: Center(
                     child: Padding(
@@ -198,7 +193,6 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ── Login with Google ────────────────────────────────
                       SizedBox(
                         width: double.infinity,
                         height: 56,

@@ -13,8 +13,8 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  static const String kGoogleAsset = 'lib/images/logogg.png';
-  static const String kBg = 'assets/images/backgroundauthen.jpg';
+  static const String kGoogleAsset = 'assets/images/icongoogle.png';
+  static const String kBg = 'assets/images/backgroundauthen.png';
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();

@@ -17,7 +17,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
   String? _selectedGender;
   final List<String> _genders = ['Male', 'Female', 'Other'];
 
-  static const String kBg = 'assets/images/backgroundauthen.jpg';
+  static const String kBg = 'assets/images/backgroundauthen.png';
 
   @override
   void dispose() {
@@ -61,7 +61,6 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
           SafeArea(
             child: Column(
               children: [
-                // ── Nút back (góc trái, riêng một hàng) ──────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Align(
@@ -72,7 +71,6 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
                 const SizedBox(height: 32),
 
-                // ── Title căn giữa ────────────────────────────────────────
                 Text(
                   "Let's get started",
                   textAlign: TextAlign.center,
@@ -85,12 +83,10 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
                 const SizedBox(height: 24),
 
-                // ── Step indicator căn giữa ───────────────────────────────
                 const _StepBar(current: 1),
 
                 const SizedBox(height: 32),
 
-                // ── Form fields ───────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
