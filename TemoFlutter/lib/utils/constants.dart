@@ -2,7 +2,7 @@ class ApiConstants {
   // static const String baseUrl = 'https://temo-server.onrender.com';
 
 
-  static const String baseUrl = 'http://172.20.10.3:5000';
+  static const String baseUrl = 'http://192.168.16.7:5000';
 
 
   // auth
