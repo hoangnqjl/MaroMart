@@ -210,8 +210,8 @@ class HomeScreenState extends State<HomeScreen> {
                               gradient: LinearGradient(
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
-                                colors: [Color(0xFFFFB86A), Color(0xFFFFAD86), Color(0xFFFFA2A2), Color(0xFFFFA2A2)],
-                                stops: [0.0, 0.39, 0.77, 1.0],
+                                colors: [Color(0xFFEFB944), Color(0xFFFF5825), Color(0xFFF66E6E), Colors.white],
+                                stops: [0.0, 0.33, 0.66, 1.0],
                               ),
                             ),
                           ),

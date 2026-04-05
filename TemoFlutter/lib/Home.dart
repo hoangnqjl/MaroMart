@@ -185,15 +185,20 @@ class _HomeState extends State<Home> {
           //     ),
           //   ),
           // ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: BottomNavigation(
+              selectedIndex: _currentIndex,
+              onTabSelected: _onTabSelected,
+              notificationCount: _unreadNotifications,
+              onAddPressed: () {
+                Navigator.pushNamed(context, '/add_product');
+              },
+            ),
+          ),
         ],
-      ),
-      bottomNavigationBar: BottomNavigation(
-        selectedIndex: _currentIndex,
-        onTabSelected: _onTabSelected,
-        notificationCount: _unreadNotifications,
-        onAddPressed: () {
-          Navigator.pushNamed(context, '/add_product');
-        },
       ),
     );
   }
