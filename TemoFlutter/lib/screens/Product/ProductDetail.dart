@@ -6,15 +6,21 @@ import 'package:temo/components/VideoPlayerWidget.dart';
 import 'package:temo/models/Media/MediaItem.dart';
 import 'package:temo/models/Product/Product.dart';
 import 'package:temo/services/product_service.dart';
+import 'package:temo/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../app_router.dart';
 import '../../models/User/ChatPartner.dart';
 import '../Message/ChatScreen.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/Skeletons/ProductDetailSkeleton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:temo/utils/string_utils.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -35,12 +41,54 @@ class ProductDetailState extends State<ProductDetail> {
   List<MediaItem> _mediaItems = [];
   List<Product> _relatedProducts = [];
   bool _isLoadingRelated = false;
+  String? _distanceText;
+  Position? _currentPosition;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _fetchProductDetail();
+  }
+
+  Future<void> _calculateDistance(Product product) async {
+    try {
+      // 1. Kiểm tra quyền truy cập vị trí trước khi lấy vị trí
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      
+      if (permission == LocationPermission.deniedForever) return;
+
+      // 2. Lấy vị trí hiện tại của người dùng
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low // Tiết kiệm pin và nhanh hơn
+      );
+      
+      if (product.latitude != null && product.longitude != null) {
+        double distanceInMeters = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude, 
+          product.latitude!, product.longitude!
+        );
+
+        if (mounted) {
+          setState(() {
+            _currentPosition = pos;
+            if (distanceInMeters < 1000) {
+              _distanceText = "Rất gần bạn";
+            } else if (distanceInMeters < 10000) {
+              _distanceText = "Gần bạn";
+            } else {
+              _distanceText = "~${(distanceInMeters / 1000).toStringAsFixed(1)} km";
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error calculating distance: $e");
+    }
   }
 
   @override
@@ -58,6 +106,7 @@ class ProductDetailState extends State<ProductDetail> {
           _mediaItems = _parseProductMedia(product.productMedia);
           _isLoading = false;
         });
+        _calculateDistance(product);
         _fetchRelatedProducts(product.categoryId);
       }
     } catch (e) {
@@ -104,7 +153,7 @@ class ProductDetailState extends State<ProductDetail> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return Scaffold(body: Center(child: ModernLoader()));
+    if (_isLoading) return const ProductDetailSkeleton();
     if (_product == null) return Scaffold(appBar: AppBar(title: const Text('Error')), body: const Center(child: Text('Product not found.')));
 
     final product = _product!;
@@ -121,14 +170,14 @@ class ProductDetailState extends State<ProductDetail> {
                 children: [
                   _buildGallery(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 20),
                         _buildProductHeader(product),
                         const SizedBox(height: 16),
-                        _buildTagButtons(),
+                        _buildTagButtons(product),
                         const SizedBox(height: 24),
                         _buildSectionTitle("Description"),
                         const SizedBox(height: 8),
@@ -141,6 +190,15 @@ class ProductDetailState extends State<ProductDetail> {
                         const SizedBox(height: 12),
                         _buildTechSpecs(product),
                         const SizedBox(height: 24),
+                        
+                        // MAP SECTION (Restored to original position)
+                        if (product.latitude != null && product.longitude != null) ...[
+                          _buildSectionTitle("Location"),
+                          const SizedBox(height: 12),
+                          _buildMapSection(product),
+                          const SizedBox(height: 24),
+                        ],
+
                         if (_relatedProducts.isNotEmpty) ...[
                           ShaderMask(
                             shaderCallback: (bounds) => const LinearGradient(
@@ -181,16 +239,40 @@ class ProductDetailState extends State<ProductDetail> {
       top: 0, left: 0, right: 0,
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              _buildRoundIconButton(HeroiconsSolid.chevronLeft, () => Navigator.pop(context)),
-              Text(
-                "Product View",
-                style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF3F3F46)),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _buildRoundIconButton(HeroiconsSolid.chevronLeft, () => Navigator.pop(context)),
               ),
-              _buildRoundIconButton(HeroiconsSolid.ellipsisVertical, () {}),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  "Product View",
+                  style: GoogleFonts.roboto(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF3F3F46),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _buildRoundIconButton(HeroiconsSolid.ellipsisVertical, () {}),
+              ),
             ],
           ),
         ),
@@ -224,7 +306,7 @@ class ProductDetailState extends State<ProductDetail> {
   Widget _buildGallery() {
     return Container(
       height: MediaQuery.of(context).size.height * 0.55,
-      margin: const EdgeInsets.fromLTRB(16, 92, 16, 0),
+      margin: const EdgeInsets.fromLTRB(8, 100, 8, 0),
       child: Stack(
         children: [
           ClipRRect(
@@ -292,12 +374,33 @@ class ProductDetailState extends State<ProductDetail> {
             ],
           ),
         ),
+        if (product.marketPrice != null && product.marketPrice! > product.productPrice)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              "Rẻ hơn ${(product.marketPrice! - product.productPrice).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ",
+              style: GoogleFonts.roboto(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2E7D32),
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  Widget _buildTagButtons() {
-    final tags = ["99% Likenew", "Near you", "512GB"];
+  Widget _buildTagButtons(Product product) {
+    final List<String> tags = [];
+    if (product.productCondition.isNotEmpty) tags.add(product.productCondition);
+    if (_distanceText != null) tags.add(_distanceText!);
+    
+    if (tags.isEmpty) return const SizedBox.shrink();
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -306,21 +409,13 @@ class ProductDetailState extends State<ProductDetail> {
           child: Material(
             color: const Color(0xFFEAEAEA),
             borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('You clicked: $tag'), duration: const Duration(seconds: 1)),
-                );
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                alignment: Alignment.center,
-                child: Text(
-                  tag,
-                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF3F3F46)),
-                ),
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              child: Text(
+                tag,
+                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF3F3F46)),
               ),
             ),
           ),
@@ -374,6 +469,136 @@ class ProductDetailState extends State<ProductDetail> {
     );
   }
 
+  Widget _buildMapSection(Product product) {
+    final LatLng productPos = LatLng(product.latitude!, product.longitude!);
+    final String? avatarUrl = product.userInfo?.avatarUrl;
+
+    // Determine initial center: if we have current position, center between them roughly
+    LatLng center = productPos;
+    if (_currentPosition != null) {
+      center = LatLng(
+        (productPos.latitude + _currentPosition!.latitude) / 2,
+        (productPos.longitude + _currentPosition!.longitude) / 2,
+      );
+    }
+
+    return Container(
+      height: 250, // Slightly taller to fit two points
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: center,
+            initialZoom: _currentPosition != null ? 12.0 : 14.5, 
+            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all), 
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
+              subdomains: const ['a', 'b', 'c', 'd'],
+              userAgentPackageName: 'com.temo.app',
+              retinaMode: MediaQuery.of(context).devicePixelRatio > 1.0,
+            ),
+            MarkerLayer(
+              markers: [
+                // SELLER MARKER
+                Marker(
+                  point: productPos,
+                  width: 60,
+                  height: 60,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      Positioned(
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          transform: Matrix4.rotationZ(0.785398),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: avatarUrl != null && avatarUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: avatarUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(color: Colors.grey[300]),
+                                    errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
+                                  )
+                                : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // CURRENT USER MARKER (Buyer)
+                if (_currentPosition != null)
+                  Marker(
+                    point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                    width: 40,
+                    height: 40,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(color: Colors.blue.withOpacity(0.4), blurRadius: 10, spreadRadius: 5)
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRelatedProducts() {
     if (_isLoadingRelated) return const SizedBox(height: 200, child: Center(child: ModernLoader(size: 30)));
     return SizedBox(
@@ -401,7 +626,7 @@ class ProductDetailState extends State<ProductDetail> {
       child: Container(
         width: 245,
         height: 327,
-        margin: const EdgeInsets.only(right: 16),
+        margin: const EdgeInsets.only(right: 12), // Reduced slightly
         child: ClipRRect(
           borderRadius: BorderRadius.circular(26),
           child: Stack(
@@ -452,7 +677,9 @@ class ProductDetailState extends State<ProductDetail> {
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
-                                        product.productAddress?.province ?? 'Location unknown',
+                                        StringUtils.simplifyAddress(
+                                          product.productAddress?.province ?? 'Location unknown',
+                                        ),
                                         style: const TextStyle(fontFamily: 'Quicksand', color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -490,46 +717,59 @@ class ProductDetailState extends State<ProductDetail> {
 
   Widget _buildFloatingActionBar() {
     return Positioned(
-      bottom: 20, left: 60, right: 60,
-      child: Container(
-        height: 58,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildActionItem(HeroiconsOutline.phone, "Call", _showCallDialog),
-            const SizedBox(width: 16),
-            _buildActionItem(HeroiconsOutline.chatBubbleOvalLeft, "Message", () {
-              if (_product?.userInfo != null) {
-                final userInfo = _product!.userInfo!;
-                final partner = ChatPartner(userId: userInfo.userId, fullName: userInfo.fullName, avatarUrl: userInfo.avatarUrl, email: userInfo.email);
-                smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
-              }
-            }),
-          ],
+      bottom: 25, left: 0, right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 25,
+                offset: const Offset(0, 8),
+              )
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildActionItem(HeroiconsOutline.phone, "Call", _showCallDialog),
+              const SizedBox(width: 8),
+              _buildActionItem(HeroiconsOutline.chatBubbleOvalLeft, "Message", () {
+                if (_product?.userInfo != null) {
+                  final userInfo = _product!.userInfo!;
+                  final partner = ChatPartner(userId: userInfo.userId, fullName: userInfo.fullName, avatarUrl: userInfo.avatarUrl, email: userInfo.email);
+                  smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                }
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildActionItem(IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 80, // Đảm bảo không gian căn giữa cho cả Icon và Label
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, color: const Color(0xFFFFB86A), size: 20),
-            const SizedBox(height: 1),
+            Icon(icon, color: AppColors.primaryLight, size: 24),
+            const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.roboto(color: const Color(0xFFFFB86A), fontSize: 10, fontWeight: FontWeight.bold),
+              style: GoogleFonts.roboto(
+                color: AppColors.primaryLight,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

@@ -14,6 +14,7 @@ import 'package:temo/screens/Profile/UserProfileScreen.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:temo/utils/string_utils.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -330,7 +331,10 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
         children: [
           const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 12),
           const SizedBox(width: 4),
-          Text(location, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'QuickSand')),
+          Text(
+            StringUtils.simplifyAddress(location),
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'QuickSand'),
+          ),
         ],
       ),
     );

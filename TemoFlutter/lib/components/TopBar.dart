@@ -53,8 +53,8 @@ class _TopBarState extends State<TopBar> {
 
         return Container(
           padding: const EdgeInsets.only(
-            left: 18,
-            right: 8,
+            left: 16,
+            right: 16,
             top: 10,
             bottom: 10,
           ),

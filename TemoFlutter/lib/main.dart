@@ -55,6 +55,7 @@ class MyApp extends StatelessWidget {
             ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary, brightness: Brightness.light),
+        scaffoldBackgroundColor: AppColors.background,
         useMaterial3: true,
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {

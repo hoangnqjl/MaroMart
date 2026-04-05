@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:temo/Home.dart';
 import 'package:temo/screens/authencation/get_started_screen.dart';
 import 'package:temo/utils/storage.dart';
@@ -13,79 +12,66 @@ class VideoSplashScreen extends StatefulWidget {
 }
 
 class _VideoSplashScreenState extends State<VideoSplashScreen> {
-  late VideoPlayerController _controller;
-  bool _initialized = false;
+  bool _isNavigated = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeVideo();
+    _startTimer();
   }
 
-  Future<void> _initializeVideo() async {
-    // Assuming the user followed instructions and renamed the file to splash_intro.mp4
-    _controller = VideoPlayerController.asset('assets/videos/splash_intro.mp4')
-      ..initialize()
-          .then((_) {
-            setState(() {
-              _initialized = true;
-            });
-            _controller.play();
-            _controller.setLooping(false);
-
-            // Listen for video end
-            _controller.addListener(_checkVideoEnd);
-          })
-          .catchError((error) {
-            debugPrint("Video Splash Error: $error");
-            // Fallback or navigate immediately if video fails
-            _navigateNext();
-          });
-  }
-
-  void _checkVideoEnd() {
-    if (_controller.value.position >= _controller.value.duration) {
-      _navigateNext();
-    }
+  void _startTimer() {
+    // Chuyển màn hình sau 2 giây thay vì dùng video
+    Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        _navigateNext();
+      }
+    });
   }
 
   void _navigateNext() {
-    _controller.removeListener(_checkVideoEnd); // Prevent multiple calls
+    if (_isNavigated) return;
+    _isNavigated = true;
 
-    // Determine where to go
+    // Xem xét người dùng đã đăng nhập chưa
     Widget nextScreen = StorageHelper.isLoggedIn()
         ? Home()
         : const GetStartedScreen();
 
-    // Use replacement to remove splash from back stack
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
-        transitionDuration: const Duration(milliseconds: 500),
+        transitionDuration: const Duration(milliseconds: 800),
       ),
     );
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Or black, depending on video bg
+      backgroundColor: Colors.white,
       body: Center(
-        child: _initialized
-            ? AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
-              )
-            : const SizedBox.shrink(), // Show nothing while initializing
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Hiển thị logo tĩnh thay vì video
+            Image.asset(
+              'assets/images/LogoTemo.png',
+              width: 150,
+              height: 150,
+              errorBuilder: (context, error, stackTrace) => const FlutterLogo(size: 100),
+            ),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFB86A)),
+              strokeWidth: 3,
+            ),
+          ],
+        ),
       ),
     );
   }

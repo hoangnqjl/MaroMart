@@ -3,7 +3,7 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/components/Post.dart';
 import 'package:temo/models/Product/Product.dart';
 import 'package:temo/services/product_service.dart';
-import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/Skeletons/ProductCardSkeleton.dart';
 
 class SearchResultScreen extends StatefulWidget {
   final String keyword;
@@ -84,7 +84,17 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return Center(child: ModernLoader());
+      return GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 305,
+        ),
+        itemCount: 6,
+        itemBuilder: (context, index) => const ProductCardSkeleton(),
+      );
     }
 
     if (_errorMessage.isNotEmpty) {

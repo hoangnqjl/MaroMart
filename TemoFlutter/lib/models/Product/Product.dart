@@ -156,6 +156,7 @@ class Product {
   final String userId;
   final String productName;
   final int productPrice;
+  final int? marketPrice;
   final String productDescription;
   
   final String status; // Added status field
@@ -168,6 +169,8 @@ class Product {
 
   final dynamic productAttribute;
   final ProductAddress? productAddress;
+  final double? latitude;
+  final double? longitude;
 
   final List<String> productMedia;
   final String createdAt;
@@ -182,6 +185,7 @@ class Product {
     required this.userId,
     required this.productName,
     required this.productPrice,
+    this.marketPrice,
     required this.productDescription,
     this.status = 'active', // Default status
 
@@ -192,6 +196,8 @@ class Product {
     required this.productCategory,
     required this.productAttribute,
     this.productAddress,
+    this.latitude,
+    this.longitude,
     required this.productMedia,
     required this.createdAt,
     required this.updatedAt,
@@ -210,6 +216,10 @@ class Product {
           ? json['productPrice']
           : int.tryParse(json['productPrice'].toString()) ?? 0,
 
+      marketPrice: json['marketPrice'] is int
+          ? json['marketPrice']
+          : int.tryParse(json['marketPrice'].toString()),
+
       productDescription: json['productDescription']?.toString() ?? '',
       status: json['status']?.toString() ?? 'active', // Parse status
 
@@ -227,6 +237,13 @@ class Product {
       productAddress: json['productAddress'] != null
           ? ProductAddress.fromJson(json['productAddress'])
           : null,
+
+      latitude: json['latitude'] is double
+          ? json['latitude']
+          : double.tryParse(json['latitude'].toString()),
+      longitude: json['longitude'] is double
+          ? json['longitude']
+          : double.tryParse(json['longitude'].toString()),
 
       productMedia: json['productMedia'] != null
           ? List<String>.from(json['productMedia'])
@@ -249,6 +266,7 @@ class Product {
       'userId': userId,
       'productName': productName,
       'productPrice': productPrice,
+      'marketPrice': marketPrice,
       'productDescription': productDescription,
       'status': status,
       'productCondition': productCondition,
@@ -258,6 +276,8 @@ class Product {
       'productCategory': productCategory,
       'productAttribute': productAttribute,
       'productAddress': productAddress?.toJson(),
+      'latitude': latitude,
+      'longitude': longitude,
       'productMedia': productMedia,
       'createdAt': createdAt,
       'updatedAt': updatedAt,

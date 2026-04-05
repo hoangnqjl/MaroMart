@@ -8,191 +8,209 @@ import 'package:temo/screens/Product/ProductDetail.dart';
 import 'package:temo/app_router.dart';
 import 'package:temo/models/User/ChatPartner.dart';
 import 'package:temo/screens/Message/ChatScreen.dart';
+import 'package:temo/utils/string_utils.dart';
 
 class ProductGridItem extends StatelessWidget {
   final Product product;
   const ProductGridItem({super.key, required this.product});
 
-  final Color baseColor = const Color(0xFF3F3F46);
+  // Màu sắc chính xác từ Figma
+  final Color titleColor = const Color(0xFF3F3F46);
+  final Color locationColor = const Color(0x803F3F46); // 50% opacity
+  final Color chatBtnColor = const Color(0xFFFFB86A);
+  final Color pricePillColor = const Color(0xFFEAEAEA);
+  final Color shadowColor = const Color(
+    0x26000000,
+  ); // 15% opacity của đen (#00000026)
 
   String _formatPrice(int price) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(price);
+    if (price >= 1000000000) {
+      double t = price / 1000000000;
+      return 'đ ${t % 1 == 0 ? t.toInt() : t.toStringAsFixed(1).replaceAll('.', ',')} tỷ';
+    } else if (price >= 10000000) {
+      double m = price / 1000000;
+      return 'đ ${m % 1 == 0 ? m.toInt() : m.toStringAsFixed(1).replaceAll('.', ',')} tr';
+    }
+    
+    // Standard format for smaller values
+    final formatter = NumberFormat('#,###', 'vi_VN');
+    return 'đ ${formatter.format(price).replaceAll(',', '.')}';
   }
 
   @override
   Widget build(BuildContext context) {
-    String imageUrl = product.productMedia.isNotEmpty ? product.productMedia[0] : '';
+    String imageUrl = product.productMedia.isNotEmpty
+        ? product.productMedia[0]
+        : '';
     if (imageUrl.startsWith('image:')) imageUrl = imageUrl.substring(6).trim();
 
-    // Sửa lỗi ward/commute tùy theo model của bạn
-    String locationText = product.productAddress?.province ?? "Đà Nẵng";
+    String locationText = StringUtils.simplifyAddress(
+      product.productAddress?.province ?? "Đà Nẵng",
+    );
     final commune = product.productAddress?.commute;
     if (commune != null && commune.isNotEmpty) {
-      locationText = "$commune, $locationText";
+      locationText = "${StringUtils.simplifyAddress(commune)}, $locationText";
     }
 
     return GestureDetector(
-      onTap: () => smoothPush(context, ProductDetail(productId: product.productId)),
+      onTap: () =>
+          smoothPush(context, ProductDetail(productId: product.productId)),
       child: Container(
-        width: 173,
-        height: 251,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: const Color(0xFFD9D9D9),
-            width: 0.5,
-          ),
+          borderRadius: BorderRadius.circular(28), // Reduced bo cong
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            )
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(6.0),
-              child: AspectRatio(
-                aspectRatio: 1,
+        child: Padding(
+          padding: const EdgeInsets.all(6.0), // Minimized internal margin
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Wrap content
+            children: [
+              // Image Section
+              AspectRatio(
+                aspectRatio: 0.9, // Slightly shorter portrait aspect ratio
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(20), // Reduced image bo cong
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(color: Colors.grey[100]),
+                    memCacheWidth: 400, // Reduced resolution for memory efficiency
+                    maxWidthDiskCache: 400, // Reduced resolution for bandwidth/disk efficiency
+                    placeholder: (context, url) =>
+                        Container(color: const Color(0xFFF3F4F6)),
                     errorWidget: (_, __, ___) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image, color: Colors.grey)
+                      color: const Color(0xFFF3F4F6),
+                      child: const Icon(Icons.image, color: Colors.grey),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            // 2. Nội dung với địa chỉ 2 hàng
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(
-                      product.productName,
+              const SizedBox(height: 8), // Reduced from 16
+
+              // Title
+              Text(
+                product.productName,
+                style: TextStyle(
+                  fontFamily: 'Quicksand',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15, // Nudged down slightly for better proportion
+                  color: titleColor,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 4), // Reduced from 6
+
+              // Location Row
+              Row(
+                children: [
+                  Icon(
+                    HeroiconsOutline.mapPin, // Switched to Outline to match screenshot
+                    size: 16,
+                    color: locationColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      locationText,
                       style: TextStyle(
                         fontFamily: 'Quicksand',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: baseColor,
+                        color: locationColor,
+                        fontSize: 13, // Nudged down for balance
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                ],
+              ),
 
-                    const SizedBox(height: 2),
+              const SizedBox(height: 12), // Reduced from 24
 
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start, // Căn icon theo dòng đầu của text
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Icon(HeroiconsOutline.mapPin, size: 10, color: baseColor.withOpacity(0.5)),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  locationText,
-                                  style: TextStyle(
-                                    fontFamily: 'Quicksand',
-                                    color: baseColor.withOpacity(0.5),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.2, // Chỉnh khoảng cách dòng cho địa chỉ
-                                  ),
-                                  maxLines: 2, // SỬA: Cho phép hiển thị 2 hàng
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
+              // Bottom Row: Price & Chat
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Price Pill
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _formatPrice(product.productPrice),
+                        style: TextStyle(
+                          fontFamily: 'Quicksand',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: titleColor,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-
-                    const Spacer(),
-
-                    // Giá tiền: Size 10
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF2F2F2),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Text(
-                              _formatPrice(product.productPrice),
-                              style: TextStyle(
-                                fontFamily: 'Quicksand',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                                color: baseColor,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                  ),
+                  // Chat Button
+                  GestureDetector(
+                    onTap: () {
+                      if (product.userInfo != null) {
+                        final userInfo = product.userInfo!;
+                        final partner = ChatPartner(
+                          userId: userInfo.userId,
+                          fullName: userInfo.fullName,
+                          avatarUrl: userInfo.avatarUrl,
+                          email: userInfo.email,
+                        );
+                        smoothPush(
+                          context,
+                          ChatScreen(
+                            conversationId: "",
+                            partnerUser: partner,
                           ),
-                        ),
-                        // Nút Chat MaroMart
-                        GestureDetector(
-                          onTap: () {
-                            if (product.userInfo != null) {
-                              final userInfo = product.userInfo!;
-                              final partner = ChatPartner(
-                                userId: userInfo.userId,
-                                fullName: userInfo.fullName,
-                                avatarUrl: userInfo.avatarUrl,
-                                email: userInfo.email,
-                              );
-                              smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Không tìm thấy thông tin người bán')),
-                              );
-                            }
-                          },
-                          child: ClipOval(
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                color: const Color(0xFFFFB86A).withOpacity(0.9), // Added slight transparency for blur
-                                child: const Icon(
-                                  HeroiconsSolid.chatBubbleOvalLeft,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                        );
+                      }
+                    },
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: chatBtnColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: chatBtnColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: const Icon(
+                        HeroiconsOutline.chatBubbleOvalLeft, // Switched to Outline
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

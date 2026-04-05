@@ -13,7 +13,8 @@ import 'package:temo/utils/storage.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/Skeletons/ListTileSkeleton.dart';
+import 'package:temo/components/Skeleton.dart';
 import 'package:temo/components/CommonAppBar.dart';
 import 'package:temo/components/AppDrawer.dart';
 
@@ -140,7 +141,7 @@ class _MessageScreenState extends State<MessageScreen> {
     final displayList = _filteredConversations;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       appBar: const CommonAppBar(title: "Tin nhắn"),
       endDrawer: const AppDrawer(),
       body: Column(
@@ -183,7 +184,11 @@ class _MessageScreenState extends State<MessageScreen> {
 
           Expanded(
             child: _isLoading
-                ? Center(child: ModernLoader(color: primaryThemeColor))
+                ? ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: 8,
+                    itemBuilder: (context, index) => const ListTileSkeleton(),
+                  )
                 : displayList.isEmpty
                 ? Center(child: Text(_selectedTab == 0 ? "No conversations yet" : "No new messages", style: TextStyle(color: Colors.grey[400])))
                 : RefreshIndicator(
@@ -295,7 +300,12 @@ class _MessageScreenState extends State<MessageScreen> {
         width: 52, height: 52,
         decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle),
         child: fullUrl.isNotEmpty
-            ? CachedNetworkImage(imageUrl: fullUrl, fit: BoxFit.cover, placeholder: (context, url) => Center(child: SizedBox(width: 20, height: 20, child: ModernLoader(size: 20, color: primaryThemeColor))), errorWidget: (context, url, error) => _buildLetterAvatar(name))
+            ? CachedNetworkImage(
+                imageUrl: fullUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => const CircleSkeleton(size: 52),
+                errorWidget: (context, url, error) => _buildLetterAvatar(name),
+              )
             : _buildLetterAvatar(name),
       ),
     );

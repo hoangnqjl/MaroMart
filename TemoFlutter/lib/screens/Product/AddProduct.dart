@@ -13,6 +13,7 @@ import '../../services/product_service.dart';
 import 'package:temo/models/Product/Product.dart'; // Add this import
 import 'package:intl/intl.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:geolocator/geolocator.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
 class AttributeItem {
@@ -745,6 +746,19 @@ class _AddProductState extends State<AddProduct> {
         "productAttribute": jsonEncode(attributesMap),
         "productAddress": jsonEncode(addressMap),
       };
+
+      // --- ADD LATITUDE & LONGITUDE ---
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high
+        );
+        fields["latitude"] = position.latitude.toString();
+        fields["longitude"] = position.longitude.toString();
+        print("Captured Location: ${position.latitude}, ${position.longitude}");
+      } catch (e) {
+        print("Could not capture location for new post: $e");
+        // We continue without coordinates if GPS fails
+      }
 
       List<XFile> allFiles = [..._selectedImages, ..._selectedVideos];
       await _productService.createProduct(fields: fields, files: allFiles);

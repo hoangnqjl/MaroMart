@@ -132,6 +132,21 @@ class ProductService {
     }
   }
 
+  Future<List<dynamic>> getCategories() async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/categories',
+        needAuth: false,
+      );
+      if (response is List) return response;
+      if (response is Map && response['data'] is List) return response['data'];
+      return [];
+    } catch (e) {
+      print("Lỗi lấy danh mục: $e");
+      return [];
+    }
+  }
+
   Future<List<Product>> getProductsByCategory({String? categoryId}) async {
     try {
       Map<String, String> queryParams = {};
