@@ -1,6 +1,7 @@
 import 'package:temo/utils/constants.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:temo/utils/storage.dart';
+import 'package:temo/services/notification_service.dart';
 
 class SocketService {
   static final SocketService _instance = SocketService._internal();
@@ -78,6 +79,9 @@ class SocketService {
 
     _socket!.on('new_notification', (data) {
       print('[Socket] Nhận thông báo mới: $data');
+
+      // Tăng số lượng thông báo chưa đọc toàn cục
+      NotificationService.unreadCountNotifier.value++;
 
       if (onNewNotification != null) {
         onNewNotification!(data);

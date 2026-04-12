@@ -381,4 +381,23 @@ class ProductService {
       throw Exception('Đẩy tin thất bại: ${e.toString()}');
     }
   }
+
+  Future<List<Product>> getRecommendedProducts({int limit = 10}) async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/products/recommended',
+        queryParameters: {'limit': limit.toString()},
+        needAuth: false,
+      );
+
+      if (response is List) {
+        return response.map((json) => Product.fromJson(json)).toList();
+      } else if (response is Map && response['data'] is List) {
+        return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Lỗi lấy sản phẩm đề xuất: $e');
+    }
+  }
 }

@@ -177,7 +177,7 @@ class _ChangeInformationScreenState extends State<ChangeInformationScreen> {
                       height: 20,
                       child: const ModernLoader(color: Colors.white, size: 20)
                   )
-                      : const Text('Change'),
+                      : const Text('Update Profile'),
                 ),
               ),
             ],

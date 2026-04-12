@@ -1,8 +1,16 @@
+import 'package:flutter/material.dart';
 import 'package:temo/models/Notification/Notification.dart';
 import 'package:temo/services/api_service.dart';
 
 class NotificationService {
   final ApiService _apiService = ApiService();
+  
+  // Toàn cục để lắng nghe số lượng thông báo chưa đọc
+  static final ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
+
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
 
   Future<List<NotificationModel>> getNotifications() async {
     try {
@@ -30,8 +38,26 @@ class NotificationService {
         body: {},
         needAuth: true,
       );
+      // Giảm số lượng sau khi đọc
+      if (unreadCountNotifier.value > 0) {
+        unreadCountNotifier.value--;
+      }
     } catch (e) {
       print('Lỗi markAsRead: $e');
+    }
+  }
+
+  Future<void> fetchUnreadCount() async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/notifications/unread-count',
+        needAuth: true,
+      );
+      if (response['count'] != null) {
+        unreadCountNotifier.value = response['count'];
+      }
+    } catch (e) {
+      print('Lỗi fetchUnreadCount: $e');
     }
   }
 }

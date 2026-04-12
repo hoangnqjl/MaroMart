@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:temo/Home.dart';
 import 'package:temo/screens/Product/AddProduct.dart';
+import 'package:temo/screens/Product/ProductDetail.dart';
 import 'package:temo/screens/Product/ProductManager.dart';
 import 'package:temo/screens/Setting/ChangeInfomation.dart';
 import 'package:temo/screens/Setting/ChangePassword.dart';
@@ -13,7 +14,6 @@ import '../screens/authencation/Login/signin_screen.dart';
 import 'package:temo/screens/Product/SuccessPostScreen.dart';
 import 'package:temo/screens/Coin/CoinManagerScreen.dart';
 import 'package:temo/screens/Setting/AboutScreen.dart';
-import 'package:temo/screens/Product/ProductDetail.dart';
 
 
 // iOS-style smooth route transition

@@ -208,4 +208,20 @@ class UserService {
       throw Exception('Nạp coin thất bại: ${e.toString()}');
     }
   }
+
+  Future<List<dynamic>> getTransactionHistory() async {
+    try {
+      final userId = getCurrentUserId();
+      if (userId == null) throw Exception("Chưa đăng nhập");
+      
+      final response = await _apiService.get(
+        endpoint: '/transactions/$userId',
+        needAuth: true,
+      );
+      
+      return response as List<dynamic>;
+    } catch (e) {
+      throw Exception('Không thể lấy lịch sử giao dịch: ${e.toString()}');
+    }
+  }
 }

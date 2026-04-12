@@ -1,7 +1,7 @@
 class ApiConstants {
   // static const String baseUrl = 'https://temo-server.onrender.com';
 
-  static const String baseUrl = 'http://192.168.16.10:5000';
+  static const String baseUrl = 'http://192.168.1.7:5000';
 
   // auth
   static const String loginEndpoint = '/auth/v1/login';

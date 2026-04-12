@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import '../../services/review_service.dart';
+
 class UserProfileScreen extends StatefulWidget {
   final String userId;
 
@@ -23,9 +25,12 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final UserService _userService = UserService();
   final ProductService _productService = ProductService();
+  final ReviewService _reviewService = ReviewService();
 
   User? _user;
   List<Product> _products = [];
+  double _rating = 0.0;
+  int _totalReviews = 0;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -42,16 +47,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final responses = await Future.wait([
         _userService.getUserById(widget.userId),
         _productService.getUserProducts(widget.userId, limit: 50),
+        _reviewService.getRatingSummary(widget.userId),
       ]);
 
       setState(() {
         _user = responses[0] as User;
         _products = responses[1] as List<Product>;
+        final summary = responses[2] as Map<String, dynamic>;
+        _rating = (summary['averageRating'] as num).toDouble();
+        _totalReviews = (summary['totalReviews'] as num).toInt();
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = "Không thể tải thông tin người dùng.";
+        _errorMessage = "Failed to load user information.";
         _isLoading = false;
       });
     }
@@ -69,7 +78,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: const CommonAppBar(title: "Trang cá nhân", showBackButton: true),
+      appBar: const CommonAppBar(title: "Profile", showBackButton: true),
       body: _isLoading
           ? const Center(child: ModernLoader())
           : _errorMessage != null
@@ -89,7 +98,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           child: Text(
-                            "Tin đang đăng (${_products.length})",
+                            "Active Listings (${_products.length})",
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: 
@@ -106,7 +115,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             padding: EdgeInsets.all(40),
                             child: Center(
                               child: Text(
-                                "Người dùng chưa có sản phẩm nào.",
+                                "This user has no active listings.",
                                 style: TextStyle(color: Colors.grey),
                               ),
                             ),
@@ -168,8 +177,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
               const SizedBox(width: 4),
               Text(
-                "Tham gia: $joinDate",
+                "Joined: $joinDate",
                 style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ...List.generate(5, (index) {
+                return Icon(
+                  index < _rating.round() ? Icons.star_rate_rounded : Icons.star_outline_rounded,
+                  color: Colors.amber,
+                  size: 22,
+                );
+              }),
+              const SizedBox(width: 8),
+              Text(
+                "${_rating.toStringAsFixed(1)}/5.0 ($_totalReviews reviews)",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
               ),
             ],
           ),

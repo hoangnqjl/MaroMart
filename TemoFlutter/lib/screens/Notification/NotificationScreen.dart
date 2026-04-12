@@ -15,6 +15,8 @@ import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/CommonAppBar.dart';
 import 'package:temo/components/AppDrawer.dart';
 
+import '../Order/OrderListScreen.dart';
+
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
@@ -114,6 +116,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
       } catch (e) {}
     }
 
+    if (noti.relatedUrl != null && noti.relatedUrl!.isNotEmpty) {
+      if (noti.relatedUrl!.contains('/order-list')) {
+        int initialTab = noti.relatedUrl!.contains('tab=buy') ? 0 : 1;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderListScreen(initialTab: initialTab),
+          ),
+        );
+        return;
+      }
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -138,11 +153,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const CommonAppBar(title: "Thông báo", showBackButton: true),
+      appBar: const CommonAppBar(title: "Notifications", showBackButton: true),
       endDrawer: const AppDrawer(),
       body: Column(
         children: [
-          // const SizedBox(height: 50),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -266,6 +280,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 4),
+                  if (item.relatedUrl != null && item.relatedUrl!.isNotEmpty) ...[
+                    Text(
+                      "Tap here to take action",
+                      style: TextStyle(color: primaryThemeColor, fontSize: 12, fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   Text(
                     timeStr,
                     style: TextStyle(color: Colors.grey[600], fontSize: 11),

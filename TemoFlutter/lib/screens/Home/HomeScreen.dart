@@ -9,6 +9,7 @@ import 'package:temo/services/product_service.dart';
 import 'package:temo/services/location_service.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'dart:async';
+import '../../components/Skeletons/CategorySkeleton.dart';
 import '../Search/SearchResult.dart';
 import 'package:temo/models/User/User.dart';
 import 'package:temo/screens/Notification/NotificationScreen.dart';
@@ -23,8 +24,8 @@ import 'package:temo/app_router.dart';
 import 'package:flutter/services.dart';
 import 'package:temo/utils/string_utils.dart';
 import 'package:temo/components/Skeleton.dart';
-import 'package:temo/components/Skeletons/CategorySkeleton.dart';
 import 'package:temo/utils/constants.dart';
+import 'package:temo/services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -38,6 +39,7 @@ class HomeScreen extends StatefulWidget {
 class HomeScreenState extends State<HomeScreen> {
   final ProductService _productService = ProductService();
   final LocationService _locationService = LocationService();
+  final NotificationService _notificationService = NotificationService();
 
   final List<Product> _products = [];
   bool _isInitialLoading = true;
@@ -62,6 +64,9 @@ class HomeScreenState extends State<HomeScreen> {
 
   List<dynamic> _categories = [];
   bool _isCategoriesLoading = true;
+  
+  List<Product> _recommendedProducts = [];
+  bool _isRecommendedLoading = true;
 
   final List<Map<String, dynamic>> _staticCategories = [
     {'id': 'technology', 'name': 'Electronics', 'image': 'assets/images/electronics.png'},
@@ -89,7 +94,9 @@ class HomeScreenState extends State<HomeScreen> {
     ));
     _fetchLocation();
     _loadCategories();
+    _loadRecommendedProducts();
     _loadProducts(isRefresh: true);
+    _notificationService.fetchUnreadCount();
     _productService.productChangeNotifier.addListener(_onProductChanged);
 
     _bannerTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
@@ -131,6 +138,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   void reload() {
     _loadProducts(isRefresh: true);
+    _loadRecommendedProducts();
     _fetchLocation();
   }
 
@@ -148,6 +156,21 @@ class HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isCategoriesLoading = false);
+    }
+  }
+
+  Future<void> _loadRecommendedProducts() async {
+    setState(() => _isRecommendedLoading = true);
+    try {
+      final products = await _productService.getRecommendedProducts(limit: 6);
+      if (mounted) {
+        setState(() {
+          _recommendedProducts = products;
+          _isRecommendedLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isRecommendedLoading = false);
     }
   }
 
@@ -379,6 +402,7 @@ class HomeScreenState extends State<HomeScreen> {
           RefreshIndicator(
             onRefresh: () async {
               _fetchLocation();
+              _loadRecommendedProducts();
               await _loadProducts(isRefresh: true);
             },
             child: CustomScrollView(
@@ -414,7 +438,17 @@ class HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(width: 12),
                                 GestureDetector(
                                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen())),
-                                  child: _buildCircleIcon('assets/images/Iconbell.svg'),
+                                  child: ValueListenableBuilder<int>(
+                                    valueListenable: NotificationService.unreadCountNotifier,
+                                    builder: (context, count, child) {
+                                      return Badge(
+                                        label: count > 0 ? Text('$count') : null,
+                                        isLabelVisible: count > 0,
+                                        backgroundColor: Colors.red,
+                                        child: _buildCircleIcon('assets/images/Iconbell.svg'),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
@@ -503,7 +537,7 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                if (_products.isNotEmpty)
+                if (_recommendedProducts.isNotEmpty || _isRecommendedLoading)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(left: 8, right: 8, top: 0, bottom: 10),
@@ -519,17 +553,25 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                if (_products.isNotEmpty)
+                if (_recommendedProducts.isNotEmpty || _isRecommendedLoading)
                   SliverToBoxAdapter(
                     child: Container(
                       height: 328, margin: const EdgeInsets.only(bottom: 20),
-                      child: ListView.separated(
+                      child: _isRecommendedLoading
+                        ? ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 3,
+                            separatorBuilder: (_, __) => const SizedBox(width: 10),
+                            itemBuilder: (context, index) => const ProductCardSkeleton(),
+                          )
+                        : ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         scrollDirection: Axis.horizontal,
-                        itemCount: _products.take(6).length,
+                        itemCount: _recommendedProducts.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
-                          final product = _products[index];
+                          final product = _recommendedProducts[index];
                           String imageUrl = product.productMedia.isNotEmpty ? product.productMedia[0] : '';
                           if (imageUrl.startsWith('image:')) imageUrl = imageUrl.substring(6).trim();
 

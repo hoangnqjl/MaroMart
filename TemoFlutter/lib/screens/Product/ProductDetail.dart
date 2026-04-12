@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../app_router.dart';
 import '../../models/User/ChatPartner.dart';
+import '../../services/review_service.dart';
 import '../Message/ChatScreen.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/Skeletons/ProductDetailSkeleton.dart';
@@ -21,6 +22,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:temo/utils/string_utils.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:temo/services/order_service.dart';
+import 'package:temo/utils/storage.dart';
+import 'package:temo/models/User/User.dart' as model_user;
+import 'package:temo/utils/ui_helpers.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -33,8 +38,14 @@ class ProductDetail extends StatefulWidget {
 
 class ProductDetailState extends State<ProductDetail> {
   final ProductService _productService = ProductService();
+  final LocationService _locationService = LocationService();
+  final ReviewService _reviewService = ReviewService();
+  final model_user.User? currentUser = StorageHelper.getUser();
+
   Product? _product;
   bool _isLoading = true;
+  double _sellerRating = 0.0;
+  int _totalReviews = 0;
   int currentPage = 0;
   late PageController _pageController;
 
@@ -77,9 +88,9 @@ class ProductDetailState extends State<ProductDetail> {
           setState(() {
             _currentPosition = pos;
             if (distanceInMeters < 1000) {
-              _distanceText = "Rất gần bạn";
+              _distanceText = "Very near you";
             } else if (distanceInMeters < 10000) {
-              _distanceText = "Gần bạn";
+              _distanceText = "Near you";
             } else {
               _distanceText = "~${(distanceInMeters / 1000).toStringAsFixed(1)} km";
             }
@@ -100,9 +111,15 @@ class ProductDetailState extends State<ProductDetail> {
   Future<void> _fetchProductDetail() async {
     try {
       final product = await _productService.getProductById(widget.productId);
+      
+      // Fetch seller rating summary
+      final summary = await _reviewService.getRatingSummary(product.userId);
+      
       if (mounted) {
         setState(() {
           _product = product;
+          _sellerRating = (summary['averageRating'] as num).toDouble();
+          _totalReviews = (summary['totalReviews'] as num).toInt();
           _mediaItems = _parseProductMedia(product.productMedia);
           _isLoading = false;
         });
@@ -271,7 +288,7 @@ class ProductDetailState extends State<ProductDetail> {
               ),
               Align(
                 alignment: Alignment.centerRight,
-                child: _buildRoundIconButton(HeroiconsSolid.ellipsisVertical, () {}),
+                child: _buildRoundIconButton(HeroiconsSolid.ellipsisVertical, _showMoreOptions),
               ),
             ],
           ),
@@ -368,9 +385,24 @@ class ProductDetailState extends State<ProductDetail> {
             children: [
               ClipOval(child: Image.network(product.userInfo?.avatarUrl ?? '', width: 30, height: 30, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 30))),
               const SizedBox(width: 8),
-              Text("4.5", style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF3F3F46).withOpacity(0.8))),
+              Text(
+                _totalReviews > 0 ? _sellerRating.toStringAsFixed(1) : "0.0",
+                style: GoogleFonts.roboto(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF3F3F46).withOpacity(0.8),
+                ),
+              ),
               const SizedBox(width: 4),
-              const Icon(Icons.star_rounded, color: Color(0xFFFFB86A), size: 16),
+              const Icon(Icons.star_rate_rounded, color: Color(0xFFFFB86A), size: 18),
+              const SizedBox(width: 4),
+              Text(
+                "($_totalReviews)",
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  color: const Color(0xFF3F3F46).withOpacity(0.6),
+                ),
+              ),
             ],
           ),
         ),
@@ -382,7 +414,7 @@ class ProductDetailState extends State<ProductDetail> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              "Rẻ hơn ${(product.marketPrice! - product.productPrice).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ",
+              "Cheaper by ${(product.marketPrice! - product.productPrice).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} VND",
               style: GoogleFonts.roboto(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -715,12 +747,228 @@ class ProductDetailState extends State<ProductDetail> {
     );
   }
 
+  final OrderService _orderService = OrderService();
+
+  Future<void> _requestPurchase() async {
+    if (_product == null) return;
+    
+    setState(() => _isLoading = true);
+    try {
+      await _orderService.createPurchaseRequest(_product!.productId, _product!.userId);
+      if (mounted) {
+        UIHelpers.showSuccessDialog(
+          context,
+          title: "Request Sent!",
+          message: "Your purchase request has been sent to the seller. Please wait for their response via notification.",
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        UIHelpers.showErrorSnackBar(context, e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _confirmDelete() async {
+    final confirmed = await UIHelpers.confirmDialog(
+      context,
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this product? This action cannot be undone.",
+      confirmText: "Delete Now",
+      confirmColor: Colors.red,
+      icon: HeroiconsOutline.trash,
+    );
+    if (confirmed == true) {
+      _handleDelete();
+    }
+  }
+
+
+  void _showMoreOptions() {
+    final currentUser = StorageHelper.getUser();
+    final bool isOwner = currentUser?.userId == _product?.userId;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            if (isOwner) ...[
+              ListTile(
+                leading: const Icon(HeroiconsOutline.arrowTrendingUp, color: Colors.blue),
+                title: Text("Promote Product", style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blue)),
+                subtitle: Text("Push your item to the top for more views", style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showPushPromotionDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(HeroiconsOutline.trash, color: Colors.red),
+                title: Text("Delete Product", style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.red)),
+                subtitle: Text("This action cannot be undone", style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDelete();
+                },
+              ),
+            ]
+            else
+              ListTile(
+                leading: const Icon(HeroiconsOutline.shoppingBag, color: Color(0xFFFFB86A)),
+                title: Text("Send Purchase Request", style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w600)),
+                subtitle: Text("Send a purchase request to the seller", style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _requestPurchase();
+                },
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDelete() async {
+    setState(() => _isLoading = true);
+    try {
+      await _productService.deleteProduct(_product!.productId);
+      if (mounted) {
+        Navigator.pop(context); // Quay về trang trước
+        UIHelpers.showSuccessSnackBar(context, "Product deleted successfully");
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        UIHelpers.showErrorSnackBar(context, "Error deleting: $e");
+      }
+    }
+  }
+
+  void _showPushPromotionDialog() {
+    final packages = [
+      {'days': 3, 'cost': 2},
+      {'days': 7, 'cost': 4},
+      {'days': 15, 'cost': 7},
+      {'days': 30, 'cost': 10},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent, // Disable Material 3 purple tint
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+        contentPadding: const EdgeInsets.all(24),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+              child: const Icon(HeroiconsOutline.megaphone, color: Colors.blue, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "Promote Product",
+              style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Your product will appear in the recommended section, helping you reach thousands of potential customers.",
+              style: GoogleFonts.roboto(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            ...packages.map((pkg) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey[200]!),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle),
+                  child: const Icon(HeroiconsOutline.clock, color: Colors.amber, size: 20),
+                ),
+                title: Text(
+                  "${pkg['days']} Days",
+                  style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                subtitle: Text(
+                  "Cost: ${pkg['cost']} coins",
+                  style: GoogleFonts.roboto(color: Colors.grey[600], fontSize: 13),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handlePush(pkg['days'] as int);
+                },
+              ),
+            )),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Cancel", style: GoogleFonts.roboto(color: Colors.grey, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handlePush(int days) async {
+    setState(() => _isLoading = true);
+    try {
+      await _productService.pushProduct(_product!.productId, days);
+      if (mounted) {
+        UIHelpers.showSuccessSnackBar(context, "Promotion successful! Your product will be featured in the recommended section soon.");
+        _fetchProductDetail(); // Reload state
+      }
+    } catch (e) {
+      if (mounted) {
+        UIHelpers.showErrorDialog(
+          context,
+          title: "Promotion Failed",
+          message: e.toString().replaceAll("Exception:", ""),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+
   Widget _buildFloatingActionBar() {
     return Positioned(
       bottom: 25, left: 0, right: 0,
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(40),
@@ -736,7 +984,7 @@ class ProductDetailState extends State<ProductDetail> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildActionItem(HeroiconsOutline.phone, "Call", _showCallDialog),
-              const SizedBox(width: 8),
+              const SizedBox(width: 24),
               _buildActionItem(HeroiconsOutline.chatBubbleOvalLeft, "Message", () {
                 if (_product?.userInfo != null) {
                   final userInfo = _product!.userInfo!;

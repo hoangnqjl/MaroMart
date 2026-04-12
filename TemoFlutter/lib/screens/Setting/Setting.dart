@@ -40,7 +40,7 @@ class _Setting extends State<Setting> {
   void _loadUserData() {
     final user = _userService.getCurrentUserFromStorage();
     setState(() {
-      _fullName = user?.fullName ?? 'Khách';
+      _fullName = user?.fullName ?? 'Guest';
       _email = user?.email ?? '';
       _avatarUrl = user?.avatarUrl ?? '';
     });
@@ -64,7 +64,7 @@ class _Setting extends State<Setting> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cập nhật ảnh đại diện thành công!"), backgroundColor: Colors.green),
+        const SnackBar(content: Text("Avatar updated successfully!"), backgroundColor: Colors.green),
       );
 
     } catch (e) {
@@ -72,7 +72,7 @@ class _Setting extends State<Setting> {
         _isUploading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi: ${e.toString()}"), backgroundColor: Colors.red),
+        SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
       );
     }
   }
@@ -114,7 +114,7 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 8),
               _buildMenuItem(
                 icon: HeroiconsOutline.creditCard,
-                label: 'Ví của tôi (Coins)',
+                label: 'Temo Wallet (Coins)',
                 onTap: () {
                   Navigator.pushNamed(context, '/coin_manager');
                 },
@@ -134,13 +134,13 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 8),
                _buildMenuItem(
                 icon: HeroiconsOutline.arrowPath,
-                label: "Kiểm tra cập nhật",
+                label: "Check for updates",
                 onTap: _checkForUpdates,
               ),
 
                const SizedBox(height: 24),
 
-              _buildSectionTitle("Thông tin chung"),
+              _buildSectionTitle("General Information"),
               const SizedBox(height: 12),
                _buildMenuItem(
                 icon: HeroiconsOutline.informationCircle,
@@ -153,7 +153,7 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 40),
               Center(
                 child: Text(
-                  "Phiên bản $_appVersion",
+                  "Version $_appVersion",
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 12,
@@ -188,12 +188,12 @@ class _Setting extends State<Setting> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Cập nhật ứng dụng"),
-        content: const Text("Bạn đang sử dụng phiên bản mới nhất."),
+        title: const Text("App Update"),
+        content: const Text("You are using the latest version."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Đóng", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text("Close", style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

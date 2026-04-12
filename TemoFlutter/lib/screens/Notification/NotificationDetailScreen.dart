@@ -4,6 +4,8 @@ import 'package:temo/components/TopBarSecond.dart';
 import 'package:temo/models/Notification/Notification.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 
+import '../Order/OrderListScreen.dart';
+
 class NotificationDetailScreen extends StatelessWidget {
   final NotificationModel notification;
 
@@ -71,11 +73,19 @@ class NotificationDetailScreen extends StatelessWidget {
             // --- EXTRA DATA (Optional) ---
             if (notification.relatedUrl != null && notification.relatedUrl!.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle("Related Link"),
+              _buildSectionTitle("Action Required"),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () {
-                  // TODO: Implement URL launcher or navigation if needed
+                  if (notification.relatedUrl!.contains('/order-list')) {
+                    int initialTab = notification.relatedUrl!.contains('tab=buy') ? 0 : 1;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderListScreen(initialTab: initialTab),
+                      ),
+                    );
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -84,15 +94,14 @@ class NotificationDetailScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.blue.withOpacity(0.2)),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(HeroiconsOutline.link, color: Colors.blue, size: 20),
-                      const SizedBox(width: 10),
+                      Icon(HeroiconsOutline.cursorArrowRays, color: Colors.blue, size: 20),
+                      SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          notification.relatedUrl!,
-                          style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
-                          overflow: TextOverflow.ellipsis,
+                          "Nhấn vào đây để thao tác",
+                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],

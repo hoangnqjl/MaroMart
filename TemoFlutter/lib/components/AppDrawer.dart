@@ -7,6 +7,8 @@ import 'package:temo/screens/Setting/Setting.dart';
 import 'package:temo/services/auth_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:temo/app_router.dart';
+import 'package:temo/screens/Coin/CoinManagerScreen.dart';
+import 'package:temo/screens/Order/OrderListScreen.dart';
 
 class AppDrawer extends StatefulWidget {
   final User? user;
@@ -28,7 +30,7 @@ class _AppDrawerState extends State<AppDrawer> {
   void _showTestingFeature() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text("Tính năng đang thử nghiệm", style: TextStyle(fontFamily: 'QuickSand')),
+        content: const Text("Feature under testing", style: TextStyle(fontFamily: 'QuickSand')),
         backgroundColor: Colors.grey[800],
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -124,11 +126,19 @@ class _AppDrawerState extends State<AppDrawer> {
                       physics: const BouncingScrollPhysics(),
                       child: Column(
                         children: [
-                          _buildDrawerItem(HeroiconsOutline.home, "Trang chủ", () => Navigator.pop(context)),
-                          _buildDrawerItem(HeroiconsOutline.heart, "Yêu thích", _showTestingFeature),
-                          _buildDrawerItem(HeroiconsOutline.clock, "Lịch sử", _showTestingFeature),
-                          _buildDrawerItem(HeroiconsOutline.user, "Tài khoản", _showTestingFeature),
-                          _buildDrawerItem(HeroiconsOutline.cog6Tooth, "Cài đặt", () {
+                          _buildDrawerItem(HeroiconsOutline.home, "Home", () => Navigator.pop(context)),
+                          _buildDrawerItem(HeroiconsOutline.currencyDollar, "Top up Coins", () {
+                              Navigator.pop(context); 
+                              smoothPush(context, const CoinManagerScreen());
+                          }),
+                          _buildDrawerItem(HeroiconsOutline.shoppingBag, "Orders", () {
+                              Navigator.pop(context); 
+                              smoothPush(context, const OrderListScreen());
+                          }),
+                          _buildDrawerItem(HeroiconsOutline.heart, "Favorites", _showTestingFeature),
+                          _buildDrawerItem(HeroiconsOutline.clock, "History", _showTestingFeature),
+                          _buildDrawerItem(HeroiconsOutline.user, "Account", _showTestingFeature),
+                          _buildDrawerItem(HeroiconsOutline.cog6Tooth, "Settings", () {
                               Navigator.pop(context); 
                               smoothPush(context, Setting());
                           }),
@@ -136,7 +146,7 @@ class _AppDrawerState extends State<AppDrawer> {
                       ),
                     ),
 
-                    _buildDrawerItem(HeroiconsOutline.arrowRightOnRectangle, "Đăng xuất", _handleLogout, isDestructive: true),
+                    _buildDrawerItem(HeroiconsOutline.arrowRightOnRectangle, "Logout", _handleLogout, isDestructive: true),
                     const SizedBox(height: 20),
                   ],
                 ),

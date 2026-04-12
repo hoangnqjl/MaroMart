@@ -142,13 +142,13 @@ class _MessageScreenState extends State<MessageScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CommonAppBar(title: "Tin nhắn"),
+      appBar: const CommonAppBar(title: "Messages"),
       endDrawer: const AppDrawer(),
       body: Column(
         children: [
           // const SizedBox(height: 50), // Removed manual spacing
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -195,7 +195,7 @@ class _MessageScreenState extends State<MessageScreen> {
               onRefresh: _fetchConversations,
               color: primaryThemeColor,
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                 itemCount: displayList.length,
                 itemBuilder: (context, index) {
                   final conv = displayList[index];

@@ -38,55 +38,49 @@ class _BottomNavigationState extends State<BottomNavigation> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 1. Cụm các tab chức năng (Co rút & Căn giữa)
-          Flexible(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center, // Căn giữa toàn bộ thanh nav
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(40),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        offset: const Offset(0, 10),
-                        blurRadius: 30,
-                        spreadRadius: -5,
-                      ),
-                    ],
+          // 1. Cụm các tab chức năng (Co rút động)
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    offset: const Offset(0, 10),
+                    blurRadius: 30,
+                    spreadRadius: -5,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                      child: Container(
-                        height: 58,
-                        padding: const EdgeInsets.symmetric(horizontal: 4), 
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min, // Tự co lại theo con
-                          children: [
-                            _buildNavItem('assets/images/HomeIcon.svg', 0, 'Home'),
-                            const SizedBox(width: 4), // Giảm khoảng cách tối thiểu
-                            _buildNavItem('assets/images/ItemIcon.svg', 1, 'Items', solidIconPath: 'assets/images/ItemIconSolid.png'),
-                            const SizedBox(width: 4),
-                            _buildNavItem('assets/images/MessageIcon.svg', 2, 'Message',
-                                solidIconPath: 'assets/images/MessageIconSolid.png',
-                                badgeCount: widget.notificationCount),
-                          ],
-                        ),
-                      ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                  child: Container(
+                    height: 58,
+                    padding: const EdgeInsets.symmetric(horizontal: 4), 
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.85),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildNavItem('assets/images/HomeIcon.svg', 0, 'Home'),
+                        const SizedBox(width: 4),
+                        _buildNavItem('assets/images/ItemIcon.svg', 1, 'Items', solidIconPath: 'assets/images/ItemIconSolid.png'),
+                        const SizedBox(width: 4),
+                        _buildNavItem('assets/images/MessageIcon.svg', 2, 'Message',
+                            solidIconPath: 'assets/images/MessageIconSolid.png',
+                            badgeCount: widget.notificationCount),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                // 2. Nút ADD bên phải
-                _buildAddButton(),
-              ],
+              ),
             ),
           ),
+          const SizedBox(width: 10),
+          // 2. Nút ADD bên phải
+          _buildAddButton(),
         ],
       ),
     );
@@ -172,93 +166,95 @@ class _BottomNavigationState extends State<BottomNavigation> {
     Color currentColor =
         isSelected ? const Color(0xFFFFF7ED) : const Color(0xFF888888);
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _tappedIndex = index),
-      onTapUp: (_) {
-        setState(() => _tappedIndex = null);
-        widget.onTabSelected(index);
-      },
-      onTapCancel: () => setState(() => _tappedIndex = null),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedScale(
-        scale: isTapped ? 0.85 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          width: 85, // CHIỀU RỘNG CỐ ĐỊNH: Đảm bảo nền trắng luôn bằng nhau tuyệt đối
-          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-          padding: const EdgeInsets.symmetric(vertical: 4), // Bỏ horizontal padding vì đã có width cố định
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryLight : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  isSelected && solidIconPath != null
-                      ? Image.asset(
-                          solidIconPath,
-                          width: 20,
-                          height: 20,
-                          color: currentColor,
-                        )
-                      : (isSelected && index == 0) // Case cho Home (Solid)
-                          ? Icon(
-                              HeroiconsSolid.home,
-                              size: 22, // Size icon Solid thường to hơn
-                              color: currentColor,
-                            )
-                          : SvgPicture.asset(
-                              iconPath,
-                              width: 20,
-                              height: 20,
-                              colorFilter:
-                                  ColorFilter.mode(currentColor, BlendMode.srcIn),
-                            ),
-                  if (badgeCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$badgeCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+    return Expanded(
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _tappedIndex = index),
+        onTapUp: (_) {
+          setState(() => _tappedIndex = null);
+          widget.onTabSelected(index);
+        },
+        onTapCancel: () => setState(() => _tappedIndex = null),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedScale(
+          scale: isTapped ? 0.85 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            // Đã xóa width: 85 để co giãn động
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: 4), 
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primaryLight : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    isSelected && solidIconPath != null
+                        ? Image.asset(
+                            solidIconPath,
+                            width: 20,
+                            height: 20,
+                            color: currentColor,
+                          )
+                        : (isSelected && index == 0) // Case cho Home (Solid)
+                            ? Icon(
+                                HeroiconsSolid.home,
+                                size: 22, // Size icon Solid thường to hơn
+                                color: currentColor,
+                              )
+                            : SvgPicture.asset(
+                                iconPath,
+                                width: 20,
+                                height: 20,
+                                colorFilter:
+                                    ColorFilter.mode(currentColor, BlendMode.srcIn),
+                              ),
+                    if (badgeCount > 0)
+                      Positioned(
+                        top: -4,
+                        right: -8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
                           ),
-                          textAlign: TextAlign.center,
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '$badgeCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: currentColor,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  fontFamily: 'Roboto',
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: currentColor,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

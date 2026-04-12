@@ -271,17 +271,8 @@ class _AddProductState extends State<AddProduct> {
   }
 
   Future<void> _pickImages() async {
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.camera, 
-    ].request();
-
-    if (await Permission.camera.isPermanentlyDenied) {
-        _showPermissionDialog();
-        return;
-    }
-
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image != null) setState(() => _selectedImages.add(image));
     } catch (e) {
       print("Pick Error: $e");
@@ -292,17 +283,8 @@ class _AddProductState extends State<AddProduct> {
   }
 
   Future<void> _pickVideo() async {
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.camera, 
-    ].request();
-
-    if (await Permission.camera.isPermanentlyDenied) {
-        _showPermissionDialog();
-        return;
-    }
-
     try {
-      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
       if (video != null) setState(() => _selectedVideos.add(video));
     } catch (e) {
        print("Pick Video Error: $e");

@@ -164,10 +164,10 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       builder: (ctx) {
         int selectedOption = 0;
         final List<Map<String, dynamic>> pushOptions = [
-          {'days': 3, 'coins': 2, 'label': '3 Ngày'},
-          {'days': 7, 'coins': 4, 'label': '7 Ngày'},
-          {'days': 15, 'coins': 7, 'label': '15 Ngày'},
-          {'days': 30, 'coins': 10, 'label': '30 Ngày'},
+          {'days': 3, 'coins': 2, 'label': '3 Days'},
+          {'days': 7, 'coins': 4, 'label': '7 Days'},
+          {'days': 15, 'coins': 7, 'label': '15 Days'},
+          {'days': 30, 'coins': 10, 'label': '30 Days'},
         ];
 
         return StatefulBuilder(
@@ -194,16 +194,16 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                       decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                  const Text("Đẩy tin / Quảng cáo", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text("Boost / Push Product", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                   const SizedBox(height: 8),
-                  Text("Tin của bạn sẽ được ưu tiên hiển thị trên đầu trang.", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  Text("Your product will be prioritized at the top of the search results.", style: TextStyle(color: Colors.grey[600], fontSize: 14, fontFamily: 'Quicksand')),
                   
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Số dư của bạn:", style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text("$currentCoins Coins", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16)),
+                      const Text("Your Balance:", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                      Text("$currentCoins Coins", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16, fontFamily: 'Quicksand')),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -227,8 +227,8 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(opt['label'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black)),
-                                Text("${opt['coins']} Coins", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black)),
+                                Text(opt['label'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
+                                Text("${opt['coins']} Coins", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
                               ],
                             ),
                           ),
@@ -255,8 +255,8 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       child: Text(
-                        canAfford ? "Thanh toán & Đẩy tin ($cost Coins)" : "Nạp thêm Coins",
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        canAfford ? "Pay & Boost Now ($cost Coins)" : "Top up Coins",
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Quicksand'),
                       ),
                     ),
                   )
@@ -279,7 +279,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       await _userService.getCurrentUser(); // Refresh balance
       if (mounted) {
         Navigator.pop(context); // Close loading
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đẩy tin thành công!"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Product boosted successfully!"), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
@@ -357,14 +357,14 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: AppColors.background,
-        appBar: const CommonAppBar(title: "Quản lý sản phẩm"),
+        appBar: const CommonAppBar(title: "Product Manager"),
         endDrawer: const AppDrawer(),
         body: Column(
           children: [
             // const SizedBox(height: 50),
             Container(
               height: 48,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 12),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppColors.E2Color,
@@ -415,7 +415,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
         return _buildPlaceholderList(msg);
     }
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
       itemCount: _products.length,
       itemBuilder: (context, index) => _buildProductCard(_products[index]),
     );

@@ -137,7 +137,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                   child: _isProcessing
                       ? const ModernLoader(size: 20, color: Colors.white)
-                      : const Text('Change'),
+                      : const Text('Update Password'),
                 ),
               ),
             ],

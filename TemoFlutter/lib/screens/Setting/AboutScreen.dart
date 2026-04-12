@@ -8,7 +8,7 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const TopBarSecond(title: "Về chúng tôi"),
+      appBar: const TopBarSecond(title: "About Us"),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -22,7 +22,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              "Aura",
+              "Temo",
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -31,7 +31,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              "Phiên bản 2.0",
+              "Version 2.0",
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 16,
@@ -39,7 +39,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
             const Text(
-              "© 2026 Aura Team",
+              "© 2026 Temo Team",
                style: TextStyle(fontWeight: FontWeight.w500),
             ),
              const SizedBox(height: 5),
