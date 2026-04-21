@@ -83,9 +83,9 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                   decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                 ),
               ),
-              Text("Select Bank", style: GoogleFonts.roboto(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text("Chọn Ngân hàng", style: GoogleFonts.roboto(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text("Choose a bank to transfer from", style: GoogleFonts.roboto(color: Colors.grey, fontSize: 14)),
+              Text("Vui lòng chọn ngân hàng bạn muốn chuyển khoản", style: GoogleFonts.roboto(color: Colors.grey, fontSize: 14)),
               const SizedBox(height: 24),
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
@@ -166,7 +166,7 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                SliverToBoxAdapter(child: TopBarCustom(title: "Temo Wallet")),
+                SliverToBoxAdapter(child: TopBarCustom(title: "Ví Temo (Xu)")),
                 
                 // Balance Card
                 SliverToBoxAdapter(
@@ -188,7 +188,7 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text("Current Balance", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600, fontFamily: 'Quicksand')),
+                                const Text("Số dư hiện tại", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600, fontFamily: 'Quicksand')),
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
@@ -215,7 +215,7 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Text("Select Top-up Package", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                    child: Text("Chọn gói nạp Xu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                   ),
                 ),
 
@@ -243,9 +243,9 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text("${pkg['coins']} Coins", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                                Text("${pkg['coins']} Xu", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                                 if (pkg['bonus'] > 0)
-                                  Text("+${pkg['bonus']} Bonus Coins", style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                                  Text("+${pkg['bonus']} Xu thưởng", style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                                 const SizedBox(height: 4),
                                 Text(pkg['priceText'], style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Quicksand')),
                               ],
@@ -262,7 +262,7 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.only(left: 20, right: 20, top: 30, bottom: 10),
-                    child: Text("Recent Transactions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                    child: Text("Giao dịch gần đây", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                   ),
                 ),
 
@@ -277,7 +277,7 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                           children: [
                             Icon(HeroiconsOutline.clock, size: 48, color: Colors.grey[200]),
                             const SizedBox(height: 8),
-                            const Text("No transactions yet", style: TextStyle(color: Colors.grey, fontFamily: 'Quicksand')),
+                            const Text("Chưa có giao dịch nào", style: TextStyle(color: Colors.grey, fontFamily: 'Quicksand')),
                           ],
                         ),
                       ),
@@ -305,12 +305,12 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(isDeposit ? "Coin Top-up" : "Product Promotion", style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                                    Text(isDeposit ? "Nạp Xu vào ví" : "Đẩy tin sản phẩm", style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                                     Text(formattedDate, style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Quicksand')),
                                   ],
                                 ),
                               ),
-                              Text("${isDeposit ? '+' : '-'}${tx['amount']} Coins", 
+                              Text("${isDeposit ? '+' : '-'}${tx['amount']} Xu", 
                                    style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.red, fontFamily: 'Quicksand')),
                             ],
                           ),

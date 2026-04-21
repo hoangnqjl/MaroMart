@@ -1,3 +1,4 @@
+import 'package:temo/components/FloatingHeader.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:temo/components/TopBarSecond.dart';
@@ -15,104 +16,113 @@ class NotificationDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const TopBarSecond(title: 'Notification Details'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- HEADER INFO (Type & Date) ---
-            Row(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTypeBadge(notification.type),
-                const Spacer(),
-                Text(
-                  DateFormat('dd/MM/yyyy HH:mm').format(notification.createdAt),
-                  style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
+                const SizedBox(height: 110), // Space for floating header
+                // --- HEADER INFO (Type & Date) ---
+                Row(
+                  children: [
+                    _buildTypeBadge(notification.type),
+                    const Spacer(),
+                    Text(
+                      DateFormat('dd/MM/yyyy HH:mm').format(notification.createdAt),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 20),
+
+                // --- TITLE ---
+                Text(
+                  notification.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    fontFamily: 'QuickSand',
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // --- CONTENT SECTION ---
+                _buildSectionTitle("Message Content"),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA), // Light grey background
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Text(
+                    notification.content,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.black87,
+                      height: 1.6,
+                      fontFamily: 'QuickSand',
+                    ),
+                  ),
+                ),
+
+                // --- EXTRA DATA (Optional) ---
+                if (notification.relatedUrl != null && notification.relatedUrl!.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionTitle("Action Required"),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () {
+                      if (notification.relatedUrl!.contains('/order-list')) {
+                        int initialTab = notification.relatedUrl!.contains('tab=buy') ? 0 : 1;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => OrderListScreen(initialTab: initialTab),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(HeroiconsOutline.cursorArrowRays, color: Colors.blue, size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "Nhấn vào đây để thao tác",
+                              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 40),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // --- TITLE ---
-            Text(
-              notification.title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-                fontFamily: 'QuickSand',
-                height: 1.3,
-              ),
+          ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: FloatingHeader(
+              title: "Details",
             ),
-            const SizedBox(height: 24),
-
-            // --- CONTENT SECTION ---
-            _buildSectionTitle("Message Content"),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA), // Light grey background like AddProduct inputs
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Text(
-                notification.content,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.black87,
-                  height: 1.6,
-                  fontFamily: 'QuickSand',
-                ),
-              ),
-            ),
-
-            // --- EXTRA DATA (Optional) ---
-            if (notification.relatedUrl != null && notification.relatedUrl!.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              _buildSectionTitle("Action Required"),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () {
-                  if (notification.relatedUrl!.contains('/order-list')) {
-                    int initialTab = notification.relatedUrl!.contains('tab=buy') ? 0 : 1;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderListScreen(initialTab: initialTab),
-                      ),
-                    );
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.2)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(HeroiconsOutline.cursorArrowRays, color: Colors.blue, size: 20),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          "Nhấn vào đây để thao tác",
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-
-            // Add more sections from 'data' map if needed
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

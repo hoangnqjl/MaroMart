@@ -2,17 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/components/ModernLoader.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
-import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/components/TopBarSecond.dart';
 import 'package:temo/services/user_service.dart';
 import '../../services/product_service.dart';
-import 'package:temo/models/Product/Product.dart'; // Add this import
+import 'package:temo/models/Product/Product.dart';
 import 'package:intl/intl.dart';
-import 'package:temo/components/ModernLoader.dart';
 import 'package:geolocator/geolocator.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
@@ -92,19 +94,34 @@ class _AddProductState extends State<AddProduct> {
   // (Since I cannot skip large chunks in replace, I will target _attributeTemplates specifically first).
 
   
+  final Map<String, String> _categoryNames = {
+    "auto": "Xe cộ",
+    "furniture": "Nội thất",
+    "technology": "Thiết bị điện tử",
+    "appliances": "Đồ gia dụng",
+    "office": "Văn phòng",
+    "style": "Thời trang",
+    "service": "Dịch vụ",
+    "hobby": "Giải trí & Sở thích",
+    "kids": "Mẹ & Bé",
+    "books": "Sách & Truyện",
+    "pets": "Thú cưng",
+    "other": "Khác"
+  };
+
   final Map<String, List<String>> _allowedTypes = {
-    "auto": ["Car", "Motorbike", "Bicycle", "Electric Bike", "Truck", "Van", "Bus", "Parts", "Accessories", "Other"],
-    "furniture": ["Chair", "Table", "Sofa", "Bed", "Wardrobe", "Cabinet", "Bookshelf", "Desk", "Mattress", "Lamp", "Mirror", "Other"],
-    "technology": ["Smartphone", "Laptop", "Tablet", "Smartwatch", "Desktop PC", "Monitor", "Headphone", "Mouse", "Keyboard", "Camera", "Speaker", "Printer", "Game Console", "Component", "Accessories", "Other"],
-    "appliances": ["Fridge", "Washing Machine", "Air Conditioner", "Fan", "Vacuum Cleaner", "Rice Cooker", "Microwave", "Kettle", "Iron", "Water Purifier", "Blender", "Heater", "Other"],
-    "office": ["Desk", "Chair", "Printer", "Scanner", "Projector", "Stationery", "Filing Cabinet", "Whiteboard", "Other"],
-    "style": ["Shirt", "T-Shirt", "Pants", "Jeans", "Dress", "Skirt", "Jacket", "Coat", "Shoes", "Sneakers", "Sandals", "Bag", "Wallet", "Watch", "Glasses", "Jewelry", "Hat", "Other"],
-    "service": ["Cleaning", "Repair", "Delivery", "Tutor", "Beauty", "Rental", "Tourism", "Photography", "Other"],
-    "hobby": ["Musical Instrument", "Sport Equipment", "Art Supply", "Board Game", "Collectible", "Toy", "Fishing Gear", "Camping Gear", "Other"],
-    "kids": ["Toy", "Stroller", "Car Seat", "Baby Clothes", "Diaper", "Feeding Bottle", "Crib", "Walker", "Other"],
-    "books": ["Fiction", "Non-fiction", "Textbook", "Comic", "Magazine", "Notebook", "Other"],
-    "pets": ["Dog Food", "Cat Food", "Cage", "Toy", "Accessories", "Aquarium", "Other"],
-    "other": ["Miscellaneous", "Other"]
+    "auto": ["Ô tô", "Xe máy", "Xe đạp", "Xe điện", "Xe tải", "Bán tải", "Xe khách", "Phụ tùng", "Phụ kiện", "Khác"],
+    "furniture": ["Ghế", "Bàn", "Sofa", "Giường", "Tủ quần áo", "Tủ hồ sơ", "Kệ sách", "Bàn làm việc", "Nệm", "Đèn", "Gương", "Khác"],
+    "technology": ["Điện thoại", "Laptop", "Máy tính bảng", "Đồng hồ thông minh", "Máy tính để bàn", "Màn hình", "Tai nghe", "Chuột", "Bàn phím", "Máy ảnh", "Loa", "Máy in", "Phụ kiện", "Khác"],
+    "appliances": ["Tủ lạnh", "Máy giặt", "Điều hòa", "Quạt", "Máy hút bụi", "Nồi cơm điện", "Lò vi sóng", "Ấm siêu tốc", "Bàn là", "Máy lọc nước", "Máy xay sinh tố", "Máy sưởi", "Khác"],
+    "office": ["Bàn văn phòng", "Ghế văn phòng", "Máy in", "Máy quét", "Máy chiếu", "Văn phòng phẩm", "Tủ tài liệu", "Bảng trắng", "Khác"],
+    "style": ["Áo sơ mi", "Áo thun", "Quần", "Quần Jeans", "Váy/Đầm", "Chân váy", "Áo khoác", "Giày", "Giày thể thao", "Sandal", "Túi xách", "Ví", "Đồng hồ", "Kính mắt", "Trang sức", "Mũ/Nón", "Khác"],
+    "service": ["Vệ sinh", "Sửa chữa", "Vận chuyển", "Gia sư", "Làm đẹp", "Cho thuê", "Du lịch", "Chụp ảnh", "Khác"],
+    "hobby": ["Nhạc cụ", "Dụng cụ thể thao", "Dụng cụ vẽ", "Board Game", "Đồ sưu tầm", "Đồ chơi", "Dụng cụ câu cá", "Dụng cụ cắm trại", "Khác"],
+    "kids": ["Đồ chơi trẻ em", "Xe đẩy", "Ghế ô tô", "Quần áo trẻ em", "Tã/Bỉm", "Bình sữa", "Cũi", "Xe tập đi", "Khác"],
+    "books": ["Tiểu thuyết", "Sách phi hư cấu", "Giáo trình", "Truyện tranh", "Tạp chí", "Sổ tay", "Khác"],
+    "pets": ["Thức ăn chó", "Thức ăn mèo", "Chuồng", "Đồ chơi thú cưng", "Phụ kiện", "Bể cá", "Khác"],
+    "other": ["Linh tinh", "Khác"]
   };
   
 
@@ -137,10 +154,10 @@ class _AddProductState extends State<AddProduct> {
   };
   
   // AI Config
-  String _selectedStyle = "Professional";
-  String _selectedLength = "Medium";
-  final List<String> _styles = ["Professional", "Casual", "Funny", "Technical"];
-  final List<String> _lengths = ["Short", "Medium", "Detailed"];
+  String _selectedStyle = "Chuyên nghiệp";
+  String _selectedLength = "Trung bình";
+  final List<String> _styles = ["Chuyên nghiệp", "Gần gũi", "Hài hước", "Kỹ thuật"];
+  final List<String> _lengths = ["Ngắn", "Trung bình", "Chi tiết"];
 
   // --- ADDRESS & MEDIA ---
   List<dynamic> _provinces = [];
@@ -271,38 +288,89 @@ class _AddProductState extends State<AddProduct> {
   }
 
   Future<void> _pickImages() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    _showImageSourceActionSheet(context, isVideo: false, onPicked: (image) {
       if (image != null) setState(() => _selectedImages.add(image));
-    } catch (e) {
-      print("Pick Error: $e");
-      if (e.toString().contains("access_denied")) {
-          _showPermissionDialog();
-      }
-    }
+    });
   }
 
   Future<void> _pickVideo() async {
-    try {
-      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-      if (video != null) setState(() => _selectedVideos.add(video));
-    } catch (e) {
-       print("Pick Video Error: $e");
-       if (e.toString().contains("access_denied")) {
-          _showPermissionDialog();
-      }
-    }
+    _showImageSourceActionSheet(context, isVideo: true, onPicked: (video) {
+        if (video != null) setState(() => _selectedVideos.add(video));
+    });
+  }
+
+  void _showImageSourceActionSheet(BuildContext context, {required bool isVideo, required Function(XFile?) onPicked}) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            Text(isVideo ? "Thêm Video" : "Thêm Ảnh", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(HeroiconsOutline.camera, color: Colors.blue),
+              ),
+              title: Text(isVideo ? "Quay Video" : "Chụp ảnh mới"),
+              onTap: () async {
+                Navigator.pop(context);
+                final status = await Permission.camera.request();
+                if (status.isGranted) {
+                  try {
+                    final XFile? media = isVideo 
+                      ? await _picker.pickVideo(source: ImageSource.camera)
+                      : await _picker.pickImage(source: ImageSource.camera);
+                    onPicked(media);
+                  } catch (e) {
+                    _showErrorDialog("Camera Error: $e");
+                  }
+                } else {
+                  _showPermissionDialog();
+                }
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(HeroiconsOutline.photo, color: Colors.purple),
+              ),
+              title: Text(isVideo ? "Chọn Video từ thư viện" : "Chọn Ảnh từ thư viện"),
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  final XFile? media = isVideo 
+                    ? await _picker.pickVideo(source: ImageSource.gallery)
+                    : await _picker.pickImage(source: ImageSource.gallery);
+                  onPicked(media);
+                } catch (e) {
+                  _showErrorDialog("Lỗi thư viện: $e");
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showPermissionDialog() {
       showDialog(
         context: context, 
         builder: (ctx) => AlertDialog(
-          title: const Text("Permission Required"),
-          content: const Text("Please grant camera access in Settings to use this feature."),
+          title: const Text("Yêu cầu quyền truy cập"),
+          content: const Text("Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này."),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Open Settings")),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
+            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Mở Cài đặt")),
           ],
         )
       );
@@ -482,7 +550,7 @@ class _AddProductState extends State<AddProduct> {
              }
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Information & specifications extracted!"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã trích xuất thông tin & thông số kỹ thuật!"), backgroundColor: Colors.green));
         
         // SAVE VISUAL MEMORY
         _visualDetails = "Detected Info from Image:\n"
@@ -522,11 +590,11 @@ class _AddProductState extends State<AddProduct> {
         bool continueAnyway = await showDialog(
           context: context,
           builder: (c) => AlertDialog(
-            title: const Text("AI Warning"),
-            content: Text("AI detected inconsistencies: ${result['inconsistency_reason']}\nDo you want to edit the Name/Photo?"),
+            title: const Text("Cảnh báo từ AI"),
+            content: Text("AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?"),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Back to edit")),
-              TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Continue anyway", style: TextStyle(color: Colors.red))),
+              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Quay lại")),
+              TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Tiếp tục", style: TextStyle(color: Colors.red))),
             ],
           )
         ) ?? false;
@@ -609,7 +677,7 @@ class _AddProductState extends State<AddProduct> {
         });
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("All information auto-filled!"), backgroundColor: Colors.green));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã tự động điền tất cả thông tin!"), backgroundColor: Colors.green));
 
     } catch (e) {
       _showErrorDialog("Content generation error: $e");
@@ -654,7 +722,7 @@ class _AddProductState extends State<AddProduct> {
           }
            
            if (result['suggestions'] != null && result['suggestions'].toString().isNotEmpty) {
-               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Suggestion: ${result['suggestions']}"), duration: const Duration(seconds: 3)));
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gợi ý: ${result['suggestions']}"), duration: const Duration(seconds: 3)));
            }
           
           return true;
@@ -667,8 +735,37 @@ class _AddProductState extends State<AddProduct> {
   }
   
   String _formatKey(String key) {
-     // Optional: format "power_usage" -> "Power Usage"
-     return key.replaceAll("_", " ").split(" ").map((str) => str.isNotEmpty ? '${str[0].toUpperCase()}${str.substring(1)}' : '').join(" ");
+     final Map<String, String> vnKeys = {
+       "type": "Loại sản phẩm",
+       "brand": "Thương hiệu",
+       "model": "Dòng máy / Mã",
+       "condition": "Tình trạng",
+       "warranty": "Bảo hành",
+       "material": "Chất liệu",
+       "color": "Màu sắc",
+       "dimensions": "Kích thước",
+       "weight": "Trọng lượng",
+       "power": "Công suất",
+       "capacity": "Dung tích / Sức chứa",
+       "ram": "Bộ nhớ RAM",
+       "storage": "Bộ nhớ lưu trữ",
+       "processor": "Bộ vi xử lý (CPU)",
+       "battery": "Dung lượng pin",
+       "screen_size": "Kích thước màn hình",
+       "gpu": "Card đồ họa (GPU)",
+       "author": "Tác giả",
+       "publisher": "Nhà xuất bản",
+       "breed": "Giống loài",
+       "gender": "Giới tính",
+       "size": "Kích cỡ",
+       "origin": "Xuất xứ",
+     };
+
+     String cleanKey = key.toLowerCase().trim();
+     if (vnKeys.containsKey(cleanKey)) return vnKeys[cleanKey]!;
+
+     // Fallback to title case
+     return cleanKey.replaceAll("_", " ").split(" ").map((str) => str.isNotEmpty ? '${str[0].toUpperCase()}${str.substring(1)}' : '').join(" ");
   }
 
   void _activateBackupMode() {
@@ -678,7 +775,7 @@ class _AddProductState extends State<AddProduct> {
       for (var attr in _attributes) attr.dispose();
       _attributes.clear();
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("AI Failed. Manual Mode Activated."), backgroundColor: Colors.redAccent));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("AI không thể xử lý. Đã chuyển sang chế độ thủ công."), backgroundColor: Colors.redAccent));
   }
 
   // --- SUBMIT ---
@@ -692,7 +789,7 @@ class _AddProductState extends State<AddProduct> {
           children: const [
             ModernLoader(),
             SizedBox(width: 20),
-            Expanded(child: Text("AI is analyzing the product...\nThis process takes about 5-8 seconds.", style: TextStyle(fontSize: 14))),
+            Expanded(child: Text("AI đang phân tích sản phẩm...\nQuá trình này mất khoảng 5-8 giây.", style: TextStyle(fontSize: 14))),
           ],
         ),
       )
@@ -769,21 +866,21 @@ class _AddProductState extends State<AddProduct> {
       // Step 1: Media & Info
       if (_titleController.text.trim().isEmpty || _priceController.text.trim().isEmpty) {
          if (_selectedImages.isEmpty) {
-             _showErrorDialog("Please enter Product Name, Price and upload at least 1 image.");
+             _showErrorDialog("Vui lòng nhập tên sản phẩm, giá bán và tải lên ít nhất 1 hình ảnh.");
          } else {
-             _showErrorDialog("Please enter both Product Name and Price.");
+             _showErrorDialog("Vui lòng nhập đầy đủ tên sản phẩm và giá bán.");
          }
          return false;
       } else if (_selectedImages.isEmpty) {
-         _showErrorDialog("Please upload at least 1 product image (real photo).");
+         _showErrorDialog("Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm (ảnh thật).");
          return false;
       }
       return await _handleValidateMedia();
     } else if (_currentStep == 1) {
        // Step 2: Info
-       if (_selectedCategory == null) { _showErrorDialog("Please select a category."); return false; }
-       if (_priceController.text.isEmpty) { _showErrorDialog("Please enter a price."); return false; }
-       if (_descController.text.length < 10) { _showErrorDialog("Description is too short."); return false; }
+       if (_selectedCategory == null) { _showErrorDialog("Vui lòng chọn danh mục sản phẩm."); return false; }
+       if (_priceController.text.isEmpty) { _showErrorDialog("Vui lòng nhập giá bán."); return false; }
+       if (_descController.text.length < 10) { _showErrorDialog("Mô tả sản phẩm quá ngắn (tối thiểu 10 ký tự)."); return false; }
        
        // Final Check for content safety & consistency
        // This ensures Step 3 is clean.
@@ -791,7 +888,7 @@ class _AddProductState extends State<AddProduct> {
     } else if (_currentStep == 2) {
        // Step 3: Address Transaction
        if (_selectedProvinceName == null || _selectedWardName == null || _addressDetailController.text.trim().isEmpty) {
-           _showErrorDialog("Please enter a complete transaction address.");
+           _showErrorDialog("Vui lòng nhập đầy đủ địa chỉ giao dịch.");
            return false;
        }
        return true;
@@ -804,7 +901,7 @@ class _AddProductState extends State<AddProduct> {
   Future<void> _saveDraft() async {
       // Allow saving with minimal info
       if (_titleController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter at least a Product Name to save as draft.")));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Vui lòng nhập ít nhất tên sản phẩm để lưu bản nháp.")));
           return;
       }
       
@@ -830,13 +927,13 @@ class _AddProductState extends State<AddProduct> {
           
           List<XFile> allFiles = [..._selectedImages, ..._selectedVideos];
           
-          showDialog(context: context, barrierDismissible: false, builder: (_) => Center(child: ModernLoader()));
+          showDialog(context: context, barrierDismissible: false, builder: (ctx) => Center(child: ModernLoader()));
           
           await _productService.createProduct(fields: fields, files: allFiles); // Create new draft
           
           if (mounted) {
               Navigator.pop(context); // Close loading
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Draft saved!"), backgroundColor: Colors.green));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã lưu bản nháp!"), backgroundColor: Colors.green));
               Navigator.pop(context); // Close Screen
           }
       } catch (e) {
@@ -873,30 +970,30 @@ class _AddProductState extends State<AddProduct> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Step 1: Images & Information", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const Text("Upload real photos (AI will check for stock/web images).", style: TextStyle(color: Colors.grey)),
+          const Text("Bước 1: Hình ảnh & Thông tin", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("Chọn ảnh thật của sản phẩm (AI sẽ kiểm tra ảnh mạng/stock).", style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 20),
           
-          _buildSectionTitle("Images (Real photos required)"),
+          _buildSectionTitle("Ảnh sản phẩm (Bắt buộc ảnh thật)"),
           const SizedBox(height: 12),
-          _buildHorizontalMediaList(label: "Add Photo", icon: HeroiconsOutline.photo, items: _selectedImages, onAdd: _pickImages, onRemove: _removeImage, isImage: true),
+          _buildHorizontalMediaList(label: "Thêm Ảnh", icon: HeroiconsOutline.photo, items: _selectedImages, onAdd: _pickImages, onRemove: _removeImage, isImage: true),
           if (_selectedImages.length > 0)
-            const Padding(padding: EdgeInsets.only(top: 8), child: Text("Photos selected. Press 'Next' for AI verification.", style: TextStyle(color: Colors.blue, fontSize: 12))),
+            const Padding(padding: EdgeInsets.only(top: 8), child: Text("Đã chọn ảnh. Nhấn 'Tiếp theo' để AI xác thực.", style: TextStyle(color: Colors.blue, fontSize: 12))),
             
           const SizedBox(height: 24),
-          _buildSectionTitle("Video (Optional)"),
+          _buildSectionTitle("Video (Không bắt buộc)"),
           const SizedBox(height: 12),
-          _buildHorizontalMediaList(label: "Add Video", icon: HeroiconsOutline.videoCamera, items: _selectedVideos, onAdd: _pickVideo, onRemove: _removeVideo, isImage: false),
+          _buildHorizontalMediaList(label: "Thêm Video", icon: HeroiconsOutline.videoCamera, items: _selectedVideos, onAdd: _pickVideo, onRemove: _removeVideo, isImage: false),
 
            const SizedBox(height: 24),
-           _buildSectionTitle("Product Name"),
+           _buildSectionTitle("Tên sản phẩm"),
            const SizedBox(height: 8),
-           _buildTextField(controller: _titleController, hint: "e.g., Laptop Dell XPS 15 9500"),
+           _buildTextField(controller: _titleController, hint: "VD: Laptop Dell XPS 15 9500"),
 
            const SizedBox(height: 16),
-           _buildSectionTitle("Desired Price (VND)"),
+           _buildSectionTitle("Giá muốn bán (VNĐ)"),
            const SizedBox(height: 8),
-           _buildTextField(controller: _priceController, hint: "e.g., 25000000", keyboardType: TextInputType.number),
+           _buildTextField(controller: _priceController, hint: "VD: 25000000", keyboardType: TextInputType.number),
         ],
       ),
     );
@@ -927,7 +1024,7 @@ class _AddProductState extends State<AddProduct> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle("Style"),
+                    _buildSectionTitle("Phong cách (AI)"),
                     const SizedBox(height: 8),
                      DropdownButtonFormField<String>(
                       value: _selectedStyle,
@@ -948,7 +1045,7 @@ class _AddProductState extends State<AddProduct> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                     _buildSectionTitle("Length"),
+                     _buildSectionTitle("Độ dài (AI)"),
                      const SizedBox(height: 8),
                      DropdownButtonFormField<String>(
                       value: _selectedLength,
@@ -973,27 +1070,27 @@ class _AddProductState extends State<AddProduct> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSectionTitle("Description"),
+              _buildSectionTitle("Mô tả sản phẩm"),
               TextButton.icon(
                 onPressed: _isAiLoading ? null : _handleGenerateDetails,
                 icon: _isAiLoading 
                     ? SizedBox(width: 16, height: 16, child: ModernLoader(size: 16, color: Colors.purple)) 
                     : const Icon(HeroiconsSolid.sparkles, size: 16, color: Colors.purple),
-                label: Text(_isAiLoading ? "Processing..." : "✨ AI Generate & Fill", style: const TextStyle(color: Colors.purple, fontSize: 13, fontWeight: FontWeight.bold)),
+                label: Text(_isAiLoading ? "Đang xử lý..." : "✨ AI Tự soạn nội dung", style: const TextStyle(color: Colors.purple, fontSize: 13, fontWeight: FontWeight.bold)),
                 style: TextButton.styleFrom(backgroundColor: Colors.purple.shade50, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
               )
             ],
           ),
           const SizedBox(height: 8),
-          _buildTextField(controller: _descController, hint: "Describe your product...", maxLines: 5),
+          _buildTextField(controller: _descController, hint: "Nhập mô tả sản phẩm của bạn...", maxLines: 5),
 
           const SizedBox(height: 20),
 
           // --- CATEGORY ---
-          _buildSectionTitle("Category"),
+          _buildSectionTitle("Danh mục"),
           const SizedBox(height: 8),
           _buildDropdownField(
-            hint: "Select Category", 
+            hint: "Chọn danh mục", 
             value: _selectedCategory, 
             items: _attributeTemplates.keys.toList(), 
             onChanged: _onCategoryChanged
@@ -1004,7 +1101,7 @@ class _AddProductState extends State<AddProduct> {
              const SizedBox(height: 20),
              const Divider(),
              const SizedBox(height: 10),
-             const Text("Attributes", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+             const Text("Thông số chi tiết", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
              const SizedBox(height: 10),
              ListView.builder(
                shrinkWrap: true,
@@ -1075,25 +1172,25 @@ class _AddProductState extends State<AddProduct> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Step 3: Transaction Address", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const Text("Enter your address so buyers can view the product.", style: TextStyle(color: Colors.grey)),
+          const Text("Bước 3: Địa chỉ giao dịch", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("Nhập địa chỉ của bạn để người mua có thể xem sản phẩm.", style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 20),
           
-          _buildSectionTitle("Transaction Address"),
+          _buildSectionTitle("Địa chỉ giao dịch"),
           const SizedBox(height: 8),
           _buildDynamicDropdown(
-                hint: "Province / City", value: _selectedProvinceCode, items: _provinces,
+                hint: "Tỉnh / Thành phố", value: _selectedProvinceCode, items: _provinces,
                 itemValueMapper: (item) => item['province_code'].toString(), itemLabelMapper: (item) => item['name'],
                 onChanged: (val) { setState(() { _selectedProvinceCode = val; final s = _provinces.firstWhere((e) => e['province_code'].toString() == val, orElse: () => null); _selectedProvinceName = s != null ? s['name'] : null; }); if (val != null) _fetchWards(val); }
             ),
             const SizedBox(height: 8),
             _buildDynamicDropdown(
-                hint: "Ward / Commune", value: _selectedWardCode, items: _wards,
+                hint: "Quận / Huyện / Phường / Xã", value: _selectedWardCode, items: _wards,
                 itemValueMapper: (item) => item['ward_code'].toString(), itemLabelMapper: (item) => item['ward_name'],
                 onChanged: (val) { setState(() { _selectedWardCode = val; final s = _wards.firstWhere((e) => e['ward_code'].toString() == val, orElse: () => null); _selectedWardName = s != null ? s['ward_name'] : null; }); }
             ),
             const SizedBox(height: 8),
-            _buildTextField(controller: _addressDetailController, hint: "House number, street name..."),
+            _buildTextField(controller: _addressDetailController, hint: "Số nhà, tên đường..."),
         ]
       )
     );
@@ -1106,8 +1203,8 @@ class _AddProductState extends State<AddProduct> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Step 4: Preview", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const Text("Review all information before finishing publication.", style: TextStyle(color: Colors.grey)),
+          const Text("Bước 4: Xem trước", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text("Xem lại tất cả thông tin trước khi hoàn tất đăng tin.", style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 30),
 
            Container(
@@ -1130,11 +1227,11 @@ class _AddProductState extends State<AddProduct> {
                    ],
                  ),
                  const Divider(height: 30),
-                 _buildReviewRow("Category", _selectedCategory?.toUpperCase() ?? "N/A"),
-                 _buildReviewRow("Condition", _conditionController.text),
-                 _buildReviewRow("Brand", _brandController.text),
-                 _buildReviewRow("Origin", _originController.text),
-                 _buildReviewRow("Warranty", _policyController.text),
+                 _buildReviewRow("Danh mục", _categoryNames[_selectedCategory] ?? "Khác"),
+                 _buildReviewRow("Tình trạng", _conditionController.text),
+                 _buildReviewRow("Thương hiệu", _brandController.text),
+                 _buildReviewRow("Xuất xứ", _originController.text),
+                 _buildReviewRow("Bảo hành", _policyController.text),
                  const SizedBox(height: 10),
                  const Text("Description:", style: TextStyle(color: Colors.grey, fontSize: 12)),
                  Text(_descController.text, maxLines: 3, overflow: TextOverflow.ellipsis),
@@ -1166,76 +1263,95 @@ class _AddProductState extends State<AddProduct> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Add New Product', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
-        actions: [
-          TextButton(
-            onPressed: _saveDraft,
-            child: const Text("Save Draft", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
-      body: Column(
+      body: Stack(
         children: [
-          // CUSTOM STEPPER
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            color: Colors.white,
-            child: Row(
-              children: [
-                _buildStepIndicator(0, "Information"),
-                _buildStepLine(0),
-                _buildStepIndicator(1, "Details"),
-                _buildStepLine(1),
-                _buildStepIndicator(2, "Address"),
-                _buildStepLine(2),
-                _buildStepIndicator(3, "Preview"),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
+          Column(
+            children: [
+              const SizedBox(height: 100), // Space for floating header
+              // CUSTOM STEPPER
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                color: Colors.white,
+                child: Row(
+                  children: [
+                    _buildStepIndicator(0, "Thông tin"),
+                    _buildStepLine(0),
+                    _buildStepIndicator(1, "Chi tiết"),
+                    _buildStepLine(1),
+                    _buildStepIndicator(2, "Địa chỉ"),
+                    _buildStepLine(2),
+                    _buildStepIndicator(3, "Xem trước"),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
 
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // Disable swipe
-              children: [
-                _buildStep1Media(),
-                _buildStep2Essentials(),
-                _buildStep3Address(),
-                _buildStep4Review(),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(), // Disable swipe
+                  children: [
+                    _buildStep1Media(),
+                    _buildStep2Essentials(),
+                    _buildStep3Address(),
+                    _buildStep4Review(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: FloatingHeader(
+              title: "Đăng tin mới",
+              actions: [
+                FloatingHeader.buildActionBubble(
+                  icon: HeroiconsOutline.bookmark,
+                  onTap: _saveDraft,
+                  color: Colors.blue,
+                ),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-         decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-             if (_currentStep > 0)
-                TextButton(onPressed: _prevStep, child: const Text("Back", style: TextStyle(color: Colors.grey)))
-             else
-                const SizedBox.shrink(),
-
-             ElevatedButton(
-                onPressed: _nextStep,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.ButtonBlackColor,
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white, 
+            border: Border(top: BorderSide(color: Colors.grey.shade200))
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+                if (_currentStep > 0) ...[
+                  TextButton(onPressed: _prevStep, child: const Text("Quay lại", style: TextStyle(color: Colors.grey))),
+                  const SizedBox(width: 16),
+                ] else
+                  const SizedBox.shrink(),
+  
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.ButtonBlackColor,
+                      foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(double.infinity, 48),
+                      elevation: 0,
+                    ),
+                    child: _isAiLoading 
+                        ? SizedBox(width: 20, height: 20, child: ModernLoader(size: 20, color: Colors.white, showText: false))
+                        : Text(
+                          _currentStep == 3 ? "Đăng tin" : "Tiếp theo",
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                  ),
                 ),
-                child: _isAiLoading 
-                    ? SizedBox(width: 20, height: 20, child: ModernLoader(size: 20, color: Colors.white))
-                    : Text(_currentStep == 3 ? "Upload Product" : "Next"),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1248,7 +1364,7 @@ class _AddProductState extends State<AddProduct> {
         Container(
           width: 30, height: 30,
           decoration: BoxDecoration(
-            color: isActive ? Colors.black : Colors.grey[200],
+              color: isActive ? AppColors.primary : Colors.grey[200],
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -1258,7 +1374,7 @@ class _AddProductState extends State<AddProduct> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 10, color: isActive ? Colors.black : Colors.grey, fontWeight: FontWeight.bold))
+          Text(label, style: TextStyle(fontSize: 10, color: isActive ? AppColors.primary : Colors.grey, fontWeight: FontWeight.bold))
       ],
     );
   }
@@ -1267,7 +1383,7 @@ class _AddProductState extends State<AddProduct> {
     return Expanded(
       child: Container(
         height: 2,
-        color: _currentStep > step ? Colors.black : Colors.grey[200],
+          color: _currentStep > step ? AppColors.primary : Colors.grey[200],
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 15), // align with circle center roughly
         // remove vertical margin if it looks off, alignment is key
       ),
@@ -1288,7 +1404,7 @@ class _AddProductState extends State<AddProduct> {
         hintText: hint, hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
         filled: true, fillColor: readOnly ? Colors.grey[200] : const Color(0xFFF2F2F2),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
       ),
     );
   }
@@ -1296,11 +1412,12 @@ class _AddProductState extends State<AddProduct> {
   Widget _buildDropdownField({required String hint, required String? value, required List<String> items, required ValueChanged<String?> onChanged}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: const Color(0xFFF2F2F2), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: const Color(0xFFF2F2F2), borderRadius: BorderRadius.circular(50)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value, hint: Text(hint, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
-          isExpanded: true, items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
+          isExpanded: true, 
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(_categoryNames[e] ?? e, style: const TextStyle(fontSize: 14)))).toList(),
           onChanged: onChanged,
         ),
       ),
@@ -1319,7 +1436,7 @@ class _AddProductState extends State<AddProduct> {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: const Color(0xFFF2F2F2), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: const Color(0xFFF2F2F2), borderRadius: BorderRadius.circular(50)),
       child: DropdownButtonHideUnderline(child: DropdownButton<String>(
           value: uniqueValues.contains(value) ? value : null, hint: Text(hint, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
           isExpanded: true, menuMaxHeight: 300, items: dropdownItems, onChanged: onChanged)),

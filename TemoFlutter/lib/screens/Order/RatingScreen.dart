@@ -24,12 +24,12 @@ class _RatingScreenState extends State<RatingScreen> {
 
   Future<void> _submitReview() async {
     if (_rating == 0) {
-      UIHelpers.showErrorSnackBar(context, "Please select a rating");
+      UIHelpers.showErrorSnackBar(context, "Vui lòng chọn mức đánh giá");
       return;
     }
 
     if (_commentController.text.trim().isEmpty) {
-      UIHelpers.showErrorSnackBar(context, "Please write a short comment");
+      UIHelpers.showErrorSnackBar(context, "Vui lòng viết một vài nhận xét");
       return;
     }
 
@@ -49,12 +49,12 @@ class _RatingScreenState extends State<RatingScreen> {
         if (!isSafe) {
           UIHelpers.showWarningDialog(
             context,
-            title: "Review Rejected",
-            message: "Content not valid: ${moderation['reason']}",
-            buttonText: "Edit",
+            title: "Nhận xét bị từ chối",
+            message: "Nội dung không phù hợp: ${moderation['reason']}",
+            buttonText: "Chỉnh sửa",
           );
         } else {
-          UIHelpers.showSuccessSnackBar(context, "Thank you for your feedback!");
+          UIHelpers.showSuccessSnackBar(context, "Cảm ơn bạn đã phản hồi!");
           Navigator.pop(context);
         }
       }
@@ -70,7 +70,7 @@ class _RatingScreenState extends State<RatingScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text("Rate Seller", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold)),
+        title: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
@@ -89,12 +89,12 @@ class _RatingScreenState extends State<RatingScreen> {
               ),
               child: Column(
                 children: [
-                  Text("How was your experience?", 
+                  Text("Trải nghiệm của bạn như thế nào?", 
                     style: GoogleFonts.quicksand(fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  Text("Your feedback helps the community grow stronger.", 
+                  Text("Phản hồi của bạn giúp cộng đồng phát triển mạnh mẽ hơn.", 
                     style: GoogleFonts.quicksand(fontSize: 14, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
@@ -133,7 +133,7 @@ class _RatingScreenState extends State<RatingScreen> {
                 controller: _commentController,
                 maxLines: 6,
                 decoration: InputDecoration(
-                  hintText: "Share more details about your transaction...",
+                  hintText: "Hãy chia sẻ thêm chi tiết về giao dịch của bạn...",
                   hintStyle: GoogleFonts.quicksand(color: Colors.grey[400]),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                   fillColor: Colors.white,
@@ -156,8 +156,8 @@ class _RatingScreenState extends State<RatingScreen> {
                   elevation: 0,
                 ),
                 child: _isSubmitting 
-                  ? const ModernLoader(color: Colors.white, size: 24)
-                  : Text("Submit Review", style: GoogleFonts.quicksand(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? ModernLoader(color: Colors.white, size: 24)
+                  : Text("Gửi đánh giá", style: GoogleFonts.quicksand(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

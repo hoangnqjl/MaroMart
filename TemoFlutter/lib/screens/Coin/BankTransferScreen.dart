@@ -58,11 +58,11 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
       await _userService.depositCoins(totalCoins);
       
       if (mounted) {
-        UIHelpers.showSuccessSnackBar(context, "Payment verified! Added $totalCoins coins to your wallet.");
+        UIHelpers.showSuccessSnackBar(context, "Thanh toán thành công! Đã thêm $totalCoins xu vào ví của bạn.");
         Navigator.pop(context, true); // Return success
       }
     } catch (e) {
-      if (mounted) UIHelpers.showErrorSnackBar(context, "Verification failed: $e");
+      if (mounted) UIHelpers.showErrorSnackBar(context, "Xác minh thất bại: $e");
     } finally {
       if (mounted) setState(() => _isConfirming = false);
     }
@@ -73,7 +73,7 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("Payment Details", style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text("Thông tin thanh toán", style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -133,18 +133,18 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
                     errorWidget: (context, url, error) => const Icon(Icons.error),
                   ),
                   const SizedBox(height: 16),
-                  Text("Scan QR code to pay", style: GoogleFonts.roboto(color: Colors.grey, fontSize: 14)),
+                  Text("Quét mã QR để thanh toán", style: GoogleFonts.roboto(color: Colors.grey, fontSize: 14)),
                 ],
               ),
             ),
             const SizedBox(height: 32),
 
             // Details Table
-            _buildDetailRow("Amount", widget.priceText, isBold: true),
+            _buildDetailRow("Số tiền", widget.priceText, isBold: true),
             const Divider(height: 32),
-            _buildDetailRow("Account Number", widget.bank['accountNo'], canCopy: true),
+            _buildDetailRow("Số tài khoản", widget.bank['accountNo'], canCopy: true),
             const Divider(height: 32),
-            _buildDetailRow("Transfer Note", _transferNote, canCopy: true, isNote: true),
+            _buildDetailRow("Nội dung chuyển khoản", _transferNote, canCopy: true, isNote: true),
             
             const SizedBox(height: 48),
 
@@ -161,12 +161,12 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
                 ),
                 child: _isConfirming 
                   ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text("I have transferred", style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                  : Text("Tôi đã chuyển khoản", style: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              "Click only after you have completed the transfer",
+              "Chỉ nhấn sau khi bạn đã hoàn tất chuyển khoản",
               style: GoogleFonts.roboto(color: Colors.grey, fontSize: 12),
             ),
           ],
@@ -195,7 +195,7 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
               GestureDetector(
                 onTap: () {
                   // Simulate copy
-                  UIHelpers.showSuccessSnackBar(context, "Copied to clipboard!");
+                  UIHelpers.showSuccessSnackBar(context, "Đã sao chép vào bộ nhớ tạm!");
                 },
                 child: const Icon(HeroiconsOutline.documentDuplicate, size: 16, color: Colors.blue),
               )

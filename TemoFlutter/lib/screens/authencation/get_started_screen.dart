@@ -206,7 +206,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                             shape: const StadiumBorder(),
                           ),
                           icon: _isGoogleLoading
-                              ? const ModernLoader(
+                              ? ModernLoader(
                             size: 20,
                             color: Colors.white,
                           )

@@ -175,6 +175,7 @@ class Product {
   final List<String> productMedia;
   final String createdAt;
   final String updatedAt;
+  final String? pushExpiry;
 
   final UserInfo? userInfo;
 
@@ -201,6 +202,7 @@ class Product {
     required this.productMedia,
     required this.createdAt,
     required this.updatedAt,
+    this.pushExpiry,
     this.userInfo,
   });
 
@@ -251,6 +253,7 @@ class Product {
 
       createdAt: json['createdAt']?.toString() ?? '',
       updatedAt: json['updatedAt']?.toString() ?? '',
+      pushExpiry: json['pushExpiry']?.toString(),
 
       userInfo: json['userInfo'] != null
           ? UserInfo.fromJson(json['userInfo'])
@@ -281,6 +284,7 @@ class Product {
       'productMedia': productMedia,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'pushExpiry': pushExpiry,
       'userInfo': userInfo?.toJson(),
     };
   }

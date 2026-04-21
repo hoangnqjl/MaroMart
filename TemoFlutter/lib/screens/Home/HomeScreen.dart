@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/components/ProductGridItem.dart';
 import 'package:temo/components/Filter.dart';
 import 'package:temo/models/Product/Product.dart';
@@ -74,10 +75,12 @@ class HomeScreenState extends State<HomeScreen> {
     {'id': 'style', 'name': 'Fashion', 'image': 'assets/images/fashion.png'},
     {'id': 'auto', 'name': 'Auto', 'image': 'assets/images/auto.png'},
     {'id': 'kids', 'name': 'Kids', 'image': 'assets/images/kids.png'},
-    {'id': 'services', 'name': 'Services', 'image': 'assets/images/service.png'},
+    {'id': 'services', 'name': 'Service', 'image': 'assets/images/service.png'},
     {'id': 'appliances', 'name': 'Appliances', 'image': 'assets/images/appliances.png'},
     {'id': 'offices', 'name': 'Offices', 'image': 'assets/images/offices.png'},
   ];
+
+  final FocusNode _searchFocusNode = FocusNode();
 
   late final FilterOverlay _filterOverlay = FilterOverlay(
     onFilterApplied: (categoryId, province, ward) =>
@@ -87,11 +90,10 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Configure transparent status bar
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ));
+    _searchFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _fetchLocation();
     _loadCategories();
     _loadRecommendedProducts();
@@ -132,6 +134,7 @@ class HomeScreenState extends State<HomeScreen> {
     _bannerTimer?.cancel();
     _bannerController.dispose();
     _hintTimer?.cancel();
+    _searchFocusNode.dispose();
     _productService.productChangeNotifier.removeListener(_onProductChanged);
     super.dispose();
   }
@@ -306,95 +309,68 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. FIXED BACKGROUND: Mesh Gradient Blobs (Loang màu)
-          Positioned.fill(
-            child: Stack(
-              children: [
-                // Ground color
-                Positioned.fill(child: Container(color: AppColors.background)),
-                
-                // Vàng - Top Left
-                Positioned(
-                  top: -MediaQuery.of(context).size.width * 0.5,
-                  left: -MediaQuery.of(context).size.width * 0.4,
-                  width: MediaQuery.of(context).size.width * 1.3,
-                  height: MediaQuery.of(context).size.width * 1.3,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          const Color(0xFFFFF6D7),
-                          const Color(0xFFFFF6D7).withOpacity(0),
-                        ],
-                        stops: const [0.3, 1.0],
-                      ),
-                    ),
+          // 1. DECORATIVE BLOBS (Restored with Heavy Blur like Sample)
+          Positioned(
+            top: -150,
+            right: -100,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(
+                width: 450,
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFFB86B).withOpacity(0.35),
+                      const Color(0xFFFFB86B).withOpacity(0),
+                    ],
                   ),
                 ),
-
-                // Đỏ nhạt - Top Right
-                Positioned(
-                  top: -MediaQuery.of(context).size.width * 0.3,
-                  right: -MediaQuery.of(context).size.width * 0.4,
-                  width: MediaQuery.of(context).size.width * 1.2,
-                  height: MediaQuery.of(context).size.width * 1.2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          const Color(0xFFFFB5BA).withOpacity(0.9),
-                          const Color(0xFFFFB5BA).withOpacity(0),
-                        ],
-                        stops: const [0.3, 1.0],
-                      ),
-                    ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 150,
+            left: -150,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+              child: Container(
+                width: 550,
+                height: 550,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFB7C7F).withOpacity(0.25),
+                      const Color(0xFFFB7C7F).withOpacity(0),
+                    ],
                   ),
                 ),
-
-                // Cam đào - Centered (Moved UP)
-                Positioned(
-                  top: -50,
-                  left: 0,
-                  right: 0,
-                  height: 350,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          const Color(0xFFFFD09F).withOpacity(0.8),
-                          const Color(0xFFFFD09F).withOpacity(0),
-                        ],
-                        stops: const [0.2, 1.0],
-                      ),
-                    ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 50,
+            right: -150,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(
+                width: 450,
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFFCC80).withOpacity(0.2),
+                      const Color(0xFFFFCC80).withOpacity(0),
+                    ],
                   ),
                 ),
-                
-                // 3. Fade to background color transition (Opaque MUCH SOONER)
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.background.withOpacity(0.0),
-                          AppColors.background.withOpacity(0.05),
-                          AppColors.background.withOpacity(0.4),
-                          AppColors.background,
-                        ],
-                        stops: const [0.0, 0.1, 0.25, 0.4], // Reaches 100% at 40% of screen height
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
 
@@ -413,39 +389,49 @@ class HomeScreenState extends State<HomeScreen> {
                       // 1. Top Bar
                       Padding(
                         padding: EdgeInsets.only(
-                          left: 8,
-                          right: 8,
-                          top: MediaQuery.of(context).padding.top + 10,
+                          left: 20,
+                          right: 20,
+                          top: MediaQuery.of(context).padding.top + 15,
                           bottom: 0,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            GestureDetector(
-                              onTap: () => widget.onMenuTap?.call(),
-                              child: SvgPicture.asset(
-                                'assets/images/Iconmenu.svg',
-                                width: 30,
-                                height: 30,
-                                fit: BoxFit.contain,
-                                colorFilter: const ColorFilter.mode(Color(0xFF333333), BlendMode.srcIn),
-                              ),
+                            Row(
+                               children: [
+                             GestureDetector(
+                               onTap: widget.onMenuTap,
+                               child: const Icon(HeroiconsOutline.bars3BottomLeft, color: Colors.black, size: 28),
+                             ),
+                                 const SizedBox(width: 8),
+                                 const Text(
+                                   "Temo",
+                                   style: TextStyle(
+                                     fontSize: 24,
+                                     fontWeight: FontWeight.bold,
+                                     color: Color(0xFFFFB86B),
+                                     fontFamily: 'Quicksand',
+                                   ),
+                                 ),
+                               ],
                             ),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildCircleIcon('assets/images/Iconluu.svg'),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 16),
                                 GestureDetector(
                                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen())),
                                   child: ValueListenableBuilder<int>(
                                     valueListenable: NotificationService.unreadCountNotifier,
                                     builder: (context, count, child) {
                                       return Badge(
-                                        label: count > 0 ? Text('$count') : null,
                                         isLabelVisible: count > 0,
                                         backgroundColor: Colors.red,
-                                        child: _buildCircleIcon('assets/images/Iconbell.svg'),
+                                        smallSize: 8,
+                                        largeSize: 8,
+                                        padding: EdgeInsets.zero,
+                                        child: SvgPicture.asset('assets/images/Iconbell.svg', width: 24, height: 24),
                                       );
                                     },
                                   ),
@@ -457,49 +443,64 @@ class HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Search Bar
+                      // Search Bar (Strict Figma: Radius 50, Border 1.5, 25% Black)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Container(
-                          height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: 52,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(25),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                            borderRadius: BorderRadius.circular(50),
+                            gradient: _searchFocusNode.hasFocus 
+                              ? const LinearGradient(colors: [Color(0xFFFFB86A), Color(0xFFFB7C7F)])
+                              : null,
+                            border: _searchFocusNode.hasFocus ? null : Border.all(color: const Color(0x40000000), width: 1.5),
                           ),
-                          child: Row(
-                            children: [
-                              const SizedBox(width: 16),
-                              const Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey, size: 22),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextField(
-                                  textInputAction: TextInputAction.search,
-                                  onSubmitted: (value) {
-                                    if (value.trim().isNotEmpty) {
-                                      smoothPush(context, SearchResultScreen(keyword: value.trim()));
-                                    }
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText: _searchHints[_currentHintIndex],
-                                    border: InputBorder.none,
-                                    hintStyle: const TextStyle(
-                                      color: Color(0x66000000),
-                                      fontSize: 14,
-                                      fontFamily: 'Roboto',
+                          child: Container(
+                            margin: _searchFocusNode.hasFocus ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 16),
+                                Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[500], size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextField(
+                                    focusNode: _searchFocusNode,
+                                    onSubmitted: (value) {
+                                      if (value.trim().isNotEmpty) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => SearchResultScreen(keyword: value.trim()),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: _searchHints[_currentHintIndex],
+                                      hintStyle: GoogleFonts.quicksand(
+                                        color: Colors.grey[400],
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      border: InputBorder.none,
+                                      isDense: true,
                                     ),
                                   ),
                                 ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _filterOverlay.toggle(context),
-                                child: Container(
-                                  width: 40, height: 40, margin: const EdgeInsets.only(right: 5),
-                                  decoration: const BoxDecoration(color: Color(0xFFFFB86A), shape: BoxShape.circle),
-                                  child: const Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.white, size: 20),
+                                IconButton(
+                                  icon: Icon(HeroiconsOutline.viewfinderCircle, color: Colors.grey[500], size: 24),
+                                  onPressed: () {
+                                    // Placeholder for future Camera/Scanner search
+                                  },
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 2),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -523,7 +524,7 @@ class HomeScreenState extends State<HomeScreen> {
                             if (index == (_categories.isNotEmpty ? _categories.length : _staticCategories.length)) {
                               return _buildCategoryItem({
                                 'id': 'all',
-                                'name': 'All',
+                                'name': 'Tất cả',
                                 'image': 'assets/images/logo.png'
                               });
                             }
@@ -540,36 +541,41 @@ class HomeScreenState extends State<HomeScreen> {
                 if (_recommendedProducts.isNotEmpty || _isRecommendedLoading)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 8, right: 8, top: 0, bottom: 10),
-                      child: const Text(
-                          "Recommended",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Color(0xB3000000),
-                              fontFamily: 'Roboto'
-                          )
+                      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 12),
+                      child: Row(
+                        children: [
+                          const Text(
+                            "Recommended",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFF333333),
+                                fontFamily: 'Quicksand'
+                            )
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(HeroiconsSolid.arrowTrendingUp, color: Color(0xFFFFB86B), size: 18),
+                        ],
                       ),
                     ),
                   ),
-
                 if (_recommendedProducts.isNotEmpty || _isRecommendedLoading)
                   SliverToBoxAdapter(
                     child: Container(
-                      height: 328, margin: const EdgeInsets.only(bottom: 20),
+                      height: 380, margin: const EdgeInsets.only(bottom: 20, top: 10),
                       child: _isRecommendedLoading
                         ? ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
                             scrollDirection: Axis.horizontal,
                             itemCount: 3,
-                            separatorBuilder: (_, __) => const SizedBox(width: 10),
+                            separatorBuilder: (_, __) => const SizedBox(width: 16),
                             itemBuilder: (context, index) => const ProductCardSkeleton(),
                           )
                         : ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         scrollDirection: Axis.horizontal,
                         itemCount: _recommendedProducts.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        separatorBuilder: (_, __) => const SizedBox(width: 16),
                         itemBuilder: (context, index) {
                           final product = _recommendedProducts[index];
                           String imageUrl = product.productMedia.isNotEmpty ? product.productMedia[0] : '';
@@ -584,20 +590,20 @@ class HomeScreenState extends State<HomeScreen> {
                           return GestureDetector(
                             onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: product.productId),
                             child: Container(
-                              width: 245,
+                              width: 250,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                                    color: const Color(0x26000000), // 15% Shadow
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
                                   ),
                                 ],
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(30),
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -609,10 +615,26 @@ class HomeScreenState extends State<HomeScreen> {
                                           color: Colors.grey[200],
                                           child: const Icon(Icons.image)
                                       ),
+                                     ),
+                                    // (Growth icon moved to section title)
+                                    // Complex Gradient Overlay for top/bottom readability
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.black.withOpacity(0.4),
+                                            Colors.transparent,
+                                            Colors.transparent,
+                                            Colors.black.withOpacity(0.4),
+                                          ],
+                                          stops: const [0.0, 0.25, 0.7, 1.0],
+                                        ),
+                                      ),
                                     ),
-                                    Container(color: Colors.black.withOpacity(0.3)),
                                     Padding(
-                                      padding: const EdgeInsets.all(16.0),
+                                      padding: const EdgeInsets.all(12.0),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -625,51 +647,57 @@ class HomeScreenState extends State<HomeScreen> {
                                                   style: const TextStyle(
                                                       fontFamily: 'Quicksand',
                                                       color: Colors.white,
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.bold
+                                                      fontSize: 22,
+                                                      fontWeight: FontWeight.bold,
+                                                      shadows: [Shadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))]
                                                   ),
-                                                  maxLines: 1,
+                                                  maxLines: 2,
                                                   overflow: TextOverflow.ellipsis
                                               ),
-                                              const SizedBox(height: 4),
+                                              const SizedBox(height: 6),
                                               Text(
                                                   formattedPrice,
                                                   style: const TextStyle(
                                                       fontFamily: 'Quicksand',
                                                       color: Colors.white,
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.w700
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w600,
+                                                      shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))]
                                                   )
                                               ),
                                             ],
                                           ),
                                           Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
                                             children: [
                                               Expanded(
                                                 child: ClipRRect(
                                                   borderRadius: BorderRadius.circular(20),
                                                   child: BackdropFilter(
-                                                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                                     child: Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                      height: 44,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 14),
                                                       decoration: BoxDecoration(
-                                                          color: Colors.white.withOpacity(0.4),
-                                                          borderRadius: BorderRadius.circular(20)
+                                                          color: Colors.white.withOpacity(0.2),
+                                                          borderRadius: BorderRadius.circular(20),
+                                                          border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5)
                                                       ),
                                                       child: Row(
+                                                        crossAxisAlignment: CrossAxisAlignment.center,
                                                         children: [
-                                                          const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 14),
-                                                          const SizedBox(width: 4),
+                                                          const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 16),
+                                                          const SizedBox(width: 6),
                                                           Expanded(
                                                               child: Text(
                                                                   StringUtils.simplifyAddress(
-                                                                    product.productAddress?.province ?? 'Location unknown',
+                                                                   product.productAddress?.province ?? 'Location',
                                                                   ),
                                                                   style: const TextStyle(
                                                                       fontFamily: 'Quicksand',
                                                                       color: Colors.white,
-                                                                      fontSize: 12,
-                                                                      fontWeight: FontWeight.w700
+                                                                      fontSize: 13,
+                                                                      fontWeight: FontWeight.w600
                                                                   ),
                                                                   maxLines: 1,
                                                                   overflow: TextOverflow.ellipsis
@@ -681,10 +709,10 @@ class HomeScreenState extends State<HomeScreen> {
                                                   ),
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
+                                              const SizedBox(width: 12),
                                               GestureDetector(
                                                 onTap: () {
-                                                  if (product.userInfo != null) {
+                                                   if (product.userInfo != null) {
                                                     final userInfo = product.userInfo!;
                                                     final partner = ChatPartner(
                                                       userId: userInfo.userId,
@@ -697,16 +725,17 @@ class HomeScreenState extends State<HomeScreen> {
                                                 },
                                                 child: ClipOval(
                                                   child: BackdropFilter(
-                                                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                                     child: Container(
-                                                        width: 36,
-                                                        height: 36,
+                                                        width: 44,
+                                                        height: 44,
                                                         decoration: BoxDecoration(
-                                                            color: Colors.white.withOpacity(0.4),
-                                                            shape: BoxShape.circle
+                                                            color: Colors.white.withOpacity(0.2),
+                                                            shape: BoxShape.circle,
+                                                            border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5)
                                                         ),
                                                         alignment: Alignment.center,
-                                                        child: const Icon(HeroiconsOutline.chatBubbleOvalLeft, color: Colors.white, size: 18)
+                                                        child: const Icon(HeroiconsOutline.chatBubbleOvalLeft, color: Colors.white, size: 22)
                                                     ),
                                                   ),
                                                 ),
@@ -729,25 +758,44 @@ class HomeScreenState extends State<HomeScreen> {
                 if (_products.isNotEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 8, right: 8, top: 10, bottom: 10),
-                      child: const Text(
-                        "Explore more",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xB3000000),
-                          fontFamily: 'Roboto',
-                        ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Explore more",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF333333),
+                              fontFamily: 'Quicksand',
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                "For you",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Quicksand',
+                                ),
+                              ),
+                              Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey[600]),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
 
                 _products.isEmpty && !_isInitialLoading
-                    ? SliverToBoxAdapter(child: Center(child: Padding(padding: const EdgeInsets.only(top: 50), child: Text("No products found.", style: TextStyle(color: Colors.grey)))))
+                    ? SliverToBoxAdapter(child: Center(child: Padding(padding: const EdgeInsets.only(top: 50), child: Text("Không tìm thấy sản phẩm nào.", style: TextStyle(color: Colors.grey)))))
                     : SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   sliver: SliverMasonryGrid.count(
-                    crossAxisCount: 2, mainAxisSpacing: 6, crossAxisSpacing: 6,
+                    crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10,
                     childCount: _products.length + (_hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == _products.length && _hasMore) {
@@ -787,16 +835,11 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCircleIcon(String assetPath) {
-    return Container(
-      width: 40, height: 40,
-      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-      alignment: Alignment.center,
-      child: SvgPicture.asset(
-        assetPath,
-        width: 20,
-        height: 20,
-        colorFilter: const ColorFilter.mode(Color(0xFF333333), BlendMode.srcIn),
-      ),
+    return SvgPicture.asset(
+      assetPath,
+      width: 24,
+      height: 24,
+      colorFilter: const ColorFilter.mode(Color(0xFF333333), BlendMode.srcIn),
     );
   }
 }

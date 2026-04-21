@@ -12,8 +12,10 @@ import 'package:temo/models/User/ChatPartner.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:temo/components/ModernLoader.dart';
-import 'package:temo/components/CommonAppBar.dart';
-import 'package:temo/components/AppDrawer.dart';
+import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/components/PremiumTabSwitcher.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 
 import '../Order/OrderListScreen.dart';
 
@@ -153,49 +155,161 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const CommonAppBar(title: "Notifications", showBackButton: true),
-      endDrawer: const AppDrawer(),
-      body: Column(
+
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.E2Color,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTabButton(0, "All"),
-                      _buildTabButton(1, "New", hasDot: true),
-                      _buildTabButton(2, "Read"),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _deleteAll,
-                  child: Container(
-                    width: 44, height: 44,
-                    decoration: const BoxDecoration(
-                      color: AppColors.E2Color,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(HeroiconsOutline.trash, color: primaryThemeColor, size: 20),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          Column(
+            children: [
+              const SizedBox(height: 130), // Space for floating header
           Expanded(
             child: _isLoading
                 ? Center(child: ModernLoader(color: primaryThemeColor))
                 : _displayNotifications.isEmpty
-                ? Center(child: Text("No notifications", style: TextStyle(color: Colors.grey[400])))
+                ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(HeroiconsOutline.bellSlash, size: 64, color: Colors.grey[200]),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Không có thông báo nào",
+                        style: GoogleFonts.roboto(
+                          color: Colors.grey[400],
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500
+                        ),
+                      ),
+                    ],
+                  ),
+                )
                 : _buildGroupedList(),
+          ),
+            ],
+          ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: FloatingHeader(
+              title: "Thông báo",
+              actions: [
+                _buildHeaderMenu(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderMenu() {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 70),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+      elevation: 8,
+      icon: Container(
+        width: 44, height: 44,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+          ],
+        ),
+        child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+      ),
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      onSelected: (value) {
+        if (value == 'delete_all') {
+          _deleteAll();
+        } else if (value.startsWith('filter_')) {
+          final idx = int.parse(value.split('_')[1]);
+          setState(() => _selectedTab = idx);
+        } else if (value == 'mark_read') {
+          // Logic for marking all as read
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'filter_0',
+          height: 56,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.rectangleGroup,
+            label: "Tất cả",
+            color: Colors.green,
+            isSelected: _selectedTab == 0,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'filter_1',
+          height: 56,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.bell,
+            label: "Chưa đọc",
+            color: AppColors.primary,
+            isSelected: _selectedTab == 1,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'filter_2',
+          height: 56,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.checkCircle,
+            label: "Đã đọc",
+            color: Colors.blue,
+            isSelected: _selectedTab == 2,
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'mark_read',
+          height: 56,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.checkCircle,
+            label: "Đánh dấu tất cả đã đọc",
+            color: Colors.grey,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete_all',
+          height: 56,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.trash,
+            label: "Xóa toàn bộ thông báo",
+            color: AppColors.accent,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPopupItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    bool isSelected = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+              border: isSelected ? Border.all(color: color, width: 2) : null,
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 14),
+          Text(
+            label,
+            style: GoogleFonts.quicksand(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+              color: isSelected ? color : const Color(0xFF374151),
+            ),
           ),
         ],
       ),
@@ -210,11 +324,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         itemCount: list.length,
         itemBuilder: (context, index) {
           final noti = list[index];
-          bool showHeader = true;
-          if (index > 0) {
-            final prevNoti = list[index - 1];
-            if (_isSameDay(prevNoti.createdAt, noti.createdAt)) showHeader = false;
-          }
+          bool showHeader = false; // Luôn ẩn tiêu đề ngày theo yêu cầu của người dùng
 
           return AnimationConfiguration.staggeredList(
             position: index,
@@ -246,26 +356,30 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildNotificationItem(NotificationModel item) {
     final style = _getStyleByType(item.type);
-    final timeStr = item.createdAt.difference(DateTime.now()).inMinutes.abs() < 60
-        ? "${item.createdAt.difference(DateTime.now()).inMinutes.abs()}m ago"
-        : DateFormat('HH:mm').format(item.createdAt);
+    final diff = DateTime.now().difference(item.createdAt).abs();
+    final timeStr = diff.inMinutes < 60
+        ? "${diff.inMinutes} phút trước"
+        : diff.inHours < 24
+            ? "${diff.inHours} giờ trước"
+            : DateFormat('dd/MM/yyyy HH:mm').format(item.createdAt);
 
     return GestureDetector(
       onTap: () => _onTapNotification(item),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: style.bgColor,
-          borderRadius: BorderRadius.circular(24),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(color: const Color(0x26000000), width: 0.4),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: style.bgColor,
                 shape: BoxShape.circle,
               ),
               child: Icon(style.icon, color: style.iconColor, size: 20),
@@ -277,26 +391,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Text(
                     item.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  if (item.relatedUrl != null && item.relatedUrl!.isNotEmpty) ...[
-                    Text(
-                      "Tap here to take action",
-                      style: TextStyle(color: primaryThemeColor, fontSize: 12, fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
+                  const SizedBox(height: 2),
                   Text(
                     timeStr,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 10),
                   ),
                 ],
               ),
             ),
             if (!item.isRead)
               Container(
-                margin: const EdgeInsets.only(top: 4),
+                margin: const EdgeInsets.only(left: 8),
                 width: 8, height: 8,
                 decoration: BoxDecoration(color: primaryThemeColor, shape: BoxShape.circle),
               )

@@ -11,13 +11,16 @@ import 'package:temo/services/product_service.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/app_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:temo/components/ModernLoader.dart'; // Import
 import 'package:temo/components/CommonAppBar.dart';
-import 'package:temo/components/AppDrawer.dart';
+
+import 'package:temo/components/TerminalButton.dart';
 
 class ProductManager extends StatefulWidget {
-  const ProductManager({super.key});
+  final VoidCallback? onMenuTap;
+  const ProductManager({super.key, this.onMenuTap});
 
   @override
   State<ProductManager> createState() => ProductManagerState(); // Public State
@@ -25,7 +28,7 @@ class ProductManager extends StatefulWidget {
 
 class ProductManagerState extends State<ProductManager> with SingleTickerProviderStateMixin { // Rename
   late TabController _tabController;
-  final List<String> _tabs = ['Active', 'Drafts', 'Hidden'];
+  final List<String> _tabs = ['Đang bán', 'Bản nháp', 'Chờ duyệt'];
   final ProductService _productService = ProductService();
   final UserService _userService = UserService();
   final Color primaryThemeColor = AppColors.primary;
@@ -33,12 +36,24 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   List<Product> _products = [];
   bool _isLoading = true;
 
+  // Search & Filter State
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  String _searchQuery = "";
+  int _selectedFilter = 0; // 0: All, 1: Newest, 2: Price Low-High, 3: Price High-Low
+  int _selectedStatusIndex = 0; // 0: Đang bán (active), 1: Bản nháp (draft), 2: Chờ duyệt (pending)
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(_handleTabSelection);
     _fetchUserProducts();
+    
+    _searchFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
+    });
   }
   
   void _handleTabSelection() {
@@ -49,7 +64,8 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -66,7 +82,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       }
       
       String status = 'active';
-      switch (_tabController.index) {
+      switch (_selectedStatusIndex) {
           case 0: status = 'active'; break;
           case 1: status = 'draft'; break; 
           case 2: status = 'pending'; break; 
@@ -105,19 +121,19 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Delete Product"),
-        content: const Text("Are you sure you want to delete this product? This action cannot be undone."),
+        title: const Text("Xóa tin đăng"),
+        content: const Text("Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               _deleteProduct(product.productId);
             },
-            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text("Xóa", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -139,7 +155,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
           _products.removeWhere((p) => p.productId == productId);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Product deleted successfully")),
+          const SnackBar(content: Text("Xóa sản phẩm thành công")),
         );
       }
     } catch (e) {
@@ -164,10 +180,10 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       builder: (ctx) {
         int selectedOption = 0;
         final List<Map<String, dynamic>> pushOptions = [
-          {'days': 3, 'coins': 2, 'label': '3 Days'},
-          {'days': 7, 'coins': 4, 'label': '7 Days'},
-          {'days': 15, 'coins': 7, 'label': '15 Days'},
-          {'days': 30, 'coins': 10, 'label': '30 Days'},
+          {'days': 3, 'coins': 2, 'label': '3 Ngày'},
+          {'days': 7, 'coins': 4, 'label': '7 Ngày'},
+          {'days': 15, 'coins': 7, 'label': '15 Ngày'},
+          {'days': 30, 'coins': 10, 'label': '30 Ngày'},
         ];
 
         return StatefulBuilder(
@@ -194,16 +210,16 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                       decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                  const Text("Boost / Push Product", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                  const Text("Đẩy tin / Ưu tiên hiển thị", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
                   const SizedBox(height: 8),
-                  Text("Your product will be prioritized at the top of the search results.", style: TextStyle(color: Colors.grey[600], fontSize: 14, fontFamily: 'Quicksand')),
+                  Text("Sản phẩm của bạn sẽ được ưu tiên hiển thị ở đầu danh sách tìm kiếm.", style: TextStyle(color: Colors.grey[600], fontSize: 14, fontFamily: 'Quicksand')),
                   
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Your Balance:", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                      Text("$currentCoins Coins", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16, fontFamily: 'Quicksand')),
+                      const Text("Số dư hiện tại:", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                      Text("$currentCoins Xu", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16, fontFamily: 'Quicksand')),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -228,7 +244,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(opt['label'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
-                                Text("${opt['coins']} Coins", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
+                                Text("${opt['coins']} Xu", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
                               ],
                             ),
                           ),
@@ -255,7 +271,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       child: Text(
-                        canAfford ? "Pay & Boost Now ($cost Coins)" : "Top up Coins",
+                        canAfford ? "Thanh toán & Đẩy tin ngay ($cost Xu)" : "Nạp thêm Xu",
                         style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Quicksand'),
                       ),
                     ),
@@ -279,7 +295,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       await _userService.getCurrentUser(); // Refresh balance
       if (mounted) {
         Navigator.pop(context); // Close loading
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Product boosted successfully!"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã đẩy tin thành công!"), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
@@ -303,20 +319,18 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               _buildOptionButton(
-                icon: HeroiconsOutline.rocketLaunch,
-                label: 'Boost / Push Product',
-                iconColor: Colors.blue,
-                bgColor: const Color(0xFFE3F2FD),
+                icon: HeroiconsOutline.arrowTrendingUp,
+                label: 'Đẩy tin / Ưu tiên',
+                iconColor: Colors.orange,
+                bgColor: const Color(0xFFFFF4E5),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showPushSheet(context, product);
@@ -325,19 +339,19 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
               const SizedBox(height: 12),
               _buildOptionButton(
                 icon: HeroiconsOutline.pencilSquare,
-                label: 'Edit item',
-                iconColor: Colors.orange,
-                bgColor: const Color(0xFFFFF4E5),
+                label: 'Chỉnh sửa tin',
+                iconColor: Colors.blue,
+                bgColor: const Color(0xFFE3F2FD),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final result = await smoothPush(context, UpdateProduct(productId: product.productId));
+                  final result = await smoothPush(context, UpdateProduct(product: product));
                   if (result == true) _fetchUserProducts();
                 },
               ),
               const SizedBox(height: 12),
               _buildOptionButton(
                 icon: HeroiconsOutline.trash,
-                label: 'Delete item',
+                label: 'Xóa tin này',
                 iconColor: Colors.red,
                 bgColor: const Color(0xFFFCEEEB),
                 onTap: () {
@@ -356,68 +370,285 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: const CommonAppBar(title: "Product Manager"),
-        endDrawer: const AppDrawer(),
-        body: Column(
+        backgroundColor: Colors.white,
+        body: Stack(
           children: [
-            // const SizedBox(height: 50),
-            Container(
-              height: 48,
-              margin: const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 12),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.E2Color,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelPadding: EdgeInsets.zero,
-                indicator: BoxDecoration(
-                  color: primaryThemeColor,
-                  borderRadius: BorderRadius.circular(25),
+            Column(
+              children: [
+                const SizedBox(height: 160), 
+                Expanded(
+                  child: _isLoading
+                      ? Center(child: ModernLoader(color: primaryThemeColor))
+                      : _buildProductList(),
                 ),
-                dividerColor: Colors.transparent,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey[600],
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                tabs: _tabs.map((name) => Tab(text: name)).toList(),
-                onTap: (index) {
-                    if (!_tabController.indexIsChanging) {
-                        _fetchUserProducts(); // Force refresh on tap if already selected or not changing via anim
-                    }
-                },
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _isLoading
-                  ? Center(child: ModernLoader(color: primaryThemeColor)) // Use ModernLoader
-                  : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildProductList(), // Active
-                  _buildProductList(), // Drafts
-                  _buildProductList(), // Hidden
-                ],
-              ),
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: _buildCustomHeader(),
             ),
           ],
         ),
     );
   }
+
+  Widget _buildCustomHeader() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: widget.onMenuTap,
+                  child: Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                      ],
+                    ),
+                    child: const Icon(HeroiconsOutline.bars3BottomLeft, color: Color(0xFF4B5563), size: 24),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Text(
+                    "Quản lý sản phẩm",
+                    style: GoogleFonts.roboto(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4B5563),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                const SizedBox(width: 44),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Row 2: Search & Filter
+            Row(
+              children: [
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(50),
+                      color: Colors.white,
+                      gradient: _searchFocusNode.hasFocus 
+                        ? const LinearGradient(colors: [Color(0xFFFFB86A), Color(0xFFFB7C7F)])
+                        : null,
+                      border: _searchFocusNode.hasFocus ? null : Border.all(color: const Color(0x1F000000), width: 1.5),
+                    ),
+                    child: Container(
+                      margin: _searchFocusNode.hasFocus ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 14),
+                          Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[400], size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              decoration: InputDecoration(
+                                hintText: "Tìm sản phẩm...",
+                                hintStyle: GoogleFonts.quicksand(color: Colors.grey[400], fontSize: 14, fontWeight: FontWeight.w600),
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    hoverColor: Colors.transparent,
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                  ),
+                  child: PopupMenuButton<int>(
+                    offset: const Offset(0, 52),
+                    padding: EdgeInsets.zero,
+                    color: Colors.white,
+                    elevation: 10,
+                    icon: Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0x1F000000), width: 1.5),
+                      ),
+                      child: Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.grey[600], size: 20),
+                    ),
+                    onSelected: (val) {
+                      if (val >= 10) {
+                        setState(() => _selectedFilter = val - 10);
+                      } else {
+                        setState(() {
+                          _selectedStatusIndex = val;
+                          _fetchUserProducts();
+                        });
+                      }
+                    },
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    itemBuilder: (context) => [
+                      _buildFilterItemHeader("TRẠNG THÁI"),
+                      _buildStatusMenuItem(0, "Đang bán", HeroiconsOutline.checkBadge, Colors.orange),
+                      _buildStatusMenuItem(1, "Bản nháp", HeroiconsOutline.pencilSquare, Colors.blue),
+                      _buildStatusMenuItem(2, "Chờ duyệt", HeroiconsOutline.clock, Colors.purple),
+                      const PopupMenuDivider(),
+                      _buildFilterItemHeader("SẮP XẾP"),
+                      _buildSortMenuItem(10, "Mới nhất", HeroiconsOutline.sparkles, Colors.deepPurple),
+                      _buildSortMenuItem(11, "Giá: Thấp -> Cao", HeroiconsOutline.barsArrowUp, Colors.green),
+                      _buildSortMenuItem(12, "Giá: Cao -> Thấp", HeroiconsOutline.barsArrowDown, Colors.teal),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<int> _buildFilterItemHeader(String title) {
+    return PopupMenuItem<int>(
+      enabled: false,
+      height: 30,
+      child: Text(
+        title,
+        style: GoogleFonts.quicksand(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey[400], letterSpacing: 1.2),
+      ),
+    );
+  }
+
+  PopupMenuItem<int> _buildStatusMenuItem(int value, String label, IconData icon, Color color) {
+    final isSelected = _selectedStatusIndex == value;
+    return PopupMenuItem(
+      value: value,
+      height: 52,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.quicksand(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(HeroiconsOutline.check, size: 18, color: color),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<int> _buildSortMenuItem(int value, String label, IconData icon, Color color) {
+    final isSelected = _selectedFilter == (value - 10);
+    return PopupMenuItem(
+      value: value,
+      height: 52,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.quicksand(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(HeroiconsOutline.check, size: 18, color: color),
+        ],
+      ),
+    );
+  }
   
   Widget _buildProductList() {
-    if (_products.isEmpty) {
-        String msg = "No products found";
-        if (_tabController.index == 1) msg = "No drafts";
-        return _buildPlaceholderList(msg);
+    // 1. Filter by Search Query
+    List<Product> filtered = _products;
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((p) => p.productName.toLowerCase().contains(_searchQuery)).toList();
+    }
+
+    // 2. Filter by Sort Option
+    if (_selectedFilter == 0) { // Newest (Default/All)
+       // Keep order
+    } else if (_selectedFilter == 1) { // Price Low-High
+      filtered.sort((a, b) => a.productPrice.compareTo(b.productPrice));
+    } else if (_selectedFilter == 2) { // Price High-Low
+      filtered.sort((a, b) => b.productPrice.compareTo(a.productPrice));
+    }
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(HeroiconsOutline.shoppingBag, size: 64, color: Colors.grey[200]),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty ? "Không có sản phẩm nào" : "Không tìm thấy sản phẩm",
+              style: GoogleFonts.quicksand(color: Colors.grey[400], fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-      itemCount: _products.length,
-      itemBuilder: (context, index) => _buildProductCard(_products[index]),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) => _buildProductCard(filtered[index]),
     );
   }
 

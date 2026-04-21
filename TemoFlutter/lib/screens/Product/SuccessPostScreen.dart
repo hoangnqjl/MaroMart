@@ -55,7 +55,7 @@ class _SuccessPostScreenState extends State<SuccessPostScreen> with SingleTicker
             ),
             const SizedBox(height: 40),
             const Text(
-              "Success!",
+              "Thành công!",
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -64,7 +64,7 @@ class _SuccessPostScreenState extends State<SuccessPostScreen> with SingleTicker
             ),
             const SizedBox(height: 10),
             const Text(
-              "Your product has been successfully posted.",
+              "Sản phẩm của bạn đã được đăng thành công.",
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 60),
@@ -83,7 +83,7 @@ class _SuccessPostScreenState extends State<SuccessPostScreen> with SingleTicker
                       minimumSize: const Size(double.infinity, 56),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
-                    child: const Text("Back to Home", style: TextStyle(color: Colors.white, fontSize: 16)),
+                    child: const Text("Về trang chủ", style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
@@ -92,7 +92,7 @@ class _SuccessPostScreenState extends State<SuccessPostScreen> with SingleTicker
                        // Navigator.pushNamed(context, '/manage_products'); // TODO: Add route
                        Navigator.pop(context); 
                     },
-                    child: const Text("Manage Products", style: TextStyle(color: Colors.black)),
+                    child: const Text("Quản lý tin đăng", style: TextStyle(color: Colors.black)),
                   )
                 ],
               ),

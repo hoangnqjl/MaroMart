@@ -14,9 +14,7 @@ class FilterOverlay {
 
   String? _savedCategory;
   String? _savedProvCode;
-  String? _savedProvName;
   String? _savedWardCode;
-  String? _savedWardName;
 
   final List<Map<String, dynamic>> _categories = [
     {'id': '', 'label': 'All', 'icon': HeroiconsOutline.squares2x2},
@@ -73,9 +71,7 @@ class FilterOverlay {
                     onApply: (cat, provCode, provName, wardCode, wardName) {
                       _savedCategory = cat;
                       _savedProvCode = provCode;
-                      _savedProvName = provName;
                       _savedWardCode = wardCode;
-                      _savedWardName = wardName;
 
                       onFilterApplied(cat, provName, wardName);
                       hide();

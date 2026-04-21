@@ -68,9 +68,11 @@ class _BottomNavigationState extends State<BottomNavigation> {
                         const SizedBox(width: 4),
                         _buildNavItem('assets/images/ItemIcon.svg', 1, 'Items', solidIconPath: 'assets/images/ItemIconSolid.png'),
                         const SizedBox(width: 4),
-                        _buildNavItem('assets/images/MessageIcon.svg', 2, 'Message',
+                        _buildNavItem('assets/images/MessageIcon.svg', 2, 'Chat',
                             solidIconPath: 'assets/images/MessageIconSolid.png',
                             badgeCount: widget.notificationCount),
+                        const SizedBox(width: 4),
+                        _buildNavItem('', 3, 'Cài đặt'), // Profile changed to Cài đặt
                       ],
                     ),
                   ),
@@ -196,26 +198,32 @@ class _BottomNavigationState extends State<BottomNavigation> {
                   alignment: Alignment.center,
                   clipBehavior: Clip.none,
                   children: [
-                    isSelected && solidIconPath != null
+                    isSelected && solidIconPath != null && solidIconPath.isNotEmpty
                         ? Image.asset(
                             solidIconPath,
                             width: 20,
                             height: 20,
                             color: currentColor,
                           )
-                        : (isSelected && index == 0) // Case cho Home (Solid)
+                        : (index == 0) // Case cho Home (Cần tăng size để cân đối thị giác)
                             ? Icon(
-                                HeroiconsSolid.home,
-                                size: 22, // Size icon Solid thường to hơn
+                                isSelected ? HeroiconsSolid.home : HeroiconsOutline.home,
+                                size: isSelected ? 24 : 22,
                                 color: currentColor,
                               )
-                            : SvgPicture.asset(
-                                iconPath,
-                                width: 20,
-                                height: 20,
-                                colorFilter:
-                                    ColorFilter.mode(currentColor, BlendMode.srcIn),
-                              ),
+                            : (index == 3) // Case cho Cài đặt (Settings)
+                                ? Icon(
+                                    isSelected ? HeroiconsSolid.cog6Tooth : HeroiconsOutline.cog6Tooth,
+                                    size: isSelected ? 22 : 20,
+                                    color: currentColor,
+                                  )
+                                : SvgPicture.asset(
+                                    iconPath,
+                                    width: 20,
+                                    height: 20,
+                                    colorFilter:
+                                        ColorFilter.mode(currentColor, BlendMode.srcIn),
+                                  ),
                     if (badgeCount > 0)
                       Positioned(
                         top: -4,

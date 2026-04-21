@@ -5,6 +5,7 @@ import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/models/Conversation/Conversation.dart';
 import 'package:temo/models/Message/Message.dart';
 import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/models/User/User.dart';
 import 'package:temo/screens/Message/ChatScreen.dart';
 import 'package:temo/services/chat_service.dart';
 import 'package:temo/services/user_service.dart';
@@ -15,11 +16,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/components/Skeletons/ListTileSkeleton.dart';
 import 'package:temo/components/Skeleton.dart';
-import 'package:temo/components/CommonAppBar.dart';
-import 'package:temo/components/AppDrawer.dart';
+import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/components/PremiumTabSwitcher.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 
 class MessageScreen extends StatefulWidget {
-  const MessageScreen({super.key});
+  final VoidCallback? onMenuTap;
+  const MessageScreen({super.key, this.onMenuTap});
 
   @override
   State<MessageScreen> createState() => _MessageScreenState();
@@ -38,6 +42,11 @@ class _MessageScreenState extends State<MessageScreen> {
 
   bool _isSelectionMode = false;
   Set<String> _selectedConversations = {};
+  
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchBarFocusNode = FocusNode();
+  String _searchQuery = "";
+  User? _currentUserProfile;
 
   @override
   void initState() {
@@ -45,6 +54,20 @@ class _MessageScreenState extends State<MessageScreen> {
     _currentUserId = StorageHelper.getUserId();
     _fetchConversations();
     _initSocketListeners();
+    _fetchCurrentUser();
+    _searchBarFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
+    });
+  }
+
+  Future<void> _fetchCurrentUser() async {
+    try {
+      final user = await _userService.getCurrentUser();
+      if (mounted) setState(() => _currentUserProfile = user);
+    } catch (e) {}
   }
 
   void _initSocketListeners() {
@@ -118,15 +141,44 @@ class _MessageScreenState extends State<MessageScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _searchBarFocusNode.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   List<Conversation> get _filteredConversations {
-    if (_selectedTab == 0) {
-      return _conversations;
-    } else {
-      return _conversations.where((conv) {
-        if (conv.latestMessage == null) return false;
-        return conv.latestMessage!.sender != _currentUserId;
+    List<Conversation> filtered = _conversations;
+    
+    // Lọc theo Tab/Filter icon
+    if (_selectedTab == 1) {
+      // Chưa đọc: Tin nhắn cuối cùng không phải của mình
+      filtered = filtered.where((conv) => 
+        conv.latestMessage != null && conv.latestMessage!.sender != _currentUserId
+      ).toList();
+    } else if (_selectedTab == 2) {
+      // Đã đọc (hoặc mình đã trả lời): Tin nhắn cuối cùng là của mình
+      filtered = filtered.where((conv) => 
+        conv.latestMessage != null && conv.latestMessage!.sender == _currentUserId
+      ).toList();
+    } else if (_selectedTab == 3) {
+      // Mới nhất: Tin nhắn trong 24h qua
+      final oneDayAgo = DateTime.now().subtract(const Duration(hours: 24));
+      filtered = filtered.where((conv) => 
+        conv.latestMessage != null && conv.latestMessage!.createdAt.isAfter(oneDayAgo)
+      ).toList();
+    }
+    
+    // Lọc theo Tìm kiếm
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((conv) {
+        final name = conv.partnerInfo?.fullName.toLowerCase() ?? "";
+        return name.contains(_searchQuery);
       }).toList();
     }
+    
+    return filtered;
   }
 
   bool get _hasNewMessages {
@@ -141,11 +193,12 @@ class _MessageScreenState extends State<MessageScreen> {
     final displayList = _filteredConversations;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const CommonAppBar(title: "Messages"),
-      endDrawer: const AppDrawer(),
-      body: Column(
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
+          Column(
+            children: [
+              const SizedBox(height: 160), // Space for new taller 2-row floating header
           // const SizedBox(height: 50), // Removed manual spacing
           Padding(
             padding: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 12),
@@ -164,20 +217,11 @@ class _MessageScreenState extends State<MessageScreen> {
                           });
                         },
                       ),
-                      Text('${_selectedConversations.length} selected', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      Text('${_selectedConversations.length} đã chọn', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
                   )
                 else
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(color: AppColors.E2Color, borderRadius: BorderRadius.circular(30)),
-                    child: Row(children: [_buildTabButton(0, "All"), _buildTabButton(1, "New", hasDot: _hasNewMessages)]),
-                  ),
-
-                if (_isSelectionMode && _selectedConversations.isNotEmpty)
-                  GestureDetector(onTap: _deleteSelectedConversations, child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(20)), child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))))
-                else
-                  GestureDetector(onTap: () => setState(() { _isSelectionMode = !_isSelectionMode; _selectedConversations.clear(); }), child: _buildCircleButton(HeroiconsOutline.trash, isTransparent: false)),
+                  const SizedBox.shrink(),
               ],
             ),
           ),
@@ -190,7 +234,23 @@ class _MessageScreenState extends State<MessageScreen> {
                     itemBuilder: (context, index) => const ListTileSkeleton(),
                   )
                 : displayList.isEmpty
-                ? Center(child: Text(_selectedTab == 0 ? "No conversations yet" : "No new messages", style: TextStyle(color: Colors.grey[400])))
+                ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(HeroiconsOutline.chatBubbleLeftRight, size: 64, color: Colors.grey[200]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _selectedTab == 0 ? "Chưa có cuộc trò chuyện nào" : "Không có tin nhắn mới",
+                        style: GoogleFonts.roboto(
+                          color: Colors.grey[400],
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500
+                        ),
+                      ),
+                    ],
+                  ),
+                )
                 : RefreshIndicator(
               onRefresh: _fetchConversations,
               color: primaryThemeColor,
@@ -204,8 +264,313 @@ class _MessageScreenState extends State<MessageScreen> {
               ),
             ),
           ),
+            ],
+          ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: _buildCustomHeader(),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCustomHeader() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Row 1: Menu - Title - Avatar
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => widget.onMenuTap?.call(),
+
+                  child: Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                      ],
+                    ),
+                    child: const Icon(HeroiconsOutline.bars3BottomLeft, color: Colors.black87, size: 22),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Text(
+                    "Chats",
+                    style: GoogleFonts.roboto(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4B5563),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                const SizedBox(width: 44),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(50),
+                      gradient: _searchBarFocusNode.hasFocus 
+                        ? const LinearGradient(colors: [Color(0xFFFFB86A), Color(0xFFFB7C7F)])
+                        : null,
+                      border: _searchBarFocusNode.hasFocus ? null : Border.all(color: const Color(0x40000000), width: 1.5),
+                    ),
+                    child: Container(
+                      margin: _searchBarFocusNode.hasFocus ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 16),
+                          Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[500], size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchBarFocusNode,
+                              decoration: InputDecoration(
+                                hintText: "Tìm kiếm...",
+                                hintStyle: GoogleFonts.quicksand(
+                                  color: Colors.grey[400],
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                PopupMenuButton<int>(
+                  offset: const Offset(0, 52),
+                  padding: EdgeInsets.zero,
+                  color: Colors.white,
+                  elevation: 10,
+                  icon: Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0x40000000), width: 1.5),
+                    ),
+                    child: Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.grey[600], size: 20),
+                  ),
+                  onSelected: (value) => setState(() => _selectedTab = value),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  itemBuilder: (context) => [
+                    _buildFilterMenuItem(0, "Tất cả", HeroiconsOutline.rectangleGroup, Colors.orange),
+                    _buildFilterMenuItem(1, "Chưa đọc", HeroiconsOutline.envelopeOpen, Colors.blue),
+                    _buildFilterMenuItem(2, "Đã đọc", HeroiconsOutline.checkBadge, Colors.green),
+                    _buildFilterMenuItem(3, "Mới nhất", HeroiconsOutline.sparkles, Colors.purple),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<int> _buildFilterMenuItem(int value, String label, IconData icon, Color color) {
+    final isSelected = _selectedTab == value;
+    return PopupMenuItem(
+      value: value,
+      height: 52,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.quicksand(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(HeroiconsOutline.check, size: 18, color: color),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar() {
+    final avatarUrl = _currentUserProfile?.avatarUrl;
+    final fullName = _currentUserProfile?.fullName ?? "Tôi";
+    
+    return Container(
+      width: 40, height: 40,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: avatarUrl != null && avatarUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: _getFullUrl(avatarUrl),
+                fit: BoxFit.cover,
+                errorWidget: (context, url, error) => _buildLetterAvatar(fullName, size: 40),
+              )
+            : _buildLetterAvatar(fullName, size: 40),
+      ),
+    );
+  }
+
+  Widget _buildHeaderMenu() {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 55),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      elevation: 8,
+      icon: Container(
+        width: 44, height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.black.withOpacity(0.1), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+          ],
+        ),
+        child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black87, size: 22),
+      ),
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      onSelected: (value) {
+        if (value == 'manage') {
+          setState(() {
+            _isSelectionMode = !_isSelectionMode;
+            _selectedConversations.clear();
+          });
+        } else if (value.startsWith('filter_')) {
+          final idx = int.parse(value.split('_')[1]);
+          setState(() => _selectedTab = idx);
+        } else if (value == 'delete_selected') {
+          if (_selectedConversations.isNotEmpty) {
+            _deleteSelectedConversations();
+          }
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'filter_0',
+          height: 60,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.rectangleGroup,
+            label: "Tất cả tin nhắn",
+            color: Colors.green,
+            isSelected: _selectedTab == 0,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'filter_1',
+          height: 60,
+          child: _buildPopupItem(
+            icon: HeroiconsOutline.envelope,
+            label: "Tin nhắn chưa đọc",
+            color: AppColors.primary,
+            isSelected: _selectedTab == 1,
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'manage',
+          height: 60,
+          child: _buildPopupItem(
+            icon: _isSelectionMode ? HeroiconsOutline.xMark : HeroiconsOutline.checkCircle,
+            label: _isSelectionMode ? "Hủy chọn" : "Quản lý tin nhắn",
+            color: Colors.blueAccent,
+          ),
+        ),
+        if (_isSelectionMode)
+          PopupMenuItem(
+            value: 'delete_selected',
+            height: 60,
+            enabled: _selectedConversations.isNotEmpty,
+            child: _buildPopupItem(
+              icon: HeroiconsOutline.trash,
+              label: "Xóa đã chọn (${_selectedConversations.length})",
+              color: _selectedConversations.isNotEmpty ? AppColors.accent : Colors.grey,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPopupItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    bool isSelected = false,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 38, height: 38,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: isSelected ? Border.all(color: color, width: 2) : null,
+          ),
+          child: Icon(icon, size: 20, color: color),
+        ),
+        const SizedBox(width: 14),
+        Text(
+          label,
+          style: GoogleFonts.quicksand(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+            color: isSelected ? color : const Color(0xFF374151),
+          ),
+        ),
+      ],
     );
   }
 
@@ -311,8 +676,8 @@ class _MessageScreenState extends State<MessageScreen> {
     );
   }
 
-  Widget _buildLetterAvatar(String name) {
+  Widget _buildLetterAvatar(String name, {double size = 52}) {
     String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-    return Container(width: 52, height: 52, decoration: BoxDecoration(color: primaryThemeColor.withOpacity(0.1), shape: BoxShape.circle), alignment: Alignment.center, child: Text(firstLetter, style: TextStyle(color: primaryThemeColor, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'QuickSand')));
+    return Container(width: size, height: size, decoration: BoxDecoration(color: primaryThemeColor.withOpacity(0.1), shape: BoxShape.circle), alignment: Alignment.center, child: Text(firstLetter, style: TextStyle(color: primaryThemeColor, fontSize: size * 0.4, fontWeight: FontWeight.bold, fontFamily: 'QuickSand')));
   }
 }

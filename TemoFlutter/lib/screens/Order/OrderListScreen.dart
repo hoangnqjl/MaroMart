@@ -49,7 +49,7 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
       await _orderService.respondToRequest(orderId, status);
       _fetchOrders();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(status == 'accepted' ? "Request accepted" : "Request rejected"),
+        content: Text(status == 'accepted' ? "Đã chấp nhận yêu cầu" : "Đã từ chối yêu cầu"),
         backgroundColor: status == 'accepted' ? Colors.green : Colors.red,
       ));
     } catch (e) {
@@ -64,15 +64,15 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
       body: SafeArea(
         child: Column(
           children: [
-            TopBarCustom(title: "Order Management"),
+            TopBarCustom(title: "Quản lý đơn hàng"),
             TabBar(
               controller: _tabController,
               labelColor: AppColors.primary,
               unselectedLabelColor: Colors.grey,
               indicatorColor: AppColors.primary,
               tabs: const [
-                Tab(text: "Buy Orders"),
-                Tab(text: "Sell Orders"),
+                Tab(text: "Đơn mua"),
+                Tab(text: "Đơn bán"),
               ],
             ),
             Expanded(
@@ -100,7 +100,7 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
           children: [
             Icon(HeroiconsOutline.shoppingCart, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text("No orders found", style: TextStyle(color: Colors.grey[400], fontFamily: 'Quicksand')),
+            Text("Không tìm thấy đơn hàng nào", style: TextStyle(color: Colors.grey[400], fontFamily: 'Quicksand')),
           ],
         ),
       );
@@ -134,7 +134,7 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                 ],
               ),
               const SizedBox(height: 12),
-              const Text("Product Transaction Request", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Quicksand')),
+              const Text("Yêu cầu giao dịch sản phẩm", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Quicksand')),
               const SizedBox(height: 16),
               if (!isBuy && isPending)
                 Row(
@@ -147,7 +147,7 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           side: const BorderSide(color: Colors.red),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text("Reject"),
+                        child: const Text("Từ chối"),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -159,7 +159,7 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text("Accept", style: TextStyle(color: Colors.white)),
+                        child: const Text("Chấp nhận", style: TextStyle(color: Colors.white)),
                       ),
                     ),
                   ],
@@ -183,7 +183,7 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                       backgroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text("Rate Seller", style: TextStyle(color: Colors.white)),
+                    child: const Text("Đánh giá người bán", style: TextStyle(color: Colors.white)),
                   ),
                 ),
             ],
@@ -197,10 +197,10 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
     Color color;
     String text;
     switch (status) {
-      case 'pending': color = Colors.orange; text = "Pending"; break;
-      case 'accepted': color = Colors.green; text = "Accepted"; break;
-      case 'rejected': color = Colors.red; text = "Rejected"; break;
-      case 'completed': color = Colors.blue; text = "Completed"; break;
+      case 'pending': color = Colors.orange; text = "Chờ duyệt"; break;
+      case 'accepted': color = Colors.green; text = "Đã chấp nhận"; break;
+      case 'rejected': color = Colors.red; text = "Đã từ chối"; break;
+      case 'completed': color = Colors.blue; text = "Hoàn tất"; break;
       default: color = Colors.grey; text = status;
     }
 

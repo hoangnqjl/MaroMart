@@ -3,10 +3,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'; // Để check kIsWeb
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:image_picker/image_picker.dart'; // <--- Import Image Picker
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/components/ModernLoader.dart';
-import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/components/FloatingHeader.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/components/UserAvatar.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +16,8 @@ import 'package:temo/providers/settings_provider.dart';
 import 'package:temo/l10n/app_localizations.dart';
 
 class Setting extends StatefulWidget {
-  const Setting({Key? key}) : super(key: key);
+  final VoidCallback? onMenuTap;
+  const Setting({Key? key, this.onMenuTap}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _Setting();
@@ -40,41 +43,113 @@ class _Setting extends State<Setting> {
   void _loadUserData() {
     final user = _userService.getCurrentUserFromStorage();
     setState(() {
-      _fullName = user?.fullName ?? 'Guest';
+      _fullName = user?.fullName ?? 'Khách';
       _email = user?.email ?? '';
       _avatarUrl = user?.avatarUrl ?? '';
     });
   }
 
   Future<void> _handleAvatarChange() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-
+    _showImageSourceActionSheet(context, onPicked: (image) async {
       if (image == null) return;
 
       setState(() {
         _isUploading = true;
       });
 
-      final updatedUser = await _userService.changeAvatar(image);
+      try {
+        final updatedUser = await _userService.changeAvatar(image);
 
-      setState(() {
-        _avatarUrl = updatedUser.avatarUrl!;
-        _isUploading = false;
-      });
+        setState(() {
+          _avatarUrl = updatedUser.avatarUrl!;
+          _isUploading = false;
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Avatar updated successfully!"), backgroundColor: Colors.green),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cập nhật ảnh đại diện thành công!"), backgroundColor: Colors.green),
+        );
+      } catch (e) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
+        );
+      }
+    });
+  }
+
+  void _showImageSourceActionSheet(BuildContext context, {required Function(XFile?) onPicked}) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            const Text("Thay đổi ảnh đại diện", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(HeroiconsOutline.camera, color: Colors.blue),
+              ),
+              title: const Text("Chụp ảnh mới"),
+              onTap: () async {
+                Navigator.pop(context);
+                final status = await Permission.camera.request();
+                if (status.isGranted) {
+                  try {
+                    final XFile? media = await _picker.pickImage(source: ImageSource.camera);
+                    onPicked(media);
+                  } catch (e) {
+                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e"), backgroundColor: Colors.red));
+                  }
+                } else {
+                  _showPermissionDialog();
+                }
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(HeroiconsOutline.photo, color: Colors.purple),
+              ),
+              title: const Text("Chọn từ thư viện"),
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  final XFile? media = await _picker.pickImage(source: ImageSource.gallery);
+                  onPicked(media);
+                } catch (e) {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi thư viện: $e"), backgroundColor: Colors.red));
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPermissionDialog() {
+      showDialog(
+        context: context, 
+        builder: (ctx) => AlertDialog(
+          title: const Text("Yêu cầu quyền truy cập"),
+          content: const Text("Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này."),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
+            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Mở Cài đặt")),
+          ],
+        )
       );
-
-    } catch (e) {
-      setState(() {
-        _isUploading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
-      );
-    }
   }
 
   @override
@@ -84,13 +159,15 @@ class _Setting extends State<Setting> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: TopBarSecond(title: l10n.settings),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildProfileCard(),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 110), // Space for floating header
+                  _buildProfileCard(),
 
               const SizedBox(height: 24),
 
@@ -114,7 +191,7 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 8),
               _buildMenuItem(
                 icon: HeroiconsOutline.creditCard,
-                label: 'Temo Wallet (Coins)',
+                label: 'Ví Temo (Xu)',
                 onTap: () {
                   Navigator.pushNamed(context, '/coin_manager');
                 },
@@ -134,13 +211,13 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 8),
                _buildMenuItem(
                 icon: HeroiconsOutline.arrowPath,
-                label: "Check for updates",
+                label: "Kiểm tra cập nhật",
                 onTap: _checkForUpdates,
               ),
 
                const SizedBox(height: 24),
 
-              _buildSectionTitle("General Information"),
+              _buildSectionTitle("Thông tin chung"),
               const SizedBox(height: 12),
                _buildMenuItem(
                 icon: HeroiconsOutline.informationCircle,
@@ -153,7 +230,7 @@ class _Setting extends State<Setting> {
               const SizedBox(height: 40),
               Center(
                 child: Text(
-                  "Version $_appVersion",
+                  "Phiên bản $_appVersion",
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 12,
@@ -166,8 +243,18 @@ class _Setting extends State<Setting> {
           ),
         ),
       ),
-    );
-  }
+      Positioned(
+        top: 0, left: 0, right: 0,
+        child: FloatingHeader(
+          title: l10n.settings,
+          isMenu: true,
+          onMenuTap: widget.onMenuTap,
+        ),
+      ),
+    ],
+  ),
+);
+}
 
   String _appVersion = "2.0";
 
@@ -175,7 +262,7 @@ class _Setting extends State<Setting> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: ModernLoader()),
+      builder: (ctx) => Center(child: ModernLoader()),
     );
 
     // Simulate network delay
@@ -188,12 +275,12 @@ class _Setting extends State<Setting> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("App Update"),
-        content: const Text("You are using the latest version."),
+        title: const Text("Cập nhật ứng dụng"),
+        content: const Text("Bạn đang sử dụng phiên bản mới nhất."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Close", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text("Đóng", style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -215,7 +302,7 @@ class _Setting extends State<Setting> {
                 fontSize: 24,
               ),
               if (_isUploading)
-                const ModernLoader(size: 20, color: Colors.white),
+                ModernLoader(size: 20, color: Colors.white),
             ],
           ),
           const SizedBox(width: 16),

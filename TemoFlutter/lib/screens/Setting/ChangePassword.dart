@@ -1,3 +1,4 @@
+import 'package:temo/components/FloatingHeader.dart';
 import 'package:flutter/material.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
@@ -77,72 +78,83 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const TopBarSecond(title: 'Change Password'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildPasswordTextField(
-                controller: _oldPasswordController,
-                hint: 'Current Password...',
-                obscure: _ob1,
-                toggleObscure: () => setState(() => _ob1 = !_ob1),
-                validator: (v) => (v?.isEmpty ?? true) ? 'Please enter current password' : null,
-              ),
-              const SizedBox(height: 16),
-              _buildPasswordTextField(
-                controller: _newPasswordController,
-                hint: 'New Password...',
-                obscure: _ob2,
-                toggleObscure: () => setState(() => _ob2 = !_ob2),
-                validator: (v) {
-                  final val = v?.trim() ?? '';
-                  if (val.length < 6) return 'Password must be at least 6 characters';
-                  if (val == _oldPasswordController.text.trim()) return 'New password cannot be the same as old password';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildPasswordTextField(
-                controller: _confirmPasswordController,
-                hint: 'Confirm New Password...',
-                obscure: _ob3,
-                toggleObscure: () => setState(() => _ob3 = !_ob3),
-                validator: (v) {
-                  if (v != _newPasswordController.text) return 'Password confirmation does not match';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 40),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 110), // Space for floating header
+                  _buildPasswordTextField(
+                    controller: _oldPasswordController,
+                    hint: 'Current Password...',
+                    obscure: _ob1,
+                    toggleObscure: () => setState(() => _ob1 = !_ob1),
+                    validator: (v) => (v?.isEmpty ?? true) ? 'Please enter current password' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPasswordTextField(
+                    controller: _newPasswordController,
+                    hint: 'New Password...',
+                    obscure: _ob2,
+                    toggleObscure: () => setState(() => _ob2 = !_ob2),
+                    validator: (v) {
+                      final val = v?.trim() ?? '';
+                      if (val.length < 6) return 'Password must be at least 6 characters';
+                      if (val == _oldPasswordController.text.trim()) return 'New password cannot be the same as old password';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPasswordTextField(
+                    controller: _confirmPasswordController,
+                    hint: 'Confirm New Password...',
+                    obscure: _ob3,
+                    toggleObscure: () => setState(() => _ob3 = !_ob3),
+                    validator: (v) {
+                      if (v != _newPasswordController.text) return 'Password confirmation does not match';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 40),
 
-              // Nút Change
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isProcessing ? null : _handleChangePassword,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.ButtonBlackColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30)),
-                    minimumSize: const Size(double.infinity, 56),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                  // Nút Change
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isProcessing ? null : _handleChangePassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.ButtonBlackColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        minimumSize: const Size(double.infinity, 56),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      child: _isProcessing
+                          ? ModernLoader(size: 20, color: Colors.white)
+                          : const Text('Update Password'),
                     ),
                   ),
-                  child: _isProcessing
-                      ? const ModernLoader(size: 20, color: Colors.white)
-                      : const Text('Update Password'),
-                ),
+                  const SizedBox(height: 40),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: FloatingHeader(
+              title: "Security",
+            ),
+          ),
+        ],
       ),
     );
   }

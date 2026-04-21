@@ -10,10 +10,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:temo/l10n/app_localizations.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/screens/splash/video_splash_screen.dart';
+import 'package:flutter/services.dart';
 import 'app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Enable Edge-to-Edge mode for a premium, immersive look
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    systemNavigationBarColor: Colors.transparent,
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
   
   try {
     await StorageHelper.init().timeout(

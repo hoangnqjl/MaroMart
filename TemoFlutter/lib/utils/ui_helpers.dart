@@ -44,61 +44,107 @@ class UIHelpers {
     required Color iconColor,
     required String buttonText,
   }) {
+    showModernDialog(
+      context,
+      icon: icon,
+      iconColor: iconColor,
+      bgColor: iconColor.withOpacity(0.1),
+      title: title,
+      description: message,
+      primaryButtonText: buttonText,
+    );
+  }
+
+  static void showModernDialog(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String title,
+    required String description,
+    Widget? content,
+    String? primaryButtonText,
+    VoidCallback? onPrimaryPressed,
+    String? secondaryButtonText,
+    VoidCallback? onSecondaryPressed,
+  }) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 100,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [iconColor.withOpacity(0.12), iconColor.withOpacity(0.02)],
-                ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(35)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.close, color: Colors.grey, size: 20),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: iconColor, size: 48),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-              child: Text(
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+                child: Icon(icon, color: iconColor, size: 30),
+              ),
+              const SizedBox(height: 24),
+              Text(
                 title,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.roboto(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF18181B)),
+                style: GoogleFonts.roboto(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF3F3F46)),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Text(
-                message,
+              const SizedBox(height: 12),
+              Text(
+                description,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.roboto(fontSize: 14, color: Colors.grey[600], height: 1.5),
               ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: iconColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              if (content != null) ...[
+                const SizedBox(height: 24),
+                content,
+              ],
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  if (secondaryButtonText != null) ...[
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF4F4F5),
+                          foregroundColor: const Color(0xFF3F3F46),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                        onPressed: onSecondaryPressed ?? () => Navigator.pop(context),
+                        child: Text(secondaryButtonText, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: iconColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      ),
+                      onPressed: onPrimaryPressed ?? () => Navigator.pop(context),
+                      child: Text(primaryButtonText ?? "Đã hiểu", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ),
-                  child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -116,42 +162,67 @@ class UIHelpers {
     return showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(35)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: confirmColor, size: 48),
-              const SizedBox(height: 20),
-              Text(title, style: GoogleFonts.roboto(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF18181B))),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context, false),
+                    child: const Icon(Icons.close, color: Colors.grey, size: 20),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: confirmColor.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(icon, color: confirmColor, size: 30),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.roboto(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF3F3F46)),
+              ),
               const SizedBox(height: 12),
-              Text(message, textAlign: TextAlign.center, style: GoogleFonts.roboto(fontSize: 14, color: Colors.grey[600], height: 1.5)),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.roboto(fontSize: 14, color: Colors.grey[600], height: 1.5),
+              ),
               const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        side: BorderSide(color: Colors.grey[300]!),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF4F4F5),
+                        foregroundColor: const Color(0xFF3F3F46),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
-                      child: Text(cancelText, style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold)),
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(cancelText, style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: confirmColor,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
+                      onPressed: () => Navigator.pop(context, true),
                       child: Text(confirmText, style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),

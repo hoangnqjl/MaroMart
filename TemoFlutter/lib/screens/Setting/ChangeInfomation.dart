@@ -1,3 +1,4 @@
+import 'package:temo/components/FloatingHeader.dart';
 import 'package:flutter/material.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/Colors/AppColors.dart';
@@ -114,75 +115,89 @@ class _ChangeInformationScreenState extends State<ChangeInformationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const TopBarSecond(title: 'Change Information'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: _isLoading
-            ? const Center(child: ModernLoader())
-            : Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTextField(
-                controller: _fullNameController,
-                hint: 'Full Name...',
-                validator: (v) => (v?.isEmpty ?? true) ? 'Full Name is required' : null,
-              ),
-              const SizedBox(height: 16),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 300,
+                    child: Center(child: ModernLoader()),
+                  )
+                : Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 110), // Space for floating header
+                  _buildTextField(
+                    controller: _fullNameController,
+                    hint: 'Full Name...',
+                    validator: (v) => (v?.isEmpty ?? true) ? 'Full Name is required' : null,
+                  ),
+                  const SizedBox(height: 16),
 
-              _buildTextField(
-                controller: _phoneNumberController,
-                hint: 'Phone Number...',
-                keyboardType: TextInputType.phone,
-                validator: (v) {
-                  if (v?.isEmpty ?? true) return null;
-                  if (int.tryParse(v!) == null) return 'Must be a valid number';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _phoneNumberController,
+                    hint: 'Phone Number...',
+                    keyboardType: TextInputType.phone,
+                    validator: (v) {
+                      if (v?.isEmpty ?? true) return null;
+                      if (int.tryParse(v!) == null) return 'Must be a valid number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
-              _buildTextField(
-                controller: _countryController,
-                hint: 'Country (Optional)...',
-              ),
-              const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _countryController,
+                    hint: 'Country (Optional)...',
+                  ),
+                  const SizedBox(height: 16),
 
-              _buildTextField(
-                controller: _addressController,
-                hint: 'Address (Optional)...',
-              ),
-              const SizedBox(height: 40),
+                  _buildTextField(
+                    controller: _addressController,
+                    hint: 'Address (Optional)...',
+                  ),
+                  const SizedBox(height: 40),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isUpdating ? null : _handleUpdate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.ButtonBlackColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30)),
-                    minimumSize: const Size(double.infinity, 56),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isUpdating ? null : _handleUpdate,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.ButtonBlackColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        minimumSize: const Size(double.infinity, 56),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      child: _isUpdating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: ModernLoader(color: Colors.white, size: 20)
+                            )
+                          : const Text('Update Profile'),
                     ),
                   ),
-                  child: _isUpdating
-                      ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: const ModernLoader(color: Colors.white, size: 20)
-                  )
-                      : const Text('Update Profile'),
-                ),
+                  const SizedBox(height: 40),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: FloatingHeader(
+              title: "Information",
+            ),
+          ),
+        ],
       ),
     );
   }

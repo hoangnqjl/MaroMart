@@ -4,8 +4,9 @@ import 'package:temo/Colors/AppColors.dart';
 class ModernLoader extends StatefulWidget {
   final Color? color;
   final double size;
+  final bool showText;
 
-  const ModernLoader({super.key, this.color, this.size = 60.0}); // Reduced default size
+  const ModernLoader({super.key, this.color, this.size = 60.0, this.showText = true});
 
   @override
   State<ModernLoader> createState() => _ModernLoaderState();
@@ -36,42 +37,47 @@ class _ModernLoaderState extends State<ModernLoader> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, _bounceAnimation.value),
-              child: child,
-            );
-          },
-          child: SizedBox(
-            width: widget.size,
-            height: widget.size,
-            child: Image.asset(
-              'assets/images/cute_robot.png',
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback if image missing
-                return Icon(Icons.smart_toy, size: widget.size, color: AppColors.primary);
-              },
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, _bounceAnimation.value),
+                child: child,
+              );
+            },
+            child: SizedBox(
+              width: widget.size,
+              height: widget.size,
+              child: Image.asset(
+                'assets/images/cute_robot.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.smart_toy, size: widget.size, color: AppColors.primary);
+                },
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          "Vui lòng chờ chút nhé...",
-          style: TextStyle(
-            fontFamily: 'QuickSand',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: widget.color ?? Colors.grey[600],
-          ),
-        ),
-      ],
+          if (widget.showText) ...[
+            const SizedBox(height: 12),
+            Flexible(
+              child: Text(
+                "Vui lòng chờ chút nhé...",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'QuickSand',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: widget.color ?? Colors.grey[600],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

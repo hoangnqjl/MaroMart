@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary colors
-  static const Color primary = Color(0xFFFB7C7F);
+  // Primary colors (Vibrant Orange Theme)
+  static const Color primary = Color(0xFFFB9A40); 
   static const Color primaryLight = Color(0xFFFFB86A);
-  static const Color primaryDark = Color(0xFFE56B6E);
+  static const Color primaryDark = Color(0xFFE07C2A);
   
   static const Gradient primaryGradient = LinearGradient(
     colors: [
       Color(0xFFFFB86A),
-      Color(0xFFFB7C7F),
+      Color(0xFFFB9A40),
     ],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
@@ -17,7 +17,7 @@ class AppColors {
 
   // Secondary colors
   static const Color secondary = Color(0xFFE2E2E2);
-  static const Color accent = Color(0xFFFF6B6B);
+  static const Color accent = Color(0xFFFF8A65); // Softer destructive red-orange
 
   // Neutral colors
   static const Color background = Color(0xFFF5F5F5);
@@ -30,7 +30,7 @@ class AppColors {
   static const Color F6Color = Color(0xFFF6F6F6); // #E2E2E280 = 50% opacity
   static const Color overlayLight = Color(0x4DE2E2E2); // 30% opacity
   static const Color overlayDark = Color(0xB3E2E2E2); // 70% opacity
-  static const Color ButtonBlackColor = Color(0xFF18181B);
+  static const Color ButtonBlackColor = primary;
   static const Color ColorFCEEEB = Color(0xFFFCEEEB);
   static const Color ColorCCCC = Color(0xFFCCCCCC);
 

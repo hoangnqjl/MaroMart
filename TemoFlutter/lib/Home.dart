@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:temo/components/BottomNavigation.dart';
 import 'package:temo/components/TopBar.dart';
 import 'package:temo/screens/Home/HomeScreen.dart';
-import 'package:temo/components/AppDrawer.dart';
+
 import 'package:temo/screens/Message/MessageScreen.dart';
 import 'package:temo/screens/Setting/Setting.dart';
 import 'package:temo/models/User/User.dart';
@@ -13,13 +13,14 @@ import 'package:temo/screens/Product/ProductManager.dart';
 import 'package:temo/Colors/AppColors.dart';
 
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/SideMenu.dart';
 
 class Home extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   final UserService _userService = UserService();
   final SocketService _socketService = SocketService();
   final GlobalKey<HomeScreenState> _homeScreenKey =
@@ -30,14 +31,42 @@ class _HomeState extends State<Home> {
 
   bool _isUserDataLoaded = false;
   int _currentIndex = 0;
+  final PageController _pageController = PageController();
   User? _currentUser;
   int _unreadNotifications = 0;
+
+  // Animation for Threads-style drawer
+  AnimationController? _animationController;
+  bool _isDrawerOpen = false;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
     _fetchAndSaveUserDetails();
     _initSocketListeners();
+  }
+
+  void _toggleDrawer() {
+    if (_animationController == null) return;
+    setState(() {
+      _isDrawerOpen = !_isDrawerOpen;
+      if (_isDrawerOpen) {
+        _animationController!.forward();
+      } else {
+        _animationController!.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController?.dispose();
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _initSocketListeners() {
@@ -84,52 +113,29 @@ class _HomeState extends State<Home> {
   }
 
   void _onTabSelected(int index) {
-    if (index == 3) {
-      _homeScaffoldKey.currentState?.openDrawer();
+    if (_isDrawerOpen) {
+      _toggleDrawer();
       return;
     }
-
     if (index == _currentIndex) {
       // RELOAD LOGIC
       if (index == 0) {
         _homeScreenKey.currentState?.reload();
-      } else if (index == 3) {
+      } else if (index == 1) {
         _productManagerKey.currentState?.reload();
       }
     } else {
-      setState(() {
-        _currentIndex = index;
-        if (index == 1) _unreadNotifications = 0;
-      });
-    }
-  }
-
-  Widget _getCurrentScreen() {
-    switch (_currentIndex) {
-      case 0:
-        return HomeScreen(
-          key: _homeScreenKey,
-          user: _currentUser,
-          onMenuTap: () => _homeScaffoldKey.currentState?.openDrawer(),
-        );
-      case 1:
-        return ProductManager(key: _productManagerKey);
-      case 2:
-        return MessageScreen();
-      case 3:
-        return const Setting();
-      default:
-        return HomeScreen(
-          key: _homeScreenKey,
-          user: _currentUser,
-          onMenuTap: () => _homeScaffoldKey.currentState?.openDrawer(),
-        );
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isUserDataLoaded) {
+    if (!_isUserDataLoaded || _animationController == null) {
       return const Scaffold(
         backgroundColor: Colors.white,
         body: Center(child: ModernLoader(color: AppColors.primary)),
@@ -137,65 +143,106 @@ class _HomeState extends State<Home> {
     }
 
     return Scaffold(
-      key: _homeScaffoldKey,
-      drawer: AppDrawer(user: _currentUser),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      extendBody: true,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 0),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                switchInCurve: Curves.easeInOut,
-                switchOutCurve: Curves.easeInOut,
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween<double>(
-                        begin: 0.95,
-                        end: 1.0,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: KeyedSubtree(
-                  key: ValueKey<int>(_currentIndex),
-                  child: _getCurrentScreen(),
-                ),
-              ),
-            ),
+          // Lower Layer: Side Menu
+          SideMenu(
+            user: _currentUser,
+            onNavigate: (page) {
+              _toggleDrawer();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+            },
           ),
 
-          // TopBar Removed for now to avoid overlap
-          // Positioned(
-          //   top: 0,
-          //   left: 0,
-          //   right: 0,
-          //   child: Container(
-          //     color: Colors.white.withOpacity(0.0),
-          //     child: SafeArea(
-          //       bottom: false,
-          //       child: TopBar(
-          //         user: _currentUser,
-          //       ),
-          //     ),
-          //   ),
-          // ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: BottomNavigation(
-              selectedIndex: _currentIndex,
-              onTabSelected: _onTabSelected,
-              notificationCount: _unreadNotifications,
-              onAddPressed: () {
-                Navigator.pushNamed(context, '/add_product');
-              },
+          // Upper Layer: Main Content
+          AnimatedBuilder(
+            animation: _animationController!,
+            builder: (context, child) {
+              final animValue = CurvedAnimation(
+                parent: _animationController!,
+                curve: Curves.easeInOutQuart,
+              ).value;
+              double slide = 240.0 * animValue;
+              double scale = 1.0 - (0.15 * animValue);
+              double radius = 28.0 * animValue;
+
+              return Transform(
+                transform: Matrix4.identity()
+                  ..translate(slide)
+                  ..scale(scale),
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: _isDrawerOpen ? _toggleDrawer : null,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        if (_isDrawerOpen)
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 20,
+                            offset: const Offset(-10, 0),
+                          ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(radius),
+                      child: RepaintBoundary(child: child),
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: Scaffold(
+              key: _homeScaffoldKey,
+              backgroundColor: Colors.white,
+              extendBody: true,
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const ClampingScrollPhysics(),
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentIndex = index;
+                          if (index == 2) _unreadNotifications = 0;
+                        });
+                      },
+                      children: [
+                        HomeScreen(
+                          key: _homeScreenKey,
+                          user: _currentUser,
+                          onMenuTap: _toggleDrawer,
+                        ),
+                        ProductManager(
+                          key: _productManagerKey,
+                          onMenuTap: _toggleDrawer,
+                        ),
+                        MessageScreen(
+                          onMenuTap: _toggleDrawer,
+                        ),
+                        Setting(
+                          onMenuTap: _toggleDrawer,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: BottomNavigation(
+                      selectedIndex: _currentIndex,
+                      onTabSelected: _onTabSelected,
+                      notificationCount: _unreadNotifications,
+                      onAddPressed: () {
+                        Navigator.pushNamed(context, '/add_product');
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
