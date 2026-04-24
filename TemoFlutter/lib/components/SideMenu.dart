@@ -7,6 +7,7 @@ import 'package:temo/screens/Setting/FeedbackScreen.dart';
 import 'package:temo/screens/Product/SavedProductsScreen.dart';
 import 'package:temo/screens/Coin/CoinManagerScreen.dart';
 import 'package:temo/services/auth_service.dart';
+import 'package:temo/screens/Setting/ChangeInfomation.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SideMenu extends StatelessWidget {
@@ -44,7 +45,7 @@ class SideMenu extends StatelessWidget {
               _buildMenuItem(
                 icon: HeroiconsOutline.user, 
                 label: "Chỉnh sửa cá nhân", 
-                onTap: () => onNavigate(const Setting()),
+                onTap: () => onNavigate(const ChangeInformationScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(

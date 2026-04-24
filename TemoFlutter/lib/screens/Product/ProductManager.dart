@@ -16,6 +16,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:temo/components/ModernLoader.dart'; // Import
+import 'package:temo/components/UserAvatar.dart';
+import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/components/CommonAppBar.dart';
 
 import 'package:temo/components/TerminalButton.dart';
@@ -47,6 +49,22 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   String _searchQuery = "";
   int _selectedFilter = 0; // 0: All, 1: Newest, 2: Price Low-High, 3: Price High-Low
   int _selectedStatusIndex = 0; // 0: Đang bán (active), 1: Bản nháp (draft), 2: Chờ duyệt (pending)
+  String _selectedCategory = "all";
+  final List<Map<String, String>> _categories = [
+    {"id": "all", "name": "Tất cả"},
+    {"id": "auto", "name": "Xe cộ"},
+    {"id": "furniture", "name": "Nội thất"},
+    {"id": "technology", "name": "Điện tử"},
+    {"id": "appliances", "name": "Gia dụng"},
+    {"id": "office", "name": "Văn phòng"},
+    {"id": "style", "name": "Thời trang"},
+    {"id": "service", "name": "Dịch vụ"},
+    {"id": "hobby", "name": "Giải trí"},
+    {"id": "kids", "name": "Mẹ & Bé"},
+    {"id": "books", "name": "Sách"},
+    {"id": "pets", "name": "Thú cưng"},
+    {"id": "other", "name": "Khác"},
+  ];
 
   @override
   void initState() {
@@ -121,28 +139,19 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
     return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(price).trim();
   }
 
-  void _confirmDelete(Product product) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Xóa tin đăng"),
-        content: const Text("Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _deleteProduct(product.productId);
-            },
-            child: const Text("Xóa", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+  void _confirmDelete(Product product) async {
+    final confirmed = await UIHelpers.confirmDialog(
+      context,
+      title: "Xóa tin đăng",
+      message: "Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác.",
+      confirmText: "Xóa ngay",
+      cancelText: "Hủy",
+      confirmColor: Colors.red,
+      icon: HeroiconsOutline.trash,
     );
+    if (confirmed == true) {
+      _deleteProduct(product.productId);
+    }
   }
 
   Future<void> _deleteProduct(String productId) async {
@@ -382,14 +391,16 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
           children: [
             Column(
               children: [
-                const SizedBox(height: 180), 
+                const SizedBox(height: 235), 
                 Expanded(
                   child: _isLoading
-                      ? Center(child: ModernLoader(color: primaryThemeColor))
+                      ? const SizedBox.shrink()
                       : _buildProductList(),
                 ),
               ],
             ),
+            if (_isLoading)
+              const Center(child: ModernLoader()),
             Positioned(
               top: 0, left: 0, right: 0,
               child: Container(
@@ -413,7 +424,9 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                       ),
                       const SizedBox(height: 16),
                       _buildSearchFilterArea(),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 14),
+                      _buildCategoryFilter(),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
@@ -465,6 +478,39 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
     );
   }
 
+  Widget _buildCategoryFilter() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: _categories.map((cat) {
+          final isSelected = _selectedCategory == cat['id'];
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = cat['id']!),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? primaryThemeColor : const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Text(
+                cat['name']!,
+                style: GoogleFonts.quicksand(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildFilterButton() {
     return Theme(
       data: Theme.of(context).copyWith(
@@ -498,14 +544,14 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         itemBuilder: (context) => [
           _buildFilterItemHeader("TRẠNG THÁI"),
-          _buildStatusMenuItem(0, "Đang bán", HeroiconsOutline.checkBadge, AppColors.primary),
+          _buildStatusMenuItem(0, "Đang bán", HeroiconsOutline.checkBadge, AppColors.success),
           _buildStatusMenuItem(1, "Bản nháp", HeroiconsOutline.pencilSquare, Colors.grey),
-          _buildStatusMenuItem(2, "Chờ duyệt", HeroiconsOutline.clock, Colors.blueGrey),
+          _buildStatusMenuItem(2, "Chờ duyệt", HeroiconsOutline.clock, AppColors.warning),
           const PopupMenuDivider(),
           _buildFilterItemHeader("SẮP XẾP"),
-          _buildSortMenuItem(10, "Mới nhất", HeroiconsOutline.sparkles, Colors.deepPurple),
-          _buildSortMenuItem(11, "Giá: Thấp -> Cao", HeroiconsOutline.barsArrowUp, Colors.green),
-          _buildSortMenuItem(12, "Giá: Cao -> Thấp", HeroiconsOutline.barsArrowDown, Colors.teal),
+          _buildSortMenuItem(10, "Mới nhất", HeroiconsOutline.sparkles, AppColors.primary),
+          _buildSortMenuItem(11, "Giá: Thấp -> Cao", HeroiconsOutline.barsArrowUp, AppColors.warning),
+          _buildSortMenuItem(12, "Giá: Cao -> Thấp", HeroiconsOutline.barsArrowDown, AppColors.primary),
         ],
       ),
     );
@@ -593,6 +639,11 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
     List<Product> filtered = _products;
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((p) => p.productName.toLowerCase().contains(_searchQuery)).toList();
+    }
+
+    // 1.1 Filter by Category
+    if (_selectedCategory != "all") {
+       filtered = filtered.where((p) => p.productCategory.toLowerCase() == _selectedCategory.toLowerCase()).toList();
     }
 
     // 2. Filter by Sort Option

@@ -206,7 +206,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                               bottomRight: Radius.circular(60),
                             ),
                             child: CachedNetworkImage(
-                              imageUrl: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=2070&auto=format&fit=crop",
+                              imageUrl: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=100&w=2000&auto=format&fit=crop",
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -225,7 +225,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   boxShadow: [
-                                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))
+                                    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4))
                                   ],
                                   image: DecorationImage(
                                     image: (_user?.avatarUrl != null && _user!.avatarUrl!.isNotEmpty)

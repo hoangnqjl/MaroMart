@@ -41,10 +41,29 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
     {'id': 'vpb', 'name': 'VPBank', 'bin': '970432', 'accountNo': '1234 5678 90', 'accountHolder': 'TEMO CORP', 'logo': 'assets/images/vpb_logo.png', 'color': const Color(0xFF009149)},
   ];
 
+  final ScrollController _scrollController = ScrollController();
+  double _headerOpacity = 1.0;
+
   @override
   void initState() {
     super.initState();
     _fetchHistory();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    double offset = _scrollController.offset;
+    double opacity = (1.0 - (offset / 40)).clamp(0.0, 1.0);
+    if (opacity != _headerOpacity) {
+      setState(() => _headerOpacity = opacity);
+    }
   }
 
   Future<void> _fetchHistory() async {
@@ -164,214 +183,221 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
             ),
           ),
           
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: Container(
-              color: Colors.white,
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  children: [
-                    FloatingHeader(
-                      title: "Ví Temo (Xu)",
-                      hasBackground: false,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                      actions: [
-                        FloatingHeader.buildActionBubble(
-                          icon: HeroiconsSolid.ellipsisVertical,
-                          onTap: () => UIHelper.showOptionsMenu(context, screenName: "Ví Temo (Xu)"),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
+          // 2. Main Content
+          CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Top padding to clear the header area
+              SliverToBoxAdapter(
+                child: SizedBox(height: MediaQuery.of(context).padding.top + 60),
+              ),
+              
+              // Balance Card
+              SliverToBoxAdapter(
+                child: ValueListenableBuilder<User?>(
+                  valueListenable: _userService.userNotifier,
+                  builder: (context, user, child) {
+                    final currentCoins = user?.coins?.toInt() ?? 0;
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(35),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Số dư hiện tại", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600, fontFamily: 'Quicksand')),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Text("$currentCoins", style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Quicksand', color: AppColors.primary)),
+                                  const SizedBox(width: 8),
+                                  const Icon(HeroiconsSolid.currencyDollar, color: Colors.amber, size: 32),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                            child: const Icon(HeroiconsOutline.wallet, color: AppColors.primary, size: 32),
+                          )
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
-          ),
-          
-          SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                const SliverToBoxAdapter(child: SizedBox(height: 70)),
-                
-                // Balance Card
+
+              // Select Packages Section
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Text("Chọn gói nạp Xu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                ),
+              ),
+
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.4,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final pkg = _coinPackages[index];
+                      return GestureDetector(
+                        onTap: () => _showBankSelection(pkg),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.05)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text("${pkg['coins']} Xu", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                              if (pkg['bonus'] > 0)
+                                Text("+${pkg['bonus']} Xu thưởng", style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                              const SizedBox(height: 4),
+                              Text(pkg['priceText'], style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Quicksand')),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: _coinPackages.length,
+                  ),
+                ),
+              ),
+
+              // History Section
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 30, bottom: 10),
+                  child: Text("Giao dịch gần đây", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                ),
+              ),
+
+              if (_isHistoryLoading)
+                const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(20), child: ModernLoader())))
+              else if (_history.isEmpty)
                 SliverToBoxAdapter(
-                  child: ValueListenableBuilder<User?>(
-                    valueListenable: _userService.userNotifier,
-                    builder: (context, user, child) {
-                      final currentCoins = user?.coins?.toInt() ?? 0;
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        children: [
+                          Icon(HeroiconsOutline.clock, size: 48, color: Colors.grey[200]),
+                          const SizedBox(height: 8),
+                          const Text("Chưa có giao dịch nào", style: TextStyle(color: Colors.grey, fontFamily: 'Quicksand')),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final tx = _history[index];
+                      final isDeposit = tx['type'] == 'DEPOSIT';
+                      final date = DateTime.parse(tx['createdAt']).toLocal();
+                      final formattedDate = "${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
+
                       return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                        padding: const EdgeInsets.all(24),
+                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(35),
+                          color: Colors.white, 
+                          borderRadius: BorderRadius.circular(25),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             )
                           ],
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text("Số dư hiện tại", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600, fontFamily: 'Quicksand')),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Text("$currentCoins", style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Quicksand', color: AppColors.primary)),
-                                    const SizedBox(width: 8),
-                                    const Icon(HeroiconsSolid.currencyDollar, color: Colors.amber, size: 32),
-                                  ],
-                                ),
-                              ],
+                            Icon(isDeposit ? HeroiconsOutline.arrowDownLeft : HeroiconsOutline.rocketLaunch, 
+                                 color: isDeposit ? Colors.green : Colors.red, size: 24),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(isDeposit ? "Nạp Xu vào ví" : "Đẩy tin sản phẩm", style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                                  Text(formattedDate, style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Quicksand')),
+                                ],
+                              ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-                              child: const Icon(HeroiconsOutline.wallet, color: AppColors.primary, size: 32),
-                            )
+                            Text("${isDeposit ? '+' : '-'}${tx['amount']} Xu", 
+                                 style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.red, fontFamily: 'Quicksand')),
                           ],
                         ),
                       );
                     },
+                    childCount: _history.length,
                   ),
                 ),
+              
+              const SliverToBoxAdapter(child: SizedBox(height: 50)),
+            ],
+          ),
 
-                // Select Packages Section
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Text("Chọn gói nạp Xu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                  ),
-                ),
-
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.4,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final pkg = _coinPackages[index];
-                        return GestureDetector(
-                          onTap: () => _showBankSelection(pkg),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: AppColors.primary.withOpacity(0.05)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.03),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 8),
-                                )
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text("${pkg['coins']} Xu", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                                if (pkg['bonus'] > 0)
-                                  Text("+${pkg['bonus']} Xu thưởng", style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                                const SizedBox(height: 4),
-                                Text(pkg['priceText'], style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Quicksand')),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: _coinPackages.length,
+          // 3. Header on Top
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: FloatingHeader(
+                title: "",
+                titleWidget: Opacity(
+                  opacity: _headerOpacity,
+                  child: Text(
+                    "Ví Temo (Xu)",
+                    style: GoogleFonts.roboto(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF111827),
                     ),
                   ),
                 ),
-
-                // History Section
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(left: 20, right: 20, top: 30, bottom: 10),
-                    child: Text("Giao dịch gần đây", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
+                hasBackground: false,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                actions: [
+                  FloatingHeader.buildActionBubble(
+                    icon: HeroiconsSolid.ellipsisVertical,
+                    onTap: () => UIHelper.showOptionsMenu(context, screenName: "Ví Temo (Xu)"),
                   ),
-                ),
-
-                if (_isHistoryLoading)
-                  const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(20), child: ModernLoader())))
-                else if (_history.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Column(
-                          children: [
-                            Icon(HeroiconsOutline.clock, size: 48, color: Colors.grey[200]),
-                            const SizedBox(height: 8),
-                            const Text("Chưa có giao dịch nào", style: TextStyle(color: Colors.grey, fontFamily: 'Quicksand')),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final tx = _history[index];
-                        final isDeposit = tx['type'] == 'DEPOSIT';
-                        final date = DateTime.parse(tx['createdAt']).toLocal();
-                        final formattedDate = "${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
-
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white, 
-                            borderRadius: BorderRadius.circular(25),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              )
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(isDeposit ? HeroiconsOutline.arrowDownLeft : HeroiconsOutline.rocketLaunch, 
-                                   color: isDeposit ? Colors.green : Colors.red, size: 24),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(isDeposit ? "Nạp Xu vào ví" : "Đẩy tin sản phẩm", style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                                    Text(formattedDate, style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Quicksand')),
-                                  ],
-                                ),
-                              ),
-                              Text("${isDeposit ? '+' : '-'}${tx['amount']} Xu", 
-                                   style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.red, fontFamily: 'Quicksand')),
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: _history.length,
-                    ),
-                  ),
-                
-                const SliverToBoxAdapter(child: SizedBox(height: 50)),
-              ],
+                ],
+              ),
             ),
           ),
 

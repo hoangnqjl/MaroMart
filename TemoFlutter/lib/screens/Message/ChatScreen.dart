@@ -309,7 +309,7 @@ class _ChatScreenState extends State<ChatScreen> {
         Navigator.pop(context); // Tắt loading
         Navigator.pop(context); // Thoát khỏi màn hình Chat
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Đã xóa cuộc hội thoại"), backgroundColor: Colors.green),
+          SnackBar(content: const Text("Đã xóa cuộc hội thoại"), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
@@ -332,17 +332,17 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
               title: const Text('Image'),
               onTap: () { Navigator.pop(context); _pickImages(); },
             ),
             ListTile(
-              leading: const Icon(Icons.video_library, color: Colors.red),
+              leading: const Icon(Icons.video_library, color: AppColors.error),
               title: const Text('Video'),
               onTap: () { Navigator.pop(context); _pickVideo(); },
             ),
             ListTile(
-              leading: const Icon(Icons.audiotrack, color: Colors.purple),
+              leading: const Icon(Icons.audiotrack, color: AppColors.warning),
               title: const Text('Audio'),
               onTap: () { Navigator.pop(context); _pickAudio(); },
             ),
@@ -386,8 +386,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(HeroiconsOutline.camera, color: Colors.blue),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(HeroiconsOutline.camera, color: AppColors.primary),
               ),
               title: Text(isVideo ? "Record Video" : "Take Photo"),
               onTap: () async {
@@ -410,8 +410,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(HeroiconsOutline.photo, color: Colors.purple),
+                decoration: BoxDecoration(color: AppColors.warning.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(HeroiconsOutline.photo, color: AppColors.warning),
               ),
               title: Text(isVideo ? "Choose from Gallery" : "Choose from Gallery (Multi)"),
               onTap: () async {
@@ -599,7 +599,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           Container(
                             width: 6, height: 6,
                             decoration: const BoxDecoration(
-                              color: Colors.green, // Change to Colors.red for offline
+                              color: AppColors.success, // Brand Orange for active/online
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -725,14 +725,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       width: 180,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: isMe ? Colors.blue[100] : Colors.grey[200],
+                          color: isMe ? AppColors.primary.withOpacity(0.2) : Colors.grey[200],
                           borderRadius: BorderRadius.circular(20)
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.play_arrow, color: isMe ? Colors.blue : Colors.black87),
+                          Icon(Icons.play_arrow, color: isMe ? AppColors.primary : Colors.black87),
                           const SizedBox(width: 8),
-                          Expanded(child: Container(height: 2, color: isMe ? Colors.blue : Colors.black87)),
+                          Expanded(child: Container(height: 2, color: isMe ? AppColors.primary : Colors.black87)),
                           const SizedBox(width: 8),
                           const Text("Audio", style: TextStyle(fontSize: 12)),
                         ],

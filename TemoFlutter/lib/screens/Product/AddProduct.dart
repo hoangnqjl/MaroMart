@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:temo/components/FloatingHeader.dart';
@@ -11,11 +12,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:temo/components/TopBarSecond.dart';
+import 'package:temo/utils/UIHelper.dart';
 import 'package:temo/services/user_service.dart';
 import '../../services/product_service.dart';
 import 'package:temo/models/Product/Product.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:temo/utils/ui_helpers.dart';
+import 'package:temo/utils/constants.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
 class AttributeItem {
@@ -63,6 +67,11 @@ class _AddProductState extends State<AddProduct> {
   // AI Data
   String? _visualDetails;
   String? _aiCondition;
+  bool _isAiValidated = false; // Trạng thái đã duyệt AI
+
+  // Remote Media (For Drafts)
+  List<String> _draftImages = [];
+  List<String> _draftVideos = [];
 
   List<AttributeItem> _attributes = [];
 
@@ -85,14 +94,6 @@ class _AddProductState extends State<AddProduct> {
     "pets": ["type", "species", "breed", "health_status"],
     "other": ["type", "brand", "condition"]
   };
-  
-  // ... (AI Config, Address & Media vars remain same)
-  // ... (initState remains same)
-
-  // ... (SKIP to _handleGenerateDetails) 
-  
-  // (Since I cannot skip large chunks in replace, I will target _attributeTemplates specifically first).
-
   
   final Map<String, String> _categoryNames = {
     "auto": "Xe cộ",
@@ -139,19 +140,15 @@ class _AddProductState extends State<AddProduct> {
     
     // Appliances
     "Fridge": ["capacity", "door_style", "power_usage", "inverter"],
-    "Washing Machine": ["capacity", "washing_type", "spin_speed", "inverter"],
+    "Washing Machine": ["load_capacity", "machine_type", "spin_speed"],
     "Air Conditioner": ["cooling_capacity", "type", "inverter", "gas_type"],
     "Fan": ["power", "fan_speed", "blade_diameter"],
-    
-    // Auto
     "Car": ["year", "fuel_type", "transmission", "mileage", "seats", "engine_capacity"],
     "Motorbike": ["year", "fuel_type", "engine_capacity", "mileage"],
-    
-    // Fashion
-    "Shirt": ["size", "material", "gender", "fit_type"],
-    "Pants": ["size", "material", "gender", "fit_type"],
-    "Shoes": ["size", "material", "gender", "sole_type"],
   };
+
+  bool get _hasAnyImages => _selectedImages.isNotEmpty || _draftImages.isNotEmpty;
+  bool get _hasAnyVideos => _selectedVideos.isNotEmpty || _draftVideos.isNotEmpty;
   
   // AI Config
   String _selectedStyle = "Chuyên nghiệp";
@@ -191,6 +188,19 @@ class _AddProductState extends State<AddProduct> {
       _policyController.text = p.productWP;
       _originController.text = p.productOrigin;
       _selectedCategory = p.productCategory;
+      _isAiValidated = p.isAiValidated;
+      _currentStep = p.lastCompletedStep;
+      
+      // Load Remote Media
+      _draftImages = p.productMedia.where((m) => !m.contains('.mp4') && !m.contains('.mov')).toList();
+      _draftVideos = p.productMedia.where((m) => m.contains('.mp4') || m.contains('.mov')).toList();
+
+      // Jump to last step
+      if (_currentStep > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _pageController.jumpToPage(_currentStep);
+        });
+      }
 
       // Handle Category & Attributes
       if (p.productCategory.isNotEmpty && p.productAttribute.isNotEmpty) {
@@ -288,96 +298,55 @@ class _AddProductState extends State<AddProduct> {
   }
 
   Future<void> _pickImages() async {
-    _showImageSourceActionSheet(context, isVideo: false, onPicked: (image) {
+    UIHelper.showImageSourceSheet(context, isVideo: false, onPicked: (image) {
       if (image != null) setState(() => _selectedImages.add(image));
     });
   }
 
   Future<void> _pickVideo() async {
-    _showImageSourceActionSheet(context, isVideo: true, onPicked: (video) {
+    UIHelper.showImageSourceSheet(context, isVideo: true, onPicked: (video) {
         if (video != null) setState(() => _selectedVideos.add(video));
     });
   }
 
-  void _showImageSourceActionSheet(BuildContext context, {required bool isVideo, required Function(XFile?) onPicked}) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
-            Text(isVideo ? "Thêm Video" : "Thêm Ảnh", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(HeroiconsOutline.camera, color: Colors.blue),
-              ),
-              title: Text(isVideo ? "Quay Video" : "Chụp ảnh mới"),
-              onTap: () async {
-                Navigator.pop(context);
-                final status = await Permission.camera.request();
-                if (status.isGranted) {
-                  try {
-                    final XFile? media = isVideo 
-                      ? await _picker.pickVideo(source: ImageSource.camera)
-                      : await _picker.pickImage(source: ImageSource.camera);
-                    onPicked(media);
-                  } catch (e) {
-                    _showErrorDialog("Camera Error: $e");
-                  }
-                } else {
-                  _showPermissionDialog();
-                }
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(HeroiconsOutline.photo, color: Colors.purple),
-              ),
-              title: Text(isVideo ? "Chọn Video từ thư viện" : "Chọn Ảnh từ thư viện"),
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  final XFile? media = isVideo 
-                    ? await _picker.pickVideo(source: ImageSource.gallery)
-                    : await _picker.pickImage(source: ImageSource.gallery);
-                  onPicked(media);
-                } catch (e) {
-                  _showErrorDialog("Lỗi thư viện: $e");
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
+
+  void _showPermissionDialog() {
+    UIHelpers.showModernDialog(
+      context,
+      icon: HeroiconsOutline.lockClosed,
+      iconColor: Colors.blue,
+      bgColor: Colors.blue.withOpacity(0.1),
+      title: "Yêu cầu quyền truy cập",
+      description: "Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này.",
+      primaryButtonText: "Mở Cài đặt",
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        openAppSettings();
+      },
+      secondaryButtonText: "Hủy",
     );
   }
 
-  void _showPermissionDialog() {
-      showDialog(
-        context: context, 
-        builder: (ctx) => AlertDialog(
-          title: const Text("Yêu cầu quyền truy cập"),
-          content: const Text("Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này."),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
-            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Mở Cài đặt")),
-          ],
-        )
-      );
+  void _removeImage(int index, bool isRemote) {
+    setState(() {
+      if (isRemote) {
+        _draftImages.removeAt(index);
+      } else {
+        _selectedImages.removeAt(index);
+      }
+      _isAiValidated = false; // Khi xóa ảnh thì phải duyệt lại (nếu thêm ảnh mới)
+    });
   }
 
-  void _removeImage(int index) => setState(() => _selectedImages.removeAt(index));
-  void _removeVideo(int index) => setState(() => _selectedVideos.removeAt(index));
+  void _removeVideo(int index, bool isRemote) {
+    setState(() {
+      if (isRemote) {
+        _draftVideos.removeAt(index);
+      } else {
+        _selectedVideos.removeAt(index);
+      }
+    });
+  }
 
   // --- LOGIC MANUAL CATEGORY ---
   void _onCategoryChanged(String? newCategory) {
@@ -461,63 +430,56 @@ class _AddProductState extends State<AddProduct> {
   
   // STEP 1: VALIDATE MEDIA
   Future<bool> _handleValidateMedia() async {
-    if (_selectedImages.isEmpty) {
-      _showErrorDialog("Please upload at least 1 product image (real photo).");
+    // 1. Kiểm tra nếu không có bất kỳ ảnh nào
+    if (!_hasAnyImages) {
+      _showErrorDialog("Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm (ảnh thật).");
       return false;
     }
-    if (_titleController.text.trim().isEmpty) {
-        _showErrorDialog("Please enter the product name.");
-        return false;
+
+    // 2. Nếu ĐÃ duyệt AI và KHÔNG CÓ ảnh mới -> Cho qua ngay
+    if (_isAiValidated && _selectedImages.isEmpty) {
+        return true;
     }
 
+    // 3. Nếu chưa duyệt AI HOẶC có ảnh mới -> Bắt buộc phải quét AI
     setState(() => _isAiLoading = true);
     try {
-      final result = await _productService.validateMedia(_selectedImages, _titleController.text);
+      final result = await _productService.validateMedia(
+        _selectedImages, 
+        _titleController.text,
+        remoteUrls: _draftImages,
+      );
 
       print("AI Check Result: ${result.toString()}"); 
       
-      // 1. Strict Stock Check
       if (result['is_stock'] == true) {
-        _showErrorDialog("Image Error: ${result['stock_reason'] ?? 'Image detected as stock/web photo.'}\nPlease use real photos.");
+        _showErrorDialog("Ảnh của bạn không hợp lệ! Hệ thống nhận diện đây là ảnh mạng hoặc ảnh quảng cáo. Vui lòng chụp ảnh thật của sản phẩm để tiếp tục.");
         return false;
       }
 
-      // 2. Strict Consistency Check
-      if (result['is_consistent'] == false) {
-           _showErrorDialog("Image does not match product name: ${result['consistency_reason']}\nPlease check your image or name.");
-           return false;
-      }
-      
-      // 3. Extract Info Success
+      // Trích xuất thông tin từ AI nếu có
       setState(() {
         if (result['condition'] != null) _conditionController.text = result['condition'];
-
-        Map<String, dynamic> attrs = result['extracted_attributes'] ?? {};
-
+        
         // A. Handle Category Auto-Selection
         String? detectedCategory = result['category'];
         if (detectedCategory != null && _attributeTemplates.containsKey(detectedCategory.toLowerCase())) {
              _onCategoryChanged(detectedCategory.toLowerCase());
         }
 
-        // B. Handle Type Auto-Selection (Critical for Specific Attributes like RAM/Storage)
-        // Find if 'type' is in the attributes
+        Map<String, dynamic> attrs = result['attributes'] ?? {};
+        
+        // B. Handle Type Auto-Selection
         String? detectedType;
         attrs.forEach((k, v) {
             if (k.toString().toLowerCase() == 'type') detectedType = v.toString().trim();
         });
 
         if (detectedType != null) {
-            print("AI Detected Type: '$detectedType'");
-            // Check if this type is valid/known (optional, but safer)
-            // Or just try to switch. _onTypeChanged handles generic logic but let's be safe.
-            // We assume _onTypeChanged logic handles "unknown" types gracefully or we just call it.
-            // But we need to be careful not to loop or break if type is weird.
-            // For now, let's call it. It will set the "type" attribute value effectively.
             _onTypeChanged(detectedType!);
         }
 
-        // C. Deep Fill Attributes (Iterate again to fill values into the NOW READY templates)
+        // C. Deep Fill Attributes (Brand, and others)
         attrs.forEach((key, value) {
              String cleanKey = key.toString().trim();
              String cleanValue = value.toString().trim();
@@ -525,26 +487,10 @@ class _AddProductState extends State<AddProduct> {
              if (cleanKey.toLowerCase() == 'brand') {
                  _brandController.text = cleanValue;
              } else {
-                 // Check if attribute already exists (from template)
-                 // Note: _formatKey might be needed if template uses "Formatted" names?
-                 // But wait, _attributeTemplates uses raw lowercase keys like "screen_size"?
-                 // Let's check _typeSpecificAttributes: ["screen_size", "ram"...]
-                 // AddProduct UI likely displays them.
-                 // The 'nameController.text' usually holds the display name?
-                 // Let's assume nameController holds the key.
-                 
                  int index = _attributes.indexWhere((attr) => attr.nameController.text.toLowerCase() == cleanKey.toLowerCase());
-                 
                  if (index != -1) {
-                     // Update existing template field
                      _attributes[index].valueController.text = cleanValue;
                  } else {
-                     // Add new Deep Fill attribute.
-                     // AVOID DUPLICATES: If _onTypeChanged added "ram", we shouldn't add "ram" again.
-                     // The index check above prevents updating if it exists.
-                     // But wait, if _onTypeChanged added "ram", index SHOULD be != -1.
-                     // So we update it.
-                     // If it's "Color" and not in template, index == -1. We add it.
                      _attributes.add(AttributeItem(name: _formatKey(cleanKey), value: cleanValue));
                  }
              }
@@ -552,19 +498,21 @@ class _AddProductState extends State<AddProduct> {
         
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã trích xuất thông tin & thông số kỹ thuật!"), backgroundColor: Colors.green));
         
-        // SAVE VISUAL MEMORY
+        // SAVE VISUAL MEMORY for Step 2
         _visualDetails = "Detected Info from Image:\n"
                          "Category: ${result['category'] ?? 'Unknown'}\n"
                          "Condition: ${result['condition'] ?? 'Unknown'}\n"
                          "Attributes: ${attrs.toString()}";
+        _isAiValidated = true;
       });
       
       return true;
+      
     } catch (e) {
-      _showErrorDialog("Could not verify images (Network/AI Error): ${e.toString()}");
-      return false; 
+        _showErrorDialog("Lỗi hệ thống AI: $e");
+        return false;
     } finally {
-      setState(() => _isAiLoading = false);
+        setState(() => _isAiLoading = false);
     }
   }
 
@@ -587,16 +535,14 @@ class _AddProductState extends State<AddProduct> {
 
       // 2. Check Consistency
       if (result['is_consistent'] == false) {
-        bool continueAnyway = await showDialog(
-          context: context,
-          builder: (c) => AlertDialog(
-            title: const Text("Cảnh báo từ AI"),
-            content: Text("AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?"),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Quay lại")),
-              TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Tiếp tục", style: TextStyle(color: Colors.red))),
-            ],
-          )
+        bool continueAnyway = await UIHelpers.confirmDialog(
+          context,
+          title: "Cảnh báo từ AI",
+          message: "AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?",
+          confirmText: "Tiếp tục",
+          cancelText: "Quay lại",
+          confirmColor: Colors.red,
+          icon: HeroiconsOutline.exclamationTriangle,
         ) ?? false;
 
         if (!continueAnyway) {
@@ -669,6 +615,11 @@ class _AddProductState extends State<AddProduct> {
 
         if (aiAttrs.containsKey('origin') && aiAttrs['origin'] != "N/A") {
             _originController.text = aiAttrs['origin'].toString();
+        }
+
+        // 6. Auto-fill Condition
+        if (aiAttrs.containsKey('condition') && aiAttrs['condition'] != "N/A") {
+            _conditionController.text = aiAttrs['condition'].toString();
         }
 
         finalAttrs.forEach((key, value) {
@@ -786,10 +737,10 @@ class _AddProductState extends State<AddProduct> {
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         content: Row(
-          children: const [
-            ModernLoader(),
-            SizedBox(width: 20),
-            Expanded(child: Text("AI đang phân tích sản phẩm...\nQuá trình này mất khoảng 5-8 giây.", style: TextStyle(fontSize: 14))),
+          children: [
+            const ModernLoader(),
+            const SizedBox(width: 20),
+            Expanded(child: const Text("AI đang phân tích sản phẩm...\nQuá trình này mất khoảng 5-8 giây.", style: TextStyle(fontSize: 14))),
           ],
         ),
       )
@@ -839,8 +790,18 @@ class _AddProductState extends State<AddProduct> {
         // We continue without coordinates if GPS fails
       }
 
-      List<XFile> allFiles = [..._selectedImages, ..._selectedVideos];
-      await _productService.createProduct(fields: fields, files: allFiles);
+      fields["status"] = "active";
+      fields["lastCompletedStep"] = "3";
+      fields["isAiValidated"] = "true";
+      fields["existingMedia"] = jsonEncode([..._draftImages, ..._draftVideos]);
+
+      List<XFile> newFiles = [..._selectedImages, ..._selectedVideos];
+
+      if (widget.draftProduct != null) {
+          await _productService.updateProductWithMedia(widget.draftProduct!.id, fields, newFiles);
+      } else {
+          await _productService.createProduct(fields: fields, files: newFiles);
+      }
 
       if (mounted) {
         Navigator.pop(context); // Close Loading
@@ -857,7 +818,158 @@ class _AddProductState extends State<AddProduct> {
   }
 
   void _showErrorDialog(String message) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text("Error"), content: Text(message), actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text("OK"))]));
+    UIHelpers.showErrorDialog(context, title: "Lỗi", message: message);
+  }
+
+  void _showAISettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(45),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+                const Text("Cài đặt soạn thảo AI", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text("Tùy chỉnh cách AI viết mô tả cho sản phẩm.", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(height: 24),
+                
+                _buildAISettingItem(
+                  icon: HeroiconsOutline.sparkles,
+                  iconColor: Colors.purple,
+                  bgColor: Colors.purple.withOpacity(0.1),
+                  title: "Phong cách viết",
+                  value: _selectedStyle,
+                  onTap: () => _showSelectionSheet("Chọn phong cách", _styles, _selectedStyle, (val) {
+                    setState(() => _selectedStyle = val);
+                  }),
+                ),
+                const SizedBox(height: 12),
+                _buildAISettingItem(
+                  icon: HeroiconsOutline.bars3BottomLeft,
+                  iconColor: Colors.blue,
+                  bgColor: Colors.blue.withOpacity(0.1),
+                  title: "Độ dài nội dung",
+                  value: _selectedLength,
+                  onTap: () => _showSelectionSheet("Chọn độ dài", _lengths, _selectedLength, (val) {
+                    setState(() => _selectedLength = val);
+                  }),
+                ),
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 12),
+                _buildAISettingItem(
+                  icon: HeroiconsOutline.bookmark,
+                  iconColor: AppColors.primary,
+                  bgColor: AppColors.primary.withOpacity(0.1),
+                  title: "Lưu bản nháp",
+                  value: "Lưu lại để chỉnh sửa sau",
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveDraft();
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAISettingItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(45),
+          border: Border.all(color: Colors.grey.shade100),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF1F2937))),
+                  Text(value, style: GoogleFonts.roboto(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSelectionSheet(String title, List<String> options, String current, Function(String) onSelected) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(45),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              ...options.map((opt) => ListTile(
+                title: Text(opt, style: TextStyle(fontWeight: opt == current ? FontWeight.bold : FontWeight.normal, color: opt == current ? AppColors.primary : Colors.black87)),
+                trailing: opt == current ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                onTap: () {
+                  onSelected(opt);
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Close parent sheet to refresh
+                  _showAISettingsSheet(); // Reopen to show new value
+                },
+              )).toList(),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // --- VALIDATION ---
@@ -865,13 +977,13 @@ class _AddProductState extends State<AddProduct> {
     if (_currentStep == 0) {
       // Step 1: Media & Info
       if (_titleController.text.trim().isEmpty || _priceController.text.trim().isEmpty) {
-         if (_selectedImages.isEmpty) {
+         if (!_hasAnyImages) {
              _showErrorDialog("Vui lòng nhập tên sản phẩm, giá bán và tải lên ít nhất 1 hình ảnh.");
          } else {
              _showErrorDialog("Vui lòng nhập đầy đủ tên sản phẩm và giá bán.");
          }
          return false;
-      } else if (_selectedImages.isEmpty) {
+      } else if (!_hasAnyImages) {
          _showErrorDialog("Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm (ảnh thật).");
          return false;
       }
@@ -911,7 +1023,7 @@ class _AddProductState extends State<AddProduct> {
           
           Map<String, String> fields = {
             "productName": _titleController.text,
-            "productPrice": _priceController.text.replaceAll('.', ''), // Remove dots
+            "productPrice": _priceController.text.replaceAll('.', ''),
             "productDescription": _descController.text.isNotEmpty ? _descController.text : " ",
             "categoryId": _selectedCategory ?? "other",
             "productCategory": _selectedCategory ?? "other",
@@ -920,16 +1032,23 @@ class _AddProductState extends State<AddProduct> {
             "productBrand": _brandController.text,
             "productWP": _policyController.text,
             "userId": userId,
-            "status": "draft", // STATUS DRAFT
+            "status": "draft",
+            "lastCompletedStep": _currentStep.toString(),
+            "isAiValidated": _isAiValidated.toString(),
             "productAttribute": jsonEncode({}),
             "productAddress": jsonEncode({"province": "", "commune": "", "detail": ""}),
+            "existingMedia": jsonEncode([..._draftImages, ..._draftVideos]),
           };
           
-          List<XFile> allFiles = [..._selectedImages, ..._selectedVideos];
+          List<XFile> newFiles = [..._selectedImages, ..._selectedVideos];
           
           showDialog(context: context, barrierDismissible: false, builder: (ctx) => Center(child: ModernLoader()));
           
-          await _productService.createProduct(fields: fields, files: allFiles); // Create new draft
+          if (widget.draftProduct != null) {
+              await _productService.updateProductWithMedia(widget.draftProduct!.id, fields, newFiles);
+          } else {
+              await _productService.createProduct(fields: fields, files: newFiles);
+          }
           
           if (mounted) {
               Navigator.pop(context); // Close loading
@@ -976,14 +1095,30 @@ class _AddProductState extends State<AddProduct> {
           
           _buildSectionTitle("Ảnh sản phẩm (Bắt buộc ảnh thật)"),
           const SizedBox(height: 12),
-          _buildHorizontalMediaList(label: "Thêm Ảnh", icon: HeroiconsOutline.photo, items: _selectedImages, onAdd: _pickImages, onRemove: _removeImage, isImage: true),
-          if (_selectedImages.length > 0)
-            const Padding(padding: EdgeInsets.only(top: 8), child: Text("Đã chọn ảnh. Nhấn 'Tiếp theo' để AI xác thực.", style: TextStyle(color: Colors.blue, fontSize: 12))),
+          _buildHorizontalMediaList(
+            label: "Thêm Ảnh", 
+            icon: HeroiconsOutline.photo, 
+            items: _selectedImages, 
+            remoteItems: _draftImages,
+            onAdd: _pickImages, 
+            onRemove: _removeImage, 
+            isImage: true
+          ),
+          if (_hasAnyImages)
+            const Padding(padding: EdgeInsets.only(top: 8), child: Text("Đã có ảnh. Nhấn 'Tiếp theo' để tiếp tục.", style: TextStyle(color: AppColors.primary, fontSize: 12))),
             
           const SizedBox(height: 24),
           _buildSectionTitle("Video (Không bắt buộc)"),
           const SizedBox(height: 12),
-          _buildHorizontalMediaList(label: "Thêm Video", icon: HeroiconsOutline.videoCamera, items: _selectedVideos, onAdd: _pickVideo, onRemove: _removeVideo, isImage: false),
+          _buildHorizontalMediaList(
+            label: "Thêm Video", 
+            icon: HeroiconsOutline.videoCamera, 
+            items: _selectedVideos, 
+            remoteItems: _draftVideos,
+            onAdd: _pickVideo, 
+            onRemove: _removeVideo, 
+            isImage: false
+          ),
 
            const SizedBox(height: 24),
            _buildSectionTitle("Tên sản phẩm"),
@@ -1011,58 +1146,19 @@ class _AddProductState extends State<AddProduct> {
           const SizedBox(height: 20),
 
           // --- CONDITION ---
-          _buildSectionTitle("Condition"),
+          _buildSectionTitle("Tình trạng sản phẩm"),
           const SizedBox(height: 8),
-          _buildTextField(controller: _conditionController, hint: "e.g. New, Like New, Used"),
+          _buildDropdownField(
+            hint: "Chọn tình trạng",
+            value: ["New", "Like New", "Old"].contains(_conditionController.text) ? _conditionController.text : null,
+            items: ["New", "Like New", "Old"],
+            onChanged: (val) => setState(() => _conditionController.text = val ?? ""),
+          ),
 
           const SizedBox(height: 20),
 
-          // --- STYLE & LENGTH ---
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle("Phong cách (AI)"),
-                    const SizedBox(height: 8),
-                     DropdownButtonFormField<String>(
-                      value: _selectedStyle,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: const Color(0xFFF2F2F2),
-                      ),
-                      items: _styles.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                      onChanged: (val) => setState(() => _selectedStyle = val!),
-                    )
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                     _buildSectionTitle("Độ dài (AI)"),
-                     const SizedBox(height: 8),
-                     DropdownButtonFormField<String>(
-                      value: _selectedLength,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                         fillColor: const Color(0xFFF2F2F2),
-                      ),
-                      items: _lengths.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13)))).toList(),
-                      onChanged: (val) => setState(() => _selectedLength = val!),
-                    )
-                  ],
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 20),
+
 
           const SizedBox(height: 20),
 
@@ -1074,15 +1170,21 @@ class _AddProductState extends State<AddProduct> {
               TextButton.icon(
                 onPressed: _isAiLoading ? null : _handleGenerateDetails,
                 icon: _isAiLoading 
-                    ? SizedBox(width: 16, height: 16, child: ModernLoader(size: 16, color: Colors.purple)) 
-                    : const Icon(HeroiconsSolid.sparkles, size: 16, color: Colors.purple),
-                label: Text(_isAiLoading ? "Đang xử lý..." : "✨ AI Tự soạn nội dung", style: const TextStyle(color: Colors.purple, fontSize: 13, fontWeight: FontWeight.bold)),
-                style: TextButton.styleFrom(backgroundColor: Colors.purple.shade50, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+                    ? SizedBox(width: 16, height: 16, child: ModernLoader(size: 16, color: AppColors.warning)) 
+                    : const Icon(HeroiconsSolid.sparkles, size: 16, color: AppColors.warning),
+                label: Text(_isAiLoading ? "Đang xử lý..." : "✨ AI Tự soạn nội dung", style: const TextStyle(color: AppColors.warning, fontSize: 13, fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(backgroundColor: AppColors.warning.withOpacity(0.1), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
               )
             ],
           ),
           const SizedBox(height: 8),
-          _buildTextField(controller: _descController, hint: "Nhập mô tả sản phẩm của bạn...", maxLines: 5),
+          _buildTextField(
+            controller: _descController, 
+            hint: "Nhập mô tả sản phẩm của bạn...", 
+            minLines: 5, 
+            maxLines: null,
+            borderRadius: 20 // Bo nhẹ hơn một chút cho ô mô tả
+          ),
 
           const SizedBox(height: 20),
 
@@ -1138,6 +1240,14 @@ class _AddProductState extends State<AddProduct> {
                                          _onTypeChanged(val);
                                     }
                                   },
+                                )
+                             else if (attr.nameController.text.toLowerCase() == 'condition')
+                                // Condition Dropdown inside Attributes too
+                                _buildDropdownField(
+                                  hint: "Chọn tình trạng",
+                                  value: ["New", "Like New", "Old"].contains(attr.valueController.text) ? attr.valueController.text : null,
+                                  items: ["New", "Like New", "Old"],
+                                  onChanged: (val) => setState(() => attr.valueController.text = val ?? ""),
                                 )
                              else
                                 _buildTextField(controller: attr.valueController, hint: "Enter ${attr.nameController.text}"),
@@ -1267,10 +1377,10 @@ class _AddProductState extends State<AddProduct> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 120), // Space for floating header
+              const SizedBox(height: 110), // Tăng lại từ 90 lên 110 để thoáng hơn
               // CUSTOM STEPPER
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16), // Tăng từ 10 lên 18
                 color: Colors.white,
                 child: Row(
                   children: [
@@ -1284,7 +1394,8 @@ class _AddProductState extends State<AddProduct> {
                   ],
                 ),
               ),
-              Divider(height: 1, color: Colors.grey.shade200),
+              Divider(height: 1, color: Colors.grey.shade100),
+              const SizedBox(height: 8), // Thêm khoảng nghỉ trước khi vào nội dung chính
 
               Expanded(
                 child: PageView(
@@ -1309,9 +1420,9 @@ class _AddProductState extends State<AddProduct> {
                 hasBackground: false,
                 actions: [
                   FloatingHeader.buildActionBubble(
-                    icon: HeroiconsOutline.bookmark,
-                    onTap: _saveDraft,
-                    color: AppColors.primary,
+                    icon: HeroiconsOutline.ellipsisHorizontal,
+                    onTap: _showAISettingsSheet,
+                    color: Colors.grey.shade600,
                   ),
                 ],
               ),
@@ -1397,18 +1508,19 @@ class _AddProductState extends State<AddProduct> {
   // --- HELPERS (Reused) ---
   Widget _buildSectionTitle(String title) => Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[800], fontWeight: FontWeight.bold));
 
-  Widget _buildTextField({required TextEditingController controller, required String hint, TextInputType keyboardType = TextInputType.text, int maxLines = 1, bool readOnly = false}) {
+  Widget _buildTextField({required TextEditingController controller, required String hint, TextInputType keyboardType = TextInputType.text, int? maxLines = 1, int? minLines, bool readOnly = false, double borderRadius = 50}) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      minLines: minLines,
       readOnly: readOnly,
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         hintText: hint, hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
         filled: true, fillColor: readOnly ? Colors.grey[200] : const Color(0xFFF2F2F2),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(borderRadius), borderSide: BorderSide.none),
       ),
     );
   }
@@ -1447,12 +1559,12 @@ class _AddProductState extends State<AddProduct> {
     );
   }
 
-  Widget _buildHorizontalMediaList({required String label, required IconData icon, required List<XFile> items, required VoidCallback onAdd, required Function(int) onRemove, required bool isImage}) {
+  Widget _buildHorizontalMediaList({required String label, required IconData icon, required List<XFile> items, required List<String> remoteItems, required VoidCallback onAdd, required Function(int, bool) onRemove, required bool isImage}) {
     return SizedBox(
       height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: items.length + 1,
+        itemCount: remoteItems.length + items.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
             return GestureDetector(onTap: onAdd, child: Container(
@@ -1460,14 +1572,44 @@ class _AddProductState extends State<AddProduct> {
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade300)),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, size: 24, color: Colors.black54), const SizedBox(height: 4), Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))])));
           }
-          final file = items[index - 1];
+          
+          // Render Remote Items First
+          if (index <= remoteItems.length) {
+            String url = remoteItems[index - 1];
+            
+            // Xử lý tiền tố "image:" nếu có (tránh lỗi nối chuỗi sai)
+            if (url.startsWith('image:')) {
+              url = url.replaceFirst('image:', '');
+            }
+
+            // Nếu không phải link tuyệt đối (http/https) thì mới nối baseUrl
+            if (!url.startsWith('http')) {
+              url = '${ApiConstants.baseUrl}${url.startsWith('/') ? '' : '/'}$url';
+            }
+            return Stack(children: [
+              Container(
+                  width: 100, margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16), 
+                    color: Colors.grey[200], 
+                    image: isImage ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover) : null
+                  ),
+                  child: !isImage ? const Center(child: Icon(Icons.play_circle_fill, size: 30, color: Colors.white)) : null
+              ),
+              Positioned(top: 4, right: 16, child: GestureDetector(onTap: () => onRemove(index - 1, true), child: Container(padding: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))
+            ]);
+          }
+
+          // Render Local Items
+          final localIndex = index - remoteItems.length - 1;
+          final file = items[localIndex];
           return Stack(children: [
             Container(
                 width: 100, margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Colors.grey[200], image: isImage ? DecorationImage(image: FileImage(File(file.path)), fit: BoxFit.cover) : null),
                 child: !isImage ? const Center(child: Icon(Icons.play_circle_fill, size: 30, color: Colors.white)) : null
             ),
-            Positioned(top: 4, right: 16, child: GestureDetector(onTap: () => onRemove(index - 1), child: Container(padding: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))
+            Positioned(top: 4, right: 16, child: GestureDetector(onTap: () => onRemove(localIndex, false), child: Container(padding: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))
           ]);
         },
       ),

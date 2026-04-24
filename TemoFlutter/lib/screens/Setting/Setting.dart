@@ -1,4 +1,5 @@
-import 'dart:io'; // Để check platform nếu cần
+import 'dart:io'; 
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'; // Để check kIsWeb
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:temo/providers/settings_provider.dart';
 import 'package:temo/l10n/app_localizations.dart';
 import 'package:temo/utils/UIHelper.dart';
+import 'package:temo/utils/ui_helpers.dart';
 
 class Setting extends StatefulWidget {
   final VoidCallback? onMenuTap;
@@ -51,7 +53,7 @@ class _Setting extends State<Setting> {
   }
 
   Future<void> _handleAvatarChange() async {
-    _showImageSourceActionSheet(context, onPicked: (image) async {
+    UIHelper.showImageSourceSheet(context, onPicked: (image) async {
       if (image == null) return;
 
       setState(() {
@@ -67,90 +69,35 @@ class _Setting extends State<Setting> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cập nhật ảnh đại diện thành công!"), backgroundColor: Colors.green),
+          SnackBar(content: const Text("Cập nhật ảnh đại diện thành công!"), backgroundColor: AppColors.success),
         );
       } catch (e) {
         setState(() {
           _isUploading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: AppColors.error),
         );
       }
     });
   }
 
-  void _showImageSourceActionSheet(BuildContext context, {required Function(XFile?) onPicked}) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
-            const Text("Thay đổi ảnh đại diện", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(HeroiconsOutline.camera, color: Colors.blue),
-              ),
-              title: const Text("Chụp ảnh mới"),
-              onTap: () async {
-                Navigator.pop(context);
-                final status = await Permission.camera.request();
-                if (status.isGranted) {
-                  try {
-                    final XFile? media = await _picker.pickImage(source: ImageSource.camera);
-                    onPicked(media);
-                  } catch (e) {
-                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e"), backgroundColor: Colors.red));
-                  }
-                } else {
-                  _showPermissionDialog();
-                }
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(HeroiconsOutline.photo, color: Colors.purple),
-              ),
-              title: const Text("Chọn từ thư viện"),
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  final XFile? media = await _picker.pickImage(source: ImageSource.gallery);
-                  onPicked(media);
-                } catch (e) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi thư viện: $e"), backgroundColor: Colors.red));
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showPermissionDialog() {
-      showDialog(
-        context: context, 
-        builder: (ctx) => AlertDialog(
-          title: const Text("Yêu cầu quyền truy cập"),
-          content: const Text("Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này."),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
-            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Mở Cài đặt")),
-          ],
-        )
-      );
+    UIHelpers.showModernDialog(
+      context,
+      icon: HeroiconsOutline.lockClosed,
+      iconColor: AppColors.primary,
+      bgColor: AppColors.primary.withOpacity(0.1),
+      title: "Yêu cầu quyền truy cập",
+      description: "Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này.",
+      primaryButtonText: "Mở Cài đặt",
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        openAppSettings();
+      },
+      secondaryButtonText: "Hủy",
+    );
   }
 
   @override
@@ -286,87 +233,77 @@ class _Setting extends State<Setting> {
     if (!mounted) return;
     Navigator.pop(context); // Close loader
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Cập nhật ứng dụng"),
-        content: const Text("Bạn đang sử dụng phiên bản mới nhất."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Đóng", style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    UIHelpers.showSuccessDialog(
+      context,
+      title: "Cập nhật ứng dụng",
+      message: "Bạn đang sử dụng phiên bản mới nhất.",
     );
   }
 
   Widget _buildProfileCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              UserAvatar(
+    return Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primary.withOpacity(0.1), width: 2),
+              ),
+              child: UserAvatar(
                 avatarUrl: _avatarUrl,
                 fullName: _fullName,
-                size: 40,
-                fontSize: 24,
-              ),
-              if (_isUploading)
-                ModernLoader(size: 20, color: Colors.white),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _fullName,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'QuickSand',
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _email,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7) ?? Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: _isUploading ? null : _handleAvatarChange, // Gọi hàm upload
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(100),
-                color: AppColors.E2Color,
-              ),
-              child: Icon(
-                HeroiconsOutline.camera,
-                size: 20,
-                color: Colors.grey[700],
+                size: 100, // Increased size for a premium look
+                fontSize: 40,
               ),
             ),
+            if (_isUploading)
+               Positioned.fill(child: Center(child: ModernLoader(size: 30, color: AppColors.primary))),
+            Positioned(
+              bottom: 5,
+              right: 5,
+              child: GestureDetector(
+                onTap: _isUploading ? null : _handleAvatarChange,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: const Icon(
+                    HeroiconsSolid.camera,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _fullName,
+          style: GoogleFonts.quicksand(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF111827),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _email,
+          style: GoogleFonts.quicksand(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[500],
+          ),
+        ),
+      ],
     );
   }
 
@@ -465,50 +402,82 @@ class _Setting extends State<Setting> {
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.selectLanguage, // "Select Language"
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(40),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                )
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Text("🇺🇸", style: TextStyle(fontSize: 24)),
-                title: const Text("English"),
-                trailing: settings.locale.languageCode == 'en'
-                    ? const Icon(Icons.check, color: Colors.blue)
-                    : null,
-                onTap: () {
-                  settings.setLocale(const Locale('en'));
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Text("🇻🇳", style: TextStyle(fontSize: 24)),
-                title: const Text("Tiếng Việt"),
-                trailing: settings.locale.languageCode == 'vi'
-                    ? const Icon(Icons.check, color: Colors.blue)
-                    : null,
-                onTap: () {
-                  settings.setLocale(const Locale('vi'));
-                  Navigator.pop(context);
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
+                Text(
+                  l10n.selectLanguage,
+                  style: GoogleFonts.roboto(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 24),
+                _buildLanguageItem(
+                  context, "🇺🇸", "English", 
+                  settings.locale.languageCode == 'en',
+                  () => settings.setLocale(const Locale('en'))
+                ),
+                const SizedBox(height: 12),
+                _buildLanguageItem(
+                  context, "🇻🇳", "Tiếng Việt", 
+                  settings.locale.languageCode == 'vi',
+                  () => settings.setLocale(const Locale('vi'))
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLanguageItem(BuildContext context, String flag, String name, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: () {
+        onTap();
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(100),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.05) : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent),
+        ),
+        child: Row(
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 16),
+            Text(name, style: GoogleFonts.roboto(fontWeight: FontWeight.w600, fontSize: 16)),
+            const Spacer(),
+            if (isSelected) const Icon(HeroiconsSolid.checkCircle, color: AppColors.primary, size: 24),
+          ],
+        ),
+      ),
     );
   }
 }

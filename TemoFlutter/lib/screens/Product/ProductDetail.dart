@@ -63,7 +63,7 @@ class ProductDetailState extends State<ProductDetail> {
   String? _currentUserId;
   final MapController _mapController = MapController();
   final ScrollController _scrollController = ScrollController();
-  double _headerOpacity = 0.0;
+  double _headerOpacity = 1.0;
 
   @override
   void initState() {
@@ -77,7 +77,8 @@ class ProductDetailState extends State<ProductDetail> {
 
   void _onScroll() {
     double offset = _scrollController.offset;
-    double opacity = (offset / 150).clamp(0.0, 1.0);
+    // Invert logic: 1.0 at top, 0.0 after scrolling 120px
+    double opacity = (1.0 - (offset / 120)).clamp(0.0, 1.0);
     if (opacity != _headerOpacity) {
       setState(() => _headerOpacity = opacity);
     }
@@ -236,13 +237,14 @@ class ProductDetailState extends State<ProductDetail> {
           Positioned.fill(
             child: SingleChildScrollView(
               controller: _scrollController,
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildGallery(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -316,24 +318,18 @@ class ProductDetailState extends State<ProductDetail> {
       top: 0, left: 0, right: 0,
       child: SafeArea(
         bottom: false,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(_headerOpacity),
-            boxShadow: _headerOpacity > 0.5 
-              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))]
-              : [],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildRoundIconButton(
-                  HeroiconsSolid.chevronLeft, 
-                  () => Navigator.pop(context),
-                ),
-                Text(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildRoundIconButton(
+                HeroiconsSolid.chevronLeft, 
+                () => Navigator.pop(context),
+              ),
+              Opacity(
+                opacity: _headerOpacity,
+                child: Text(
                   "Chi tiết sản phẩm",
                   style: GoogleFonts.roboto(
                     fontSize: 16,
@@ -341,12 +337,12 @@ class ProductDetailState extends State<ProductDetail> {
                     color: const Color(0xFF111827),
                   ),
                 ),
-                _buildRoundIconButton(
-                  HeroiconsSolid.ellipsisVertical, 
-                  _showMoreOptions,
-                ),
-              ],
-            ),
+              ),
+              _buildRoundIconButton(
+                HeroiconsSolid.ellipsisVertical, 
+                _showMoreOptions,
+              ),
+            ],
           ),
         ),
       ),
@@ -379,7 +375,7 @@ class ProductDetailState extends State<ProductDetail> {
   Widget _buildGallery() {
     return Container(
       height: MediaQuery.of(context).size.height * 0.55,
-      margin: const EdgeInsets.fromLTRB(8, 120, 8, 0),
+      margin: const EdgeInsets.fromLTRB(16, 120, 16, 0),
       child: Stack(
         children: [
           ClipRRect(
@@ -1405,8 +1401,8 @@ class ProductDetailState extends State<ProductDetail> {
                   const SizedBox(height: 12),
                   _buildMenuItem(
                     icon: HeroiconsOutline.pencilSquare,
-                    iconColor: Colors.blue,
-                    bgColor: const Color(0xFFEFF6FF),
+                    iconColor: AppColors.primary,
+                    bgColor: AppColors.primary.withOpacity(0.1),
                     title: "Chỉnh sửa sản phẩm",
                     onTap: () { Navigator.pop(context); /* logic chỉnh sửa */ },
                   ),
@@ -1422,8 +1418,8 @@ class ProductDetailState extends State<ProductDetail> {
                 else ...[
                   _buildMenuItem(
                     icon: HeroiconsOutline.shoppingBag,
-                    iconColor: Colors.green,
-                    bgColor: const Color(0xFFF0FDF4),
+                    iconColor: AppColors.success,
+                    bgColor: AppColors.success.withOpacity(0.1),
                     title: "Gửi yêu cầu mua",
                     onTap: () { Navigator.pop(context); _requestPurchase(); },
                   ),
@@ -1441,8 +1437,8 @@ class ProductDetailState extends State<ProductDetail> {
                   const SizedBox(height: 12),
                   _buildMenuItem(
                     icon: HeroiconsOutline.share,
-                    iconColor: Colors.purple,
-                    bgColor: const Color(0xFFFAF5FF),
+                    iconColor: AppColors.warning,
+                    bgColor: AppColors.warning.withOpacity(0.1),
                     title: "Chia sẻ",
                     onTap: () => Navigator.pop(context),
                   ),
@@ -1450,8 +1446,8 @@ class ProductDetailState extends State<ProductDetail> {
                 const SizedBox(height: 12),
                 _buildMenuItem(
                   icon: HeroiconsOutline.sparkles,
-                  iconColor: Colors.purple,
-                  bgColor: Colors.purple.withOpacity(0.1),
+                  iconColor: AppColors.primary,
+                  bgColor: AppColors.primary.withOpacity(0.1),
                   title: "Cải tiến ứng dụng",
                   onTap: () {
                     Navigator.pop(context);

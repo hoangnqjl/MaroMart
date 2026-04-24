@@ -1,38 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 class UIHelpers {
-  static void showSuccessDialog(BuildContext context, {required String title, required String message}) {
+  static void showSuccessDialog(BuildContext context, {required String title, required String message, VoidCallback? onConfirm}) {
     _showCustomDialog(
       context,
       title: title,
       message: message,
       icon: HeroiconsOutline.checkCircle,
-      iconColor: Colors.green,
+      iconColor: AppColors.success,
       buttonText: "Tuyệt vời",
+      onConfirm: onConfirm,
     );
   }
 
-  static void showErrorDialog(BuildContext context, {required String title, required String message}) {
+  static void showErrorDialog(BuildContext context, {required String title, required String message, VoidCallback? onConfirm}) {
     _showCustomDialog(
       context,
       title: title,
       message: message,
       icon: HeroiconsOutline.exclamationCircle,
-      iconColor: Colors.red,
+      iconColor: AppColors.error,
       buttonText: "Đóng",
+      onConfirm: onConfirm,
     );
   }
 
-  static void showWarningDialog(BuildContext context, {required String title, required String message, String? buttonText}) {
+  static void showWarningDialog(BuildContext context, {required String title, required String message, String? buttonText, VoidCallback? onConfirm}) {
     _showCustomDialog(
       context,
       title: title,
       message: message,
       icon: HeroiconsOutline.exclamationTriangle,
-      iconColor: Colors.orange,
+      iconColor: AppColors.warning,
       buttonText: buttonText ?? "Đã hiểu",
+      onConfirm: onConfirm,
     );
   }
 
@@ -43,6 +47,7 @@ class UIHelpers {
     required IconData icon,
     required Color iconColor,
     required String buttonText,
+    VoidCallback? onConfirm,
   }) {
     showModernDialog(
       context,
@@ -52,6 +57,7 @@ class UIHelpers {
       title: title,
       description: message,
       primaryButtonText: buttonText,
+      onPrimaryPressed: onConfirm,
     );
   }
 
@@ -156,7 +162,7 @@ class UIHelpers {
     required String message,
     String confirmText = "Xác nhận",
     String cancelText = "Hủy bỏ",
-    Color confirmColor = Colors.blue,
+    Color confirmColor = AppColors.primary,
     IconData icon = HeroiconsOutline.questionMarkCircle,
   }) {
     return showDialog<bool>(
@@ -236,11 +242,11 @@ class UIHelpers {
   }
 
   static void showSuccessSnackBar(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.green, HeroiconsOutline.checkCircle);
+    _showSnackBar(context, message, AppColors.success, HeroiconsOutline.checkCircle);
   }
 
   static void showErrorSnackBar(BuildContext context, String message) {
-    _showSnackBar(context, message, const Color(0xFFFB7C7F), HeroiconsOutline.exclamationCircle);
+    _showSnackBar(context, message, AppColors.error, HeroiconsOutline.exclamationCircle);
   }
 
   static void _showSnackBar(BuildContext context, String message, Color color, IconData icon) {

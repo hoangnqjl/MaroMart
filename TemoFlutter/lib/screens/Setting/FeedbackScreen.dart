@@ -8,6 +8,7 @@ import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/utils/UIHelper.dart';
+import 'package:temo/utils/ui_helpers.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -62,28 +63,14 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       
       if (mounted) {
         setState(() => _isSubmitting = false);
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(45)),
-            title: const Center(child: Text("Thành công")),
-            content: const Text(
-              "Cảm ơn đóng góp của bạn! Chúng tôi sẽ xem xét để cải thiện ứng dụng tốt hơn.",
-              textAlign: TextAlign.center,
-              style: TextStyle(height: 1.5),
-            ),
-            actions: [
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Đóng", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ),
-            ],
-          ),
+        UIHelpers.showSuccessDialog(
+          context,
+          title: "Thành công",
+          message: "Cảm ơn đóng góp của bạn! Chúng tôi sẽ xem xét để cải thiện ứng dụng tốt hơn.",
+          onConfirm: () {
+            Navigator.pop(context); // Pop dialog
+            Navigator.pop(context); // Pop screen
+          },
         );
       }
     } catch (e) {

@@ -96,7 +96,7 @@ class _SavedProductsScreenState extends State<SavedProductsScreen> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 180), // Increased height for 2-row header
+              const SizedBox(height: 235), // Increased height for 2-row header + category filter
               Expanded(
                 child: _isLoading
                     ? SliverPadding(
@@ -113,9 +113,6 @@ class _SavedProductsScreenState extends State<SavedProductsScreen> {
                         onRefresh: _fetchData,
                         child: CustomScrollView(
                           slivers: [
-                            SliverToBoxAdapter(
-                              child: _buildCategoryFilter(),
-                            ),
                             if (_filteredProducts.isEmpty)
                               SliverFillRemaining(
                                 child: Center(
@@ -175,7 +172,9 @@ class _SavedProductsScreenState extends State<SavedProductsScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildSearchFilterArea(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 14),
+                    _buildCategoryFilter(),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
@@ -234,12 +233,11 @@ class _SavedProductsScreenState extends State<SavedProductsScreen> {
   }
 
   Widget _buildCategoryFilter() {
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
         children: [
           _buildFilterChip("Tất cả", null),
           ..._categories.map((cat) => _buildFilterChip(cat['categoryName'], cat['categoryId'])),
@@ -252,20 +250,20 @@ class _SavedProductsScreenState extends State<SavedProductsScreen> {
     bool isSelected = _selectedCategoryId == id;
     return GestureDetector(
       onTap: () => _onCategorySelected(id),
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        alignment: Alignment.center,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(25),
         ),
         child: Text(
           label,
-          style: GoogleFonts.roboto(
+          style: GoogleFonts.quicksand(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: isSelected ? Colors.white : const Color(0xFF4B5563),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF6B7280),
           ),
         ),
       ),

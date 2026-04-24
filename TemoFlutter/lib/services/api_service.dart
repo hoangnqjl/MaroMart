@@ -43,7 +43,7 @@ class ApiService {
     } on SocketException {
       throw Exception('Không có kết nối internet');
     } on TimeoutException {
-      throw Exception('Timeout - Vui lòng thử lại');
+      throw Exception('Hệ thống AI đang xử lý hơi chậm, vui lòng đợi thêm chút hoặc thử lại sau.');
     } catch (e) {
       throw Exception('Lỗi: ${e.toString()}');
     }
@@ -100,7 +100,7 @@ class ApiService {
     } on SocketException {
       throw Exception('Không có kết nối internet');
     } on TimeoutException {
-      throw Exception('Timeout - Vui lòng thử lại');
+      throw Exception('Đang phân tích hình ảnh, quá trình này có thể mất hơn 1 phút. Vui lòng đợi hoặc thử lại.');
     } catch (e) {
       throw Exception('Lỗi Upload: ${e.toString()}');
     }
@@ -158,7 +158,7 @@ class ApiService {
     } on SocketException {
       throw Exception('Không có kết nối internet');
     } on TimeoutException {
-      throw Exception('Timeout - Vui lòng thử lại');
+      throw Exception('Quá trình tải lên và phân tích ảnh đang mất nhiều thời gian hơn dự kiến...');
     } catch (e) {
       throw Exception('Lỗi Upload (MultiKey): ${e.toString()}');
     }
@@ -214,7 +214,7 @@ class ApiService {
     } on SocketException {
       throw Exception('Không có kết nối internet');
     } on TimeoutException {
-      throw Exception('Timeout - Vui lòng thử lại');
+      throw Exception('Hệ thống đang bận xử lý dữ liệu lớn, vui lòng đợi.');
     } catch (e) {
       throw Exception('Lỗi Update: ${e.toString()}');
     }
@@ -241,7 +241,7 @@ class ApiService {
     } on SocketException {
       throw Exception('Không có kết nối internet');
     } on TimeoutException {
-      throw Exception('Timeout - Vui lòng thử lại');
+      throw Exception('Không nhận được phản hồi từ máy chủ (Timeout).');
     } catch (e) {
       throw Exception('Lỗi: ${e.toString()}');
     }

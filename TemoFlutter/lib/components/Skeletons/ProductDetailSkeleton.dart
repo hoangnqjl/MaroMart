@@ -15,12 +15,12 @@ class ProductDetailSkeleton extends StatelessWidget {
             // Gallery Area Placeholder
             Container(
               height: MediaQuery.of(context).size.height * 0.55,
-              margin: const EdgeInsets.fromLTRB(16, 92, 16, 0),
+              margin: const EdgeInsets.fromLTRB(16, 120, 16, 0),
               child: const Skeleton(borderRadius: 40),
             ),
             
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

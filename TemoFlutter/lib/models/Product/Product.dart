@@ -159,7 +159,9 @@ class Product {
   final int? marketPrice;
   final String productDescription;
   
-  final String status; // Added status field
+  final String status; 
+  final int lastCompletedStep;
+  final bool isAiValidated;
 
   final String productCondition;
   final String productBrand;
@@ -203,6 +205,8 @@ class Product {
     required this.createdAt,
     required this.updatedAt,
     this.pushExpiry,
+    this.lastCompletedStep = 0,
+    this.isAiValidated = false,
     this.userInfo,
   });
 
@@ -223,7 +227,9 @@ class Product {
           : int.tryParse(json['marketPrice'].toString()),
 
       productDescription: json['productDescription']?.toString() ?? '',
-      status: json['status']?.toString() ?? 'active', // Parse status
+      status: json['status']?.toString() ?? 'active',
+      lastCompletedStep: json['lastCompletedStep'] is int ? json['lastCompletedStep'] : int.tryParse(json['lastCompletedStep'].toString()) ?? 0,
+      isAiValidated: json['isAiValidated'] == true || json['isAiValidated'] == 'true',
 
       productCondition: json['productCondition']?.toString() ?? '',
       productBrand: json['productBrand']?.toString() ?? '',
@@ -285,6 +291,8 @@ class Product {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       'pushExpiry': pushExpiry,
+      'lastCompletedStep': lastCompletedStep,
+      'isAiValidated': isAiValidated,
       'userInfo': userInfo?.toJson(),
     };
   }

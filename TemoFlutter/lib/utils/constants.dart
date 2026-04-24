@@ -1,7 +1,7 @@
 class ApiConstants {
   // static const String baseUrl = 'https://temo-server.onrender.com';
 
-  static const String baseUrl = 'http://192.168.16.8:5000';
+  static const String baseUrl = 'http://192.168.16.6:5000';
 
   // auth
   static const String loginEndpoint = '/auth/v1/login';
@@ -13,8 +13,9 @@ class ApiConstants {
   static const String productsFilterEndpoint = '/products/filter-product';
 
   // Timeout
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  // Timeout - Tăng lên để AI có đủ thời gian xử lý ảnh
+  static const Duration connectTimeout = Duration(seconds: 120);
+  static const Duration receiveTimeout = Duration(seconds: 120);
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

@@ -1,9 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/services/auth_service.dart';
 import 'package:temo/services/socket_service.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -93,7 +95,7 @@ class _SignInScreenState extends State<SignInScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message),
-      backgroundColor: Colors.green,
+      backgroundColor: AppColors.success,
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 1),
     ));

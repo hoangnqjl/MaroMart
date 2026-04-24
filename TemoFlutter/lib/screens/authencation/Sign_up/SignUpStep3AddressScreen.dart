@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/services/auth_service.dart';
 
@@ -45,9 +46,9 @@ class _SignUpStep3AddressScreenState
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully!'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Text('Account created successfully!'),
+          backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
       );

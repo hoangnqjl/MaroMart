@@ -123,10 +123,7 @@ class _ChangeInformationScreenState extends State<ChangeInformationScreen> {
           SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _isLoading
-                ? const SizedBox(
-                    height: 300,
-                    child: Center(child: ModernLoader()),
-                  )
+                ? const SizedBox.shrink()
                 : Form(
                     key: _formKey,
                     child: Column(

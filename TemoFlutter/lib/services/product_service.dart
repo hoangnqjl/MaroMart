@@ -120,11 +120,16 @@ class ProductService {
   }
 
   // --- NEW AI METHODS ---
-  Future<Map<String, dynamic>> validateMedia(List<XFile> files, String productName) async {
+  Future<Map<String, dynamic>> validateMedia(List<XFile> files, String productName, {List<String>? remoteUrls}) async {
     try {
+      final Map<String, String> fields = {'productName': productName};
+      if (remoteUrls != null && remoteUrls.isNotEmpty) {
+          fields['remoteUrls'] = jsonEncode(remoteUrls);
+      }
+
       final response = await _apiService.postMultipart(
-        endpoint: '/products/validate-media',
-        fields: {'productName': productName},
+        endpoint: '/ai/validate-media', // Đổi từ /products/ sang /ai/ cho đúng logic mới
+        fields: fields,
         files: files,
         fileKey: 'files',
         needAuth: true,
@@ -143,7 +148,7 @@ class ProductService {
   }) async {
     try {
       final response = await _apiService.post(
-        endpoint: '/products/generate-details',
+        endpoint: '/ai/generate-details',
         body: {
           "productName": productName,
           "visualDetails": visualDetails,
@@ -167,7 +172,7 @@ class ProductService {
   }) async {
     try {
       final response = await _apiService.post(
-        endpoint: '/products/validate-content',
+        endpoint: '/ai/validate-content',
         body: {
           "productName": productName,
           "productDescription": productDescription,
