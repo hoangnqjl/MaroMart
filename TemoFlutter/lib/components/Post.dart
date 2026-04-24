@@ -15,6 +15,8 @@ import 'package:temo/utils/constants.dart';
 import 'package:temo/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:temo/utils/string_utils.dart';
+import 'package:temo/services/product_service.dart';
+import 'package:temo/utils/storage.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -27,6 +29,7 @@ class Post extends StatefulWidget {
 class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   late List<MediaItem> _mediaItems;
   final PageController _pageController = PageController();
+  final ProductService _productService = ProductService();
   int _currentMediaIndex = 0;
   bool isExpanded = false;
 
@@ -47,6 +50,8 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
     _flipAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _flipController, curve: Curves.easeInOutBack),
     );
+
+    _productService.fetchSavedProductsIfNeeded();
   }
 
   @override
@@ -298,13 +303,31 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
       ),
       onSelected: (value) {
         if (value == 'save') {
-          // Logic Save của bạn ở đây
+          _toggleSave();
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'save',
-          child: Row(children: [Icon(HeroiconsOutline.bookmark, color: Colors.black87), SizedBox(width: 10), Text("Lưu tin", style: TextStyle(fontFamily: 'QuickSand'))]),
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: ProductService.savedProductIdsNotifier,
+            builder: (context, savedIds, _) {
+              final isSaved = savedIds.contains(widget.product.productId);
+              return Row(
+                children: [
+                  Icon(
+                    isSaved ? HeroiconsSolid.bookmark : HeroiconsOutline.bookmark,
+                    color: isSaved ? AppColors.primary : Colors.black87,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    isSaved ? "Bỏ lưu tin" : "Lưu tin",
+                    style: const TextStyle(fontFamily: 'QuickSand'),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
         const PopupMenuItem(
           value: 'report',
@@ -473,5 +496,22 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  Future<void> _toggleSave() async {
+    if (StorageHelper.getToken() == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng đăng nhập để lưu sản phẩm")),
+      );
+      return;
+    }
+
+    try {
+      await _productService.toggleSave(widget.product.productId);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi: ${e.toString().replaceAll("Exception: ", "")}")),
+      );
+    }
   }
 }

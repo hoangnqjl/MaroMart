@@ -4,7 +4,11 @@ import 'package:temo/models/Product/Product.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class ProductFlashCard extends StatelessWidget {
+import 'package:temo/services/product_service.dart';
+import 'package:temo/utils/storage.dart';
+import 'package:temo/Colors/AppColors.dart';
+
+class ProductFlashCard extends StatefulWidget {
   final Product product;
   final VoidCallback? onTap;
 
@@ -15,7 +19,39 @@ class ProductFlashCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ProductFlashCard> createState() => _ProductFlashCardState();
+}
+
+class _ProductFlashCardState extends State<ProductFlashCard> {
+  final ProductService _productService = ProductService();
+
+  @override
+  void initState() {
+    super.initState();
+    _productService.fetchSavedProductsIfNeeded();
+  }
+
+  Future<void> _toggleSave() async {
+    if (StorageHelper.getToken() == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng đăng nhập để lưu sản phẩm")),
+      );
+      return;
+    }
+
+    try {
+      await _productService.toggleSave(widget.product.productId);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi: ${e.toString().replaceAll("Exception: ", "")}")),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final product = widget.product;
+    final onTap = widget.onTap;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -89,7 +125,18 @@ class ProductFlashCard extends StatelessWidget {
                 bottom: 100, // Above bottom text
                 child: Column(
                   children: [
-                    _buildActionButton(HeroiconsSolid.bookmark, "Save"),
+                    ValueListenableBuilder<Set<String>>(
+                      valueListenable: ProductService.savedProductIdsNotifier,
+                      builder: (context, savedIds, _) {
+                        final isSaved = savedIds.contains(product.productId);
+                        return _buildActionButton(
+                          isSaved ? HeroiconsSolid.bookmark : HeroiconsOutline.bookmark, 
+                          isSaved ? "Saved" : "Save",
+                          color: isSaved ? AppColors.primary : Colors.white,
+                          onTap: _toggleSave,
+                        );
+                      },
+                    ),
                     const SizedBox(height: 20),
                     _buildActionButton(HeroiconsSolid.chatBubbleLeftEllipsis, "Chat"),
                     const SizedBox(height: 20),
@@ -156,25 +203,28 @@ class ProductFlashCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label) {
-    return Column(
-      children: [
-        ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              color: Colors.white.withOpacity(0.2),
-              child: Icon(icon, color: Colors.white, size: 24),
+  Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap, Color color = Colors.white}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          ClipOval(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                color: Colors.white.withOpacity(0.2),
+                child: Icon(icon, color: color, size: 24),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
-        )
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
+          )
+        ],
+      ),
     );
   }
 }

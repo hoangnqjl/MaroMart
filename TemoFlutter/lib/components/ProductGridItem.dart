@@ -11,6 +11,9 @@ import 'package:temo/screens/Message/ChatScreen.dart';
 import 'package:temo/utils/string_utils.dart';
 import 'package:temo/services/review_service.dart';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/services/api_service.dart';
+import 'package:temo/utils/storage.dart';
+import 'package:temo/services/product_service.dart';
 
 class ProductGridItem extends StatefulWidget {
   final Product product;
@@ -25,6 +28,7 @@ class _ProductGridItemState extends State<ProductGridItem> {
   static final Map<String, double> _ratingCache = {};
   
   final ReviewService _reviewService = ReviewService();
+  final ProductService _productService = ProductService();
   double? _rating;
   bool _isFetchingRating = false;
 
@@ -32,6 +36,24 @@ class _ProductGridItemState extends State<ProductGridItem> {
   void initState() {
     super.initState();
     _loadRating();
+    _productService.fetchSavedProductsIfNeeded();
+  }
+
+  Future<void> _toggleSave(String productId) async {
+    if (StorageHelper.getToken() == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng đăng nhập để lưu sản phẩm")),
+      );
+      return;
+    }
+
+    try {
+      await _productService.toggleSave(productId);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi: ${e.toString().replaceAll("Exception: ", "")}")),
+      );
+    }
   }
 
   Future<void> _loadRating() async {
@@ -272,7 +294,20 @@ class _ProductGridItemState extends State<ProductGridItem> {
                         ),
                       ),
                     ),
-                    const Icon(HeroiconsOutline.bookmark, color: Color(0xFF3F3F46), size: 20),
+                    ValueListenableBuilder<Set<String>>(
+                      valueListenable: ProductService.savedProductIdsNotifier,
+                      builder: (context, savedIds, _) {
+                        final isSaved = savedIds.contains(product.productId);
+                        return GestureDetector(
+                          onTap: () => _toggleSave(product.productId),
+                          child: Icon(
+                            isSaved ? HeroiconsSolid.bookmark : HeroiconsOutline.bookmark,
+                            color: isSaved ? AppColors.primary : const Color(0xFF3F3F46),
+                            size: 20,
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

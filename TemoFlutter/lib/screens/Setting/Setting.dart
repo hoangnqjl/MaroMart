@@ -14,6 +14,7 @@ import 'package:temo/services/user_service.dart';
 import 'package:provider/provider.dart';
 import 'package:temo/providers/settings_provider.dart';
 import 'package:temo/l10n/app_localizations.dart';
+import 'package:temo/utils/UIHelper.dart';
 
 class Setting extends StatefulWidget {
   final VoidCallback? onMenuTap;
@@ -245,10 +246,21 @@ class _Setting extends State<Setting> {
       ),
       Positioned(
         top: 0, left: 0, right: 0,
-        child: FloatingHeader(
-          title: l10n.settings,
-          isMenu: true,
-          onMenuTap: widget.onMenuTap,
+        child: SafeArea(
+          bottom: false,
+          child: FloatingHeader(
+            title: l10n.settings,
+            isMenu: true,
+            hasBackground: false,
+            onMenuTap: widget.onMenuTap,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            actions: [
+              FloatingHeader.buildActionBubble(
+                icon: HeroiconsSolid.ellipsisVertical,
+                onTap: () => UIHelper.showOptionsMenu(context, screenName: "Cài đặt"),
+              ),
+            ],
+          ),
         ),
       ),
     ],

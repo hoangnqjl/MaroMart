@@ -8,17 +8,18 @@ import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/utils/UIHelper.dart';
+import 'package:temo/services/api_service.dart';
 
-class FeedbackScreen extends StatefulWidget {
-  const FeedbackScreen({super.key});
+class AppImprovementScreen extends StatefulWidget {
+  const AppImprovementScreen({super.key});
 
   @override
-  State<FeedbackScreen> createState() => _FeedbackScreenState();
+  State<AppImprovementScreen> createState() => _AppImprovementScreenState();
 }
 
-class _FeedbackScreenState extends State<FeedbackScreen> {
+class _AppImprovementScreenState extends State<AppImprovementScreen> {
   final TextEditingController _contentController = TextEditingController();
-  String _selectedCategory = 'Phản hồi ứng dụng';
+  String _selectedCategory = 'Đề xuất mới';
   bool _isSubmitting = false;
   List<File> _images = [];
   String _selectedBugType = 'Giao diện';
@@ -58,6 +59,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     setState(() => _isSubmitting = true);
     
     try {
+      final formData = {
+        'category': _selectedCategory,
+        'content': _contentController.text,
+      };
+
+      // Reuse postMultipart if available, or simulate
       await Future.delayed(const Duration(milliseconds: 1500));
       
       if (mounted) {
@@ -100,6 +107,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // Content
           SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -141,7 +149,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   const SizedBox(height: 10),
                   _buildRatingStars(),
                 ],
-
+                
                 // Bug Types (Shown only when Báo lỗi is selected)
                 if (_selectedCategory == 'Báo lỗi') ...[
                   const SizedBox(height: 20),
@@ -205,6 +213,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(45),
                                 image: DecorationImage(image: FileImage(entry.value), fit: BoxFit.cover),
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
                               ),
                             ),
                             Positioned(
@@ -232,6 +241,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               ],
             ),
           ),
+
+          // Sticky Bottom Button
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: SafeArea(
@@ -270,6 +281,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               ),
             ),
           ),
+
+          // Floating Header
           Positioned(
             top: 0, left: 0, right: 0,
             child: SafeArea(

@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'api_service.dart';
 import '../utils/constants.dart';
+import '../utils/storage.dart';
+import 'package:flutter/foundation.dart';
 
 class ProductService {
   final ApiService _apiService = ApiService();
@@ -15,6 +17,80 @@ class ProductService {
 
   void notifyProductChanges() {
     productChangeNotifier.value++;
+  }
+
+  // Global sync for saved products
+  static final ValueNotifier<Set<String>> savedProductIdsNotifier = ValueNotifier<Set<String>>({});
+  static bool _hasFetchedSaved = false;
+  static bool _isFetchingSaved = false;
+
+  Future<void> fetchSavedProductsIfNeeded() async {
+    if (_hasFetchedSaved || _isFetchingSaved) return;
+    
+    // Check token via StorageHelper
+    final token = StorageHelper.getToken();
+    if (token == null) return;
+
+    _isFetchingSaved = true;
+    try {
+      final response = await _apiService.get(endpoint: '/products/user/saved', needAuth: true);
+      if (response != null && response is List) {
+        final Set<String> savedIds = response.map((p) {
+          if (p is Map && p['product'] != null) {
+            return p['product']['productId']?.toString() ?? '';
+          }
+          return p['productId']?.toString() ?? '';
+        }).where((id) => id.isNotEmpty).toSet();
+        
+        savedProductIdsNotifier.value = savedIds;
+        _hasFetchedSaved = true;
+      }
+    } catch (e) {
+      debugPrint("Error fetching saved products: $e");
+    } finally {
+      _isFetchingSaved = false;
+    }
+  }
+
+  Future<void> toggleSave(String productId) async {
+    final currentSaved = Set<String>.from(savedProductIdsNotifier.value);
+    final isCurrentlySaved = currentSaved.contains(productId);
+
+    // Optimistic Update
+    if (isCurrentlySaved) {
+      currentSaved.remove(productId);
+    } else {
+      currentSaved.add(productId);
+    }
+    savedProductIdsNotifier.value = currentSaved;
+
+    try {
+      final response = await _apiService.post(
+        endpoint: '/products/$productId/save',
+        body: {},
+        needAuth: true,
+      );
+      
+      if (response != null && response['isSaved'] != null) {
+        final newSaved = Set<String>.from(savedProductIdsNotifier.value);
+        if (response['isSaved'] == true) {
+          newSaved.add(productId);
+        } else {
+          newSaved.remove(productId);
+        }
+        savedProductIdsNotifier.value = newSaved;
+      }
+    } catch (e) {
+      // Revert on error
+      final revertSaved = Set<String>.from(savedProductIdsNotifier.value);
+      if (isCurrentlySaved) {
+        revertSaved.add(productId);
+      } else {
+        revertSaved.remove(productId);
+      }
+      savedProductIdsNotifier.value = revertSaved;
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> getAISuggestion({

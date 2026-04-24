@@ -26,7 +26,6 @@ class SearchItemState extends State<SearchItem> {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.4),
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: Colors.black12),
             ),
             child: Row(
               children: [

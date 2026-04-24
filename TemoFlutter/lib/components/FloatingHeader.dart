@@ -11,6 +11,7 @@ class FloatingHeader extends StatelessWidget {
   final bool showBackButton;
   final bool isMenu;
   final AlignmentGeometry contentAlignment;
+  final bool hasBackground;
 
   const FloatingHeader({
     super.key,
@@ -22,13 +23,16 @@ class FloatingHeader extends StatelessWidget {
     this.showBackButton = true,
     this.isMenu = false,
     this.contentAlignment = Alignment.center,
+    this.hasBackground = true,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
   });
+
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    return Padding(
+      padding: padding,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -45,15 +49,15 @@ class FloatingHeader extends StatelessWidget {
                 onBack ?? () => Navigator.pop(context),
               )
             else
-              const SizedBox(width: 45), // Maintain spacing
+              const SizedBox(width: 48), // Maintain spacing
 
             Expanded(
               child: Align(
                 alignment: contentAlignment,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  padding: hasBackground ? const EdgeInsets.symmetric(horizontal: 24, vertical: 10) : EdgeInsets.zero,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
+                  decoration: hasBackground ? BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(100),
                     boxShadow: [
@@ -63,13 +67,13 @@ class FloatingHeader extends StatelessWidget {
                         offset: const Offset(0, 5),
                       ),
                     ],
-                  ),
+                  ) : null,
                   child: titleWidget ?? Text(
                     title,
                     style: GoogleFonts.roboto(
-                      fontSize: 15,
+                      fontSize: hasBackground ? 15 : 17,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4B5563),
+                      color: const Color(0xFF111827),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -81,19 +85,18 @@ class FloatingHeader extends StatelessWidget {
             if (actions != null && actions!.isNotEmpty)
               Row(children: actions!)
             else
-              const SizedBox(width: 45), // Maintain spacing
+              const SizedBox(width: 40), // Maintain spacing
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildRoundIconButton(BuildContext context, IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 45,
-        height: 45,
+        width: 48,
+        height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.95),
@@ -119,8 +122,8 @@ class FloatingHeader extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 45,
-        height: 45,
+        width: 48,
+        height: 48,
         margin: const EdgeInsets.only(left: 8),
         alignment: Alignment.center,
         decoration: BoxDecoration(

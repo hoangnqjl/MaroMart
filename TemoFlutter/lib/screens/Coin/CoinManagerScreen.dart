@@ -6,11 +6,13 @@ import 'package:temo/models/User/User.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/utils/UIHelper.dart';
 import 'package:temo/utils/ui_helpers.dart';
+import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/screens/Coin/BankTransferScreen.dart';
 import 'package:temo/app_router.dart';
 
-import '../../components/TopBarCustom.dart';
+
 
 class CoinManagerScreen extends StatefulWidget {
   const CoinManagerScreen({super.key});
@@ -162,11 +164,37 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
             ),
           ),
           
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    FloatingHeader(
+                      title: "Ví Temo (Xu)",
+                      hasBackground: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      actions: [
+                        FloatingHeader.buildActionBubble(
+                          icon: HeroiconsSolid.ellipsisVertical,
+                          onTap: () => UIHelper.showOptionsMenu(context, screenName: "Ví Temo (Xu)"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
           SafeArea(
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                SliverToBoxAdapter(child: TopBarCustom(title: "Ví Temo (Xu)")),
+                const SliverToBoxAdapter(child: SizedBox(height: 70)),
                 
                 // Balance Card
                 SliverToBoxAdapter(
@@ -179,8 +207,14 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
+                          borderRadius: BorderRadius.circular(35),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 30,
+                              offset: const Offset(0, 15),
+                            )
+                          ],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -236,9 +270,15 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.primary.withOpacity(0.1)),
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(color: AppColors.primary.withOpacity(0.05)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                )
+                              ],
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -295,7 +335,17 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                          decoration: BoxDecoration(
+                            color: Colors.white, 
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
                           child: Row(
                             children: [
                               Icon(isDeposit ? HeroiconsOutline.arrowDownLeft : HeroiconsOutline.rocketLaunch, 

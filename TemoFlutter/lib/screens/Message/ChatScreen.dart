@@ -13,6 +13,8 @@ import 'package:temo/utils/storage.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/screens/Common/BugReportScreen.dart';
+import 'package:temo/utils/UIHelper.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -161,6 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // --- MENU OPTION (Modal Bottom Sheet) ---
 
+
   void _showChatOptions(BuildContext context) {
     if (_currentConId.isEmpty) return;
 
@@ -183,12 +186,23 @@ class _ChatScreenState extends State<ChatScreen> {
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
+                margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
+              _buildOptionButton(
+                icon: HeroiconsOutline.exclamationTriangle,
+                label: 'Báo cáo lỗi',
+                iconColor: Colors.red,
+                bgColor: Colors.red.withOpacity(0.1),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => BugReportScreen(preFilledError: "Lỗi tại cuộc hội thoại với ${widget.partnerUser.fullName}")));
+                },
+              ),
+              const SizedBox(height: 12),
               _buildOptionButton(
                 icon: HeroiconsOutline.trash,
                 label: 'Xóa hội thoại',
@@ -199,7 +213,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   _confirmDeleteConversation();
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -551,6 +565,7 @@ class _ChatScreenState extends State<ChatScreen> {
             top: 0, left: 0, right: 0,
             child: FloatingHeader(
               title: "",
+              hasBackground: false,
               contentAlignment: Alignment.center,
               titleWidget: Row(
                 mainAxisSize: MainAxisSize.min,

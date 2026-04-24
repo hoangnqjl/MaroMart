@@ -13,7 +13,6 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/FloatingHeader.dart';
-import 'package:temo/components/PremiumTabSwitcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -33,7 +32,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   List<NotificationModel> _allNotifications = [];
   bool _isLoading = true;
-  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -140,8 +138,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   List<NotificationModel> get _displayNotifications {
-    if (_selectedTab == 1) return _allNotifications.where((n) => !n.isRead).toList();
-    if (_selectedTab == 2) return _allNotifications.where((n) => n.isRead).toList();
     return _allNotifications;
   }
 
@@ -188,11 +184,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           Positioned(
             top: 0, left: 0, right: 0,
-            child: FloatingHeader(
-              title: "Thông báo",
-              actions: [
-                _buildHeaderMenu(),
-              ],
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: FloatingHeader(
+                  title: "Thông báo",
+                  hasBackground: false,
+                  actions: [
+                    _buildHeaderMenu(),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -201,81 +204,65 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Widget _buildHeaderMenu() {
-    return PopupMenuButton<String>(
-      offset: const Offset(0, 70),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-      elevation: 8,
-      icon: Container(
-        width: 44, height: 44,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
-          ],
-        ),
-        child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+    return MenuAnchor(
+      style: MenuStyle(
+        shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32))),
+        backgroundColor: WidgetStateProperty.all(Colors.white),
+        elevation: WidgetStateProperty.all(12),
+        shadowColor: WidgetStateProperty.all(Colors.black26),
+        surfaceTintColor: WidgetStateProperty.all(Colors.white),
+        padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 8)),
       ),
-      color: Colors.white,
-      surfaceTintColor: Colors.white,
-      onSelected: (value) {
-        if (value == 'delete_all') {
-          _deleteAll();
-        } else if (value.startsWith('filter_')) {
-          final idx = int.parse(value.split('_')[1]);
-          setState(() => _selectedTab = idx);
-        } else if (value == 'mark_read') {
-          // Logic for marking all as read
-        }
+      alignmentOffset: const Offset(-215, 12),
+      builder: (context, controller, child) {
+        return GestureDetector(
+          onTap: () {
+            if (controller.isOpen) controller.close();
+            else controller.open();
+          },
+          child: Container(
+            width: 44, height: 44,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+              ],
+            ),
+            child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+          ),
+        );
       },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'filter_0',
-          height: 56,
-          child: _buildPopupItem(
-            icon: HeroiconsOutline.rectangleGroup,
-            label: "Tất cả",
-            color: Colors.green,
-            isSelected: _selectedTab == 0,
-          ),
-        ),
-        PopupMenuItem(
-          value: 'filter_1',
-          height: 56,
-          child: _buildPopupItem(
-            icon: HeroiconsOutline.bell,
-            label: "Chưa đọc",
-            color: AppColors.primary,
-            isSelected: _selectedTab == 1,
-          ),
-        ),
-        PopupMenuItem(
-          value: 'filter_2',
-          height: 56,
-          child: _buildPopupItem(
-            icon: HeroiconsOutline.checkCircle,
-            label: "Đã đọc",
-            color: Colors.blue,
-            isSelected: _selectedTab == 2,
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'mark_read',
-          height: 56,
-          child: _buildPopupItem(
-            icon: HeroiconsOutline.checkCircle,
-            label: "Đánh dấu tất cả đã đọc",
-            color: Colors.grey,
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete_all',
-          height: 56,
-          child: _buildPopupItem(
-            icon: HeroiconsOutline.trash,
-            label: "Xóa toàn bộ thông báo",
-            color: AppColors.accent,
+      menuChildren: [
+        AnimationLimiter(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: AnimationConfiguration.toStaggeredList(
+              duration: const Duration(milliseconds: 400),
+              childAnimationBuilder: (widget) => FadeInAnimation(
+                child: widget,
+              ),
+              children: [
+                MenuItemButton(
+                  onPressed: () {
+                    // Logic for marking all as read
+                  },
+                  child: _buildPopupItem(
+                    icon: HeroiconsOutline.checkCircle,
+                    label: "Đánh dấu tất cả đã đọc",
+                    color: Colors.grey,
+                  ),
+                ),
+                MenuItemButton(
+                  onPressed: () => _deleteAll(),
+                  child: _buildPopupItem(
+                    icon: HeroiconsOutline.trash,
+                    label: "Xóa toàn bộ thông báo",
+                    color: AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -308,7 +295,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             style: GoogleFonts.quicksand(
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
-              color: isSelected ? color : const Color(0xFF374151),
+              color: const Color(0xFF111827),
             ),
           ),
         ],
@@ -369,9 +356,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.transparent,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: const Color(0x26000000), width: 0.4),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            )
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -415,39 +408,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Widget _buildTabButton(int index, String text, {bool hasDot = false}) {
-    final isSelected = _selectedTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryThemeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(50),
-        ),
-        child: Row(
-          children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[600],
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            if (hasDot && !isSelected && _hasUnread)
-              Container(
-                margin: const EdgeInsets.only(left: 4),
-                width: 6, height: 6,
-                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-              )
-          ],
-        ),
-      ),
-    );
-  }
-
-  bool get _hasUnread => _allNotifications.any((n) => !n.isRead);
   bool _isSameDay(DateTime date1, DateTime date2) =>
       date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
 

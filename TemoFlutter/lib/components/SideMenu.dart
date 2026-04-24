@@ -44,28 +44,24 @@ class SideMenu extends StatelessWidget {
               _buildMenuItem(
                 icon: HeroiconsOutline.user, 
                 label: "Chỉnh sửa cá nhân", 
-                color: Colors.blueAccent,
-                onTap: () => onNavigate(const Setting()), // Form setting cá nhân hoặc tuỳ
+                onTap: () => onNavigate(const Setting()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
                 icon: HeroiconsOutline.bookmark, 
                 label: "Danh sách đã lưu", 
-                color: Colors.purpleAccent,
                 onTap: () => onNavigate(const SavedProductsScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
                 icon: HeroiconsOutline.currencyDollar, 
                 label: "Coins", 
-                color: Colors.redAccent,
                 onTap: () => onNavigate(const CoinManagerScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
                 icon: HeroiconsOutline.language, 
                 label: "Ngôn ngữ", 
-                color: Colors.green,
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -82,14 +78,12 @@ class SideMenu extends StatelessWidget {
               _buildMenuItem(
                 icon: HeroiconsOutline.chatBubbleLeftRight, 
                 label: "Feedback", 
-                color: Colors.orange,
                 onTap: () => onNavigate(const FeedbackScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
                 icon: HeroiconsOutline.arrowRightOnRectangle, 
                 label: "Đăng xuất", 
-                color: Colors.grey,
                 onTap: () => _handleLogout(context),
               ),
               
@@ -153,7 +147,6 @@ class SideMenu extends StatelessWidget {
   Widget _buildMenuItem({
     required IconData icon, 
     required String label, 
-    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -162,11 +155,11 @@ class SideMenu extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF3F4F6),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: const Color(0xFF1F2937), size: 22),
           ),
           const SizedBox(width: 16),
           Text(

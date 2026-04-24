@@ -27,6 +27,7 @@ import 'package:temo/utils/string_utils.dart';
 import 'package:temo/components/Skeleton.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/services/notification_service.dart';
+import 'package:temo/screens/Product/SavedProductsScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -308,7 +309,9 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
@@ -418,7 +421,10 @@ class HomeScreenState extends State<HomeScreen> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildCircleIcon('assets/images/Iconluu.svg'),
+                                GestureDetector(
+                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SavedProductsScreen())),
+                                  child: _buildCircleIcon('assets/images/Iconluu.svg'),
+                                ),
                                 const SizedBox(width: 16),
                                 GestureDetector(
                                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationScreen())),
@@ -454,7 +460,6 @@ class HomeScreenState extends State<HomeScreen> {
                             gradient: _searchFocusNode.hasFocus 
                               ? const LinearGradient(colors: [Color(0xFFFFB86A), Color(0xFFFB7C7F)])
                               : null,
-                            border: _searchFocusNode.hasFocus ? null : Border.all(color: const Color(0x40000000), width: 1.5),
                           ),
                           child: Container(
                             margin: _searchFocusNode.hasFocus ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
@@ -831,7 +836,8 @@ class HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
+    ),
+   );
   }
 
   Widget _buildCircleIcon(String assetPath) {

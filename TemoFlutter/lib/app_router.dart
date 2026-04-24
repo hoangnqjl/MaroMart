@@ -14,6 +14,7 @@ import '../screens/authencation/Login/signin_screen.dart';
 import 'package:temo/screens/Product/SuccessPostScreen.dart';
 import 'package:temo/screens/Coin/CoinManagerScreen.dart';
 import 'package:temo/screens/Setting/AboutScreen.dart';
+import 'package:temo/screens/Profile/UserProfileScreen.dart';
 
 
 // iOS-style smooth route transition
@@ -116,6 +117,9 @@ Route? onGenerateRoute(RouteSettings settings) {
     case '/product_detail':
       final productId = settings.arguments as String? ?? '';
       return smoothRoute(ProductDetail(productId: productId), settings);
+    case '/user_profile':
+      final userId = settings.arguments as String? ?? '';
+      return smoothRoute(UserProfileScreen(userId: userId), settings);
     default:
       return null;
   }
