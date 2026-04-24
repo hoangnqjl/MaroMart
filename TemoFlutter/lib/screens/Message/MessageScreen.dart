@@ -19,6 +19,7 @@ import 'package:temo/components/Skeleton.dart';
 import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/components/PremiumTabSwitcher.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:temo/utils/UIHelper.dart';
 
 
 class MessageScreen extends StatefulWidget {
@@ -276,79 +277,41 @@ class _MessageScreenState extends State<MessageScreen> {
   }
 
   Widget _buildCustomHeader() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    return Container(
+      color: Colors.white,
+      child: SafeArea(
+        bottom: false,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            // Row 1: Menu - Title - Avatar
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => widget.onMenuTap?.call(),
-
-                  child: Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-                      ],
-                    ),
-                    child: const Icon(HeroiconsOutline.bars3BottomLeft, color: Colors.black87, size: 22),
-                  ),
+            FloatingHeader(
+              title: "Chats",
+              isMenu: true,
+              hasBackground: false,
+              onMenuTap: () => widget.onMenuTap?.call(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              actions: [
+                FloatingHeader.buildActionBubble(
+                  icon: HeroiconsSolid.ellipsisVertical,
+                  onTap: () => UIHelper.showOptionsMenu(context, screenName: "Tin nhắn"),
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-                    ],
-                  ),
-                  child: Text(
-                    "Chats",
-                    style: GoogleFonts.roboto(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4B5563),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                const SizedBox(width: 44),
               ],
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      gradient: _searchBarFocusNode.hasFocus 
-                        ? const LinearGradient(colors: [Color(0xFFFFB86A), Color(0xFFFB7C7F)])
-                        : null,
-                      border: _searchBarFocusNode.hasFocus ? null : Border.all(color: const Color(0x40000000), width: 1.5),
-                    ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Container(
-                      margin: _searchBarFocusNode.hasFocus ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(50),
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                       child: Row(
                         children: [
-                          const SizedBox(width: 16),
-                          Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[500], size: 20),
+                          const SizedBox(width: 18),
+                          Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[400], size: 20),
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
@@ -370,22 +333,20 @@ class _MessageScreenState extends State<MessageScreen> {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                PopupMenuButton<int>(
-                  offset: const Offset(0, 52),
-                  padding: EdgeInsets.zero,
-                  color: Colors.white,
-                  elevation: 10,
-                  icon: Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0x40000000), width: 1.5),
+                  const SizedBox(width: 10),
+                  PopupMenuButton<int>(
+                    offset: const Offset(0, 52),
+                    padding: EdgeInsets.zero,
+                    color: Colors.white,
+                    elevation: 10,
+                    icon: Container(
+                      width: 48, height: 48,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF3F4F6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(HeroiconsOutline.adjustmentsHorizontal, color: const Color(0xFF111827), size: 22),
                     ),
-                    child: Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.grey[600], size: 20),
-                  ),
                   onSelected: (value) => setState(() => _selectedTab = value),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                   itemBuilder: (context) => [
@@ -397,11 +358,13 @@ class _MessageScreenState extends State<MessageScreen> {
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   PopupMenuItem<int> _buildFilterMenuItem(int value, String label, IconData icon, Color color) {
     final isSelected = _selectedTab == value;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
@@ -12,11 +13,15 @@ import 'package:temo/services/user_service.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/app_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:temo/components/ModernLoader.dart'; // Import
 import 'package:temo/components/CommonAppBar.dart';
 
 import 'package:temo/components/TerminalButton.dart';
+import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/utils/UIHelper.dart';
+import 'package:temo/screens/Common/BugReportScreen.dart';
 
 class ProductManager extends StatefulWidget {
   final VoidCallback? onMenuTap;
@@ -369,13 +374,15 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
   
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
         backgroundColor: Colors.white,
         body: Stack(
           children: [
             Column(
               children: [
-                const SizedBox(height: 160), 
+                const SizedBox(height: 180), 
                 Expanded(
                   child: _isLoading
                       ? Center(child: ModernLoader(color: primaryThemeColor))
@@ -385,154 +392,121 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
             ),
             Positioned(
               top: 0, left: 0, right: 0,
-              child: _buildCustomHeader(),
-            ),
-          ],
-        ),
-    );
-  }
-
-  Widget _buildCustomHeader() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: widget.onMenuTap,
-                  child: Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-                      ],
-                    ),
-                    child: const Icon(HeroiconsOutline.bars3BottomLeft, color: Color(0xFF4B5563), size: 24),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-                    ],
-                  ),
-                  child: Text(
-                    "Quản lý sản phẩm",
-                    style: GoogleFonts.roboto(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4B5563),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                const SizedBox(width: 44),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Row 2: Search & Filter
-            Row(
-              children: [
-                Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      color: Colors.white,
-                      gradient: _searchFocusNode.hasFocus 
-                        ? const LinearGradient(colors: [Color(0xFFFFB86A), Color(0xFFFB7C7F)])
-                        : null,
-                      border: _searchFocusNode.hasFocus ? null : Border.all(color: const Color(0x1F000000), width: 1.5),
-                    ),
-                    child: Container(
-                      margin: _searchFocusNode.hasFocus ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 14),
-                          Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[400], size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _searchController,
-                              focusNode: _searchFocusNode,
-                              decoration: InputDecoration(
-                                hintText: "Tìm sản phẩm...",
-                                hintStyle: GoogleFonts.quicksand(color: Colors.grey[400], fontSize: 14, fontWeight: FontWeight.w600),
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                            ),
+              child: Container(
+                color: Colors.white,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      FloatingHeader(
+                        title: "Quản lý sản phẩm",
+                        isMenu: true,
+                        hasBackground: false,
+                        onMenuTap: widget.onMenuTap,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        actions: [
+                          FloatingHeader.buildActionBubble(
+                            icon: HeroiconsSolid.ellipsisVertical,
+                            onTap: () => UIHelper.showOptionsMenu(context, screenName: "Quản lý sản phẩm"),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Theme(
-                  data: Theme.of(context).copyWith(
-                    hoverColor: Colors.transparent,
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                  ),
-                  child: PopupMenuButton<int>(
-                    offset: const Offset(0, 52),
-                    padding: EdgeInsets.zero,
-                    color: Colors.white,
-                    elevation: 10,
-                    icon: Container(
-                      width: 48, height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0x1F000000), width: 1.5),
-                      ),
-                      child: Icon(HeroiconsOutline.adjustmentsHorizontal, color: Colors.grey[600], size: 20),
-                    ),
-                    onSelected: (val) {
-                      if (val >= 10) {
-                        setState(() => _selectedFilter = val - 10);
-                      } else {
-                        setState(() {
-                          _selectedStatusIndex = val;
-                          _fetchUserProducts();
-                        });
-                      }
-                    },
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                    itemBuilder: (context) => [
-                      _buildFilterItemHeader("TRẠNG THÁI"),
-                      _buildStatusMenuItem(0, "Đang bán", HeroiconsOutline.checkBadge, Colors.orange),
-                      _buildStatusMenuItem(1, "Bản nháp", HeroiconsOutline.pencilSquare, Colors.blue),
-                      _buildStatusMenuItem(2, "Chờ duyệt", HeroiconsOutline.clock, Colors.purple),
-                      const PopupMenuDivider(),
-                      _buildFilterItemHeader("SẮP XẾP"),
-                      _buildSortMenuItem(10, "Mới nhất", HeroiconsOutline.sparkles, Colors.deepPurple),
-                      _buildSortMenuItem(11, "Giá: Thấp -> Cao", HeroiconsOutline.barsArrowUp, Colors.green),
-                      _buildSortMenuItem(12, "Giá: Cao -> Thấp", HeroiconsOutline.barsArrowDown, Colors.teal),
+                      const SizedBox(height: 16),
+                      _buildSearchFilterArea(),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchFilterArea() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 18),
+                  Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[400], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      style: GoogleFonts.roboto(fontWeight: FontWeight.w600, fontSize: 15),
+                      decoration: InputDecoration(
+                        hintText: "Tìm sản phẩm...",
+                        hintStyle: GoogleFonts.roboto(color: Colors.grey[400], fontSize: 14),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildFilterButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+      ),
+      child: PopupMenuButton<int>(
+        offset: const Offset(0, 60),
+        color: Colors.white,
+        elevation: 20,
+        padding: EdgeInsets.zero,
+        icon: Container(
+          width: 48, height: 48,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF3F4F6),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(HeroiconsOutline.adjustmentsHorizontal, color: Color(0xFF111827), size: 22),
+        ),
+        onSelected: (val) {
+          if (val >= 10) {
+            setState(() => _selectedFilter = val - 10);
+          } else {
+            setState(() {
+              _selectedStatusIndex = val;
+              _fetchUserProducts();
+            });
+          }
+        },
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        itemBuilder: (context) => [
+          _buildFilterItemHeader("TRẠNG THÁI"),
+          _buildStatusMenuItem(0, "Đang bán", HeroiconsOutline.checkBadge, AppColors.primary),
+          _buildStatusMenuItem(1, "Bản nháp", HeroiconsOutline.pencilSquare, Colors.grey),
+          _buildStatusMenuItem(2, "Chờ duyệt", HeroiconsOutline.clock, Colors.blueGrey),
+          const PopupMenuDivider(),
+          _buildFilterItemHeader("SẮP XẾP"),
+          _buildSortMenuItem(10, "Mới nhất", HeroiconsOutline.sparkles, Colors.deepPurple),
+          _buildSortMenuItem(11, "Giá: Thấp -> Cao", HeroiconsOutline.barsArrowUp, Colors.green),
+          _buildSortMenuItem(12, "Giá: Cao -> Thấp", HeroiconsOutline.barsArrowDown, Colors.teal),
+        ],
       ),
     );
   }
@@ -570,7 +544,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
               style: GoogleFonts.quicksand(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: color,
+                color: const Color(0xFF111827),
               ),
             ),
           ),
@@ -603,7 +577,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
               style: GoogleFonts.quicksand(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: color,
+                color: const Color(0xFF111827),
               ),
             ),
           ),
@@ -705,7 +679,10 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                 children: [
                   Text(product.productName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text(product.productCategory.toUpperCase(), style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                  Text(
+                    "${product.productCategory}${_getProductType(product.productAttribute).isNotEmpty ? ' • ${_getProductType(product.productAttribute)}' : ''}".toUpperCase(), 
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -720,9 +697,67 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                GestureDetector(
-                  onTap: () => _showProductOptions(context, product),
-                  child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+                MenuAnchor(
+                  style: MenuStyle(
+                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+                    backgroundColor: WidgetStateProperty.all(Colors.white),
+                    elevation: WidgetStateProperty.all(12),
+                    shadowColor: WidgetStateProperty.all(Colors.black26),
+                    surfaceTintColor: WidgetStateProperty.all(Colors.white),
+                    padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 8)),
+                  ),
+                  alignmentOffset: const Offset(-195, 12),
+                  builder: (context, controller, child) {
+                    return GestureDetector(
+                      onTap: () {
+                        if (controller.isOpen) controller.close();
+                        else controller.open();
+                      },
+                      child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+                    );
+                  },
+                  menuChildren: [
+                    AnimationLimiter(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: AnimationConfiguration.toStaggeredList(
+                          duration: const Duration(milliseconds: 400),
+                          childAnimationBuilder: (widget) => FadeInAnimation(
+                            child: widget,
+                          ),
+                          children: [
+                            MenuItemButton(
+                              onPressed: () => _showPushSheet(context, product),
+                              child: _buildPopupItem(
+                                icon: HeroiconsOutline.arrowTrendingUp,
+                                label: 'Đẩy tin / Ưu tiên',
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            MenuItemButton(
+                              onPressed: () async {
+                                final result = await smoothPush(context, UpdateProduct(product: product));
+                                if (result == true) _fetchUserProducts();
+                              },
+                              child: _buildPopupItem(
+                                icon: HeroiconsOutline.pencilSquare,
+                                label: 'Chỉnh sửa tin',
+                                color: Colors.blue,
+                              ),
+                            ),
+                            MenuItemButton(
+                              onPressed: () => _confirmDelete(product),
+                              child: _buildPopupItem(
+                                icon: HeroiconsOutline.trash,
+                                label: 'Xóa tin này',
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 25),
                 Text(_formatDate(product.createdAt, 'dd MMM'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
@@ -746,6 +781,30 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
           Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor)),
         ],
       ),
+    );
+  }
+
+  Widget _buildPopupItem({required IconData icon, required String label, required Color color}) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: GoogleFonts.quicksand(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF111827),
+          ),
+        ),
+      ],
     );
   }
 
@@ -775,5 +834,15 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
         ),
       ),
     );
+  }
+
+  String _getProductType(dynamic attr) {
+    if (attr == null) return "";
+    try {
+      final Map<String, dynamic> data = attr is String ? jsonDecode(attr) : Map<String, dynamic>.from(attr);
+      return data['type']?.toString() ?? data['Loại sản phẩm']?.toString() ?? "";
+    } catch (e) {
+      return "";
+    }
   }
 }

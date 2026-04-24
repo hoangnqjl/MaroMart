@@ -162,7 +162,9 @@ class _Setting extends State<Setting> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          SingleChildScrollView(
+          Positioned.fill(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -239,11 +241,12 @@ class _Setting extends State<Setting> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 120),
             ],
           ),
         ),
       ),
+    ),
       Positioned(
         top: 0, left: 0, right: 0,
         child: SafeArea(

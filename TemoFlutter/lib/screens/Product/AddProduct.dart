@@ -1267,7 +1267,7 @@ class _AddProductState extends State<AddProduct> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 100), // Space for floating header
+              const SizedBox(height: 120), // Space for floating header
               // CUSTOM STEPPER
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -1302,15 +1302,19 @@ class _AddProductState extends State<AddProduct> {
           ),
           Positioned(
             top: 0, left: 0, right: 0,
-            child: FloatingHeader(
-              title: "Đăng tin mới",
-              actions: [
-                FloatingHeader.buildActionBubble(
-                  icon: HeroiconsOutline.bookmark,
-                  onTap: _saveDraft,
-                  color: Colors.blue,
-                ),
-              ],
+            child: SafeArea(
+              bottom: false,
+              child: FloatingHeader(
+                title: "Đăng tin mới",
+                hasBackground: false,
+                actions: [
+                  FloatingHeader.buildActionBubble(
+                    icon: HeroiconsOutline.bookmark,
+                    onTap: _saveDraft,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

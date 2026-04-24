@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/screens/Common/BugReportScreen.dart';
 import 'package:temo/components/VideoPlayerWidget.dart';
 import 'package:temo/models/Media/MediaItem.dart';
 import 'package:temo/models/Product/Product.dart';
@@ -28,6 +30,8 @@ import 'package:temo/utils/storage.dart';
 import 'package:temo/models/User/User.dart' as model_user;
 import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/services/user_service.dart';
+import 'package:temo/utils/constants.dart';
+import 'package:temo/screens/Setting/AppImprovementScreen.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -57,46 +61,37 @@ class ProductDetailState extends State<ProductDetail> {
   String? _distanceText;
   Position? _currentPosition;
   String? _currentUserId;
-  bool _isSaved = false;
+  final MapController _mapController = MapController();
+  final ScrollController _scrollController = ScrollController();
+  double _headerOpacity = 0.0;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _currentUserId = StorageHelper.getUserId();
+    _scrollController.addListener(_onScroll);
     _fetchProductDetail();
-    _checkIfSaved();
+    _productService.fetchSavedProductsIfNeeded();
   }
 
-  Future<void> _checkIfSaved() async {
-    try {
-      final response = await ApiService().get(endpoint: '/products/user/saved', needAuth: true);
-      if (response != null && response is List) {
-        bool saved = response.any((p) => p['productId'] == widget.productId || (p['product'] != null && p['product']['productId'] == widget.productId));
-        if (mounted) setState(() => _isSaved = saved);
-      }
-    } catch (e) {
-      print('Lỗi kiểm tra sản phẩm lưu: $e');
+  void _onScroll() {
+    double offset = _scrollController.offset;
+    double opacity = (offset / 150).clamp(0.0, 1.0);
+    if (opacity != _headerOpacity) {
+      setState(() => _headerOpacity = opacity);
     }
   }
 
+
   Future<void> _toggleSaveProduct() async {
     try {
-      // Optistic update
-      setState(() => _isSaved = !_isSaved);
-      
-      final response = await ApiService().post(
-         endpoint: '/products/${widget.productId}/save',
-         body: {}, 
-         needAuth: true
-      );
-      if (response != null && response['isSaved'] != null) {
-        setState(() {
-          _isSaved = response['isSaved'];
-        });
-      }
+      await _productService.toggleSave(widget.productId);
     } catch (e) {
       print('Lỗi lưu/ẩn sản phẩm: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: ${e.toString().replaceAll("Exception: ", "")}')),
+      );
     }
   }
 
@@ -136,13 +131,34 @@ class ProductDetailState extends State<ProductDetail> {
         }
       }
     } catch (e) {
-      debugPrint("Error calculating distance: $e");
+      debugPrint("Lỗi tính khoảng cách: $e");
     }
+  }
+
+  Future<List<LatLng>> _getRoutePoints(LatLng start, LatLng end) async {
+    try {
+      final String url = 'https://router.project-osrm.org/route/v1/driving/'
+          '${start.longitude},${start.latitude};${end.longitude},${end.latitude}'
+          '?overview=full&geometries=geojson';
+      
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final List coords = data['routes'][0]['geometry']['coordinates'];
+          return coords.map((c) => LatLng(c[1].toDouble(), c[0].toDouble())).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint("Lỗi lấy chỉ đường: $e");
+    }
+    return [];
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -219,6 +235,7 @@ class ProductDetailState extends State<ProductDetail> {
         children: [
           Positioned.fill(
             child: SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,11 +251,18 @@ class ProductDetailState extends State<ProductDetail> {
                         const SizedBox(height: 16),
                         _buildTagButtons(product),
                         const SizedBox(height: 24),
+                        _buildSellerInfo(product),
+                        const SizedBox(height: 24),
                         _buildSectionTitle("Mô tả chi tiết"),
                         const SizedBox(height: 8),
                         Text(
                           product.productDescription,
-                          style: GoogleFonts.roboto(fontSize: 14, color: const Color(0xFF3F3F46).withOpacity(0.62), height: 1.5),
+                          style: GoogleFonts.inter(
+                            fontSize: 14.5,
+                            color: const Color(0xFF4B5563),
+                            height: 1.65,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                         const SizedBox(height: 24),
                         _buildSectionTitle("Thông số sản phẩm"),
@@ -281,11 +305,9 @@ class ProductDetailState extends State<ProductDetail> {
 
           // TOP BAR
           _buildTopBar(),
-
-          // BOTTOM BAR
-          _buildFloatingActionBar(),
         ],
       ),
+      bottomNavigationBar: _buildBottomBar(),
     );
   }
 
@@ -293,53 +315,45 @@ class ProductDetailState extends State<ProductDetail> {
     return Positioned(
       top: 0, left: 0, right: 0,
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildRoundIconButton(HeroiconsSolid.chevronLeft, () => Navigator.pop(context)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+        bottom: false,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(_headerOpacity),
+            boxShadow: _headerOpacity > 0.5 
+              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))]
+              : [],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildRoundIconButton(
+                  HeroiconsSolid.chevronLeft, 
+                  () => Navigator.pop(context),
                 ),
-                child: Text(
+                Text(
                   "Chi tiết sản phẩm",
                   style: GoogleFonts.roboto(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF3F3F46),
+                    color: const Color(0xFF111827),
                   ),
                 ),
-              ),
-              Row(
-                children: [
-                   _buildRoundIconButton(
-                    _isSaved ? HeroiconsSolid.heart : HeroiconsOutline.heart,
-                    _toggleSaveProduct,
-                    iconColor: _isSaved ? Colors.redAccent : const Color(0xFF3F3F46),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildRoundIconButton(HeroiconsSolid.ellipsisVertical, _showMoreOptions),
-                ],
-              ),
-            ],
+                _buildRoundIconButton(
+                  HeroiconsSolid.ellipsisVertical, 
+                  _showMoreOptions,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildRoundIconButton(IconData icon, VoidCallback onTap, {Color iconColor = const Color(0xFF3F3F46)}) {
+  Widget _buildRoundIconButton(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -357,7 +371,7 @@ class ProductDetailState extends State<ProductDetail> {
             )
           ],
         ),
-        child: Icon(icon, color: iconColor, size: 20),
+        child: Icon(icon, color: const Color(0xFF3F3F46), size: 20),
       ),
     );
   }
@@ -374,7 +388,10 @@ class ProductDetailState extends State<ProductDetail> {
               controller: _pageController,
               onPageChanged: (index) => setState(() => currentPage = index),
               itemCount: _mediaItems.length,
-              itemBuilder: (context, index) => _buildMediaItem(_mediaItems[index]),
+              itemBuilder: (context, index) => GestureDetector(
+                onTap: () => _showFullScreenGallery(index),
+                child: _buildMediaItem(_mediaItems[index]),
+              ),
             ),
           ),
           Positioned(
@@ -396,82 +413,190 @@ class ProductDetailState extends State<ProductDetail> {
     );
   }
 
-  Widget _buildProductHeader(Product product) {
-    return Row(
+      Widget _buildProductHeader(Product product) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "đ ${product.formattedPrice}",
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFFFB86A), fontFamily: 'QuickSand'),
+        // MAIN CONTENT (PRICE/TITLE + ANIMATED BOOKMARK)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "₫ ${product.formattedPrice}",
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    product.productName,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF111827),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                product.productName,
-                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF3F3F46).withOpacity(0.8)),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            _buildAnimatedBookmarkButton(),
+          ],
         ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-          ),
-          child: Row(
-            children: [
-              ClipOval(child: Image.network(product.userInfo?.avatarUrl ?? '', width: 30, height: 30, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 30))),
-              const SizedBox(width: 8),
-              Text(
-                _totalReviews > 0 ? _sellerRating.toStringAsFixed(1) : "0.0",
-                style: GoogleFonts.roboto(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF3F3F46).withOpacity(0.8),
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.star_rate_rounded, color: Color(0xFFFFB86A), size: 18),
-              const SizedBox(width: 4),
-              Text(
-                "($_totalReviews)",
-                style: GoogleFonts.roboto(
-                  fontSize: 14,
-                  color: const Color(0xFF3F3F46).withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (product.marketPrice != null && product.marketPrice! > product.productPrice)
+        
+        // MARKET PRICE INFO
+        if (product.marketPrice != null && product.marketPrice! > product.productPrice) ...[
+          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              "Rẻ hơn ${(product.marketPrice! - product.productPrice).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} đ so với thị trường",
-              style: GoogleFonts.roboto(
+              "Rẻ hơn ${(product.marketPrice! - product.productPrice).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ so với thị trường",
+              style: GoogleFonts.inter(
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF2E7D32),
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF059669),
               ),
             ),
           ),
+        ],
       ],
     );
   }
 
+  Widget _buildSellerInfo(Product product) {
+    // Tiền xử lý URL ảnh đại diện
+    String avatarUrl = product.userInfo?.avatarUrl ?? '';
+    if (avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
+      avatarUrl = '${ApiConstants.baseUrl}$avatarUrl';
+    }
+
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/user_profile', arguments: product.userId),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB), // Xám cực nhạt để tạo khối
+          borderRadius: BorderRadius.circular(30), // Bo cong hoàn toàn (Pill shape)
+          border: Border.all(color: const Color(0xFFF3F4F6), width: 1),
+        ),
+        child: Row(
+          children: [
+            // Avatar với Placeholder chuyên nghiệp hơn
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE5E7EB),
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(
+                child: avatarUrl.isNotEmpty
+                    ? Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 24),
+                      )
+                    : const Icon(Icons.person, color: Colors.white, size: 24),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.userInfo?.fullName ?? 'Người bán',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: const Color(0xFF111827),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        _totalReviews > 0 ? _sellerRating.toStringAsFixed(1) : '0.0',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "• $_totalReviews đánh giá",
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: const Color(0xFF6B7280),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Nút "Xem Shop" hoặc "Liên hệ" nhỏ (Optional)
+            Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedBookmarkButton() {
+    return ValueListenableBuilder<Set<String>>(
+      valueListenable: ProductService.savedProductIdsNotifier,
+      builder: (context, savedIds, _) {
+        final isSaved = savedIds.contains(widget.productId);
+        return _BookmarkButton(
+          isSaved: isSaved,
+          onTap: _toggleSaveProduct,
+        );
+      },
+    );
+  }
+
+  String _translateCondition(String condition) {
+    final lower = condition.toLowerCase().trim();
+    if (lower == 'used' || lower == 'cũ' || lower == 'đã sử dụng') return 'Đã qua sử dụng';
+    if (lower == 'new' || lower == 'mới') return 'Mới';
+    if (lower == 'like new' || lower == 'like_new') return 'Như mới';
+    if (lower == 'refurbished') return 'Tân trang';
+    return condition;
+  }
+
   Widget _buildTagButtons(Product product) {
-    final List<String> tags = [];
-    if (product.productCondition.isNotEmpty) tags.add(product.productCondition);
-    if (_distanceText != null) tags.add(_distanceText!);
+    final List<Map<String, dynamic>> tags = [];
+    if (product.productCondition.isNotEmpty) {
+      tags.add({
+        'label': _translateCondition(product.productCondition),
+        'icon': HeroiconsOutline.tag,
+        'color': const Color(0xFF6B7280),
+        'bg': const Color(0xFFF3F4F6),
+      });
+    }
+    if (_distanceText != null) {
+      tags.add({
+        'label': _distanceText!,
+        'icon': HeroiconsOutline.mapPin,
+        'color': const Color(0xFF6B7280),
+        'bg': const Color(0xFFF3F4F6),
+      });
+    }
     
     if (tags.isEmpty) return const SizedBox.shrink();
 
@@ -480,17 +605,23 @@ class ProductDetailState extends State<ProductDetail> {
       child: Row(
         children: tags.map((tag) => Padding(
           padding: const EdgeInsets.only(right: 10),
-          child: Material(
-            color: const Color(0xFFEAEAEA),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              alignment: Alignment.center,
-              child: Text(
-                tag,
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF3F3F46)),
-              ),
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: tag['bg'] as Color,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(tag['icon'] as IconData, size: 13, color: tag['color'] as Color),
+                const SizedBox(width: 6),
+                Text(
+                  tag['label'] as String,
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: tag['color'] as Color),
+                ),
+              ],
             ),
           ),
         )).toList(),
@@ -499,8 +630,56 @@ class ProductDetailState extends State<ProductDetail> {
   }
 
   Widget _buildSectionTitle(String title, {Color? color}) {
-    final defaultColor = const Color(0xFF3F3F46).withOpacity(0.8);
-    return Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color ?? defaultColor, fontFamily: 'QuickSand'));
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: color ?? const Color(0xFF111827),
+      ),
+    );
+  }
+
+  static const Map<String, String> _specLabelMap = {
+    'cpu': 'Bộ vi xử lý',
+    'processor': 'Bộ vi xử lý',
+    'ram': 'Bộ nhớ RAM',
+    'memory': 'Bộ nhớ RAM',
+    'type': 'Loại thiết bị',
+    'device_type': 'Loại thiết bị',
+    'model': 'Kiểu máy',
+    'storage': 'Dung lượng',
+    'capacity': 'Dung lượng',
+    'condition': 'Tình trạng',
+    'screen': 'Kích thước màn hình',
+    'screen_size': 'Kích thước màn hình',
+    'display': 'Kích thước màn hình',
+    'battery': 'Dung lượng pin',
+    'battery_capacity': 'Dung lượng pin',
+    'os': 'Hệ điều hành',
+    'operating_system': 'Hệ điều hành',
+    'brand': 'Thương hiệu',
+    'color': 'Màu sắc',
+    'weight': 'Trọng lượng',
+    'material': 'Chất liệu',
+    'warranty': 'Bảo hành',
+    'origin': 'Xuất xứ',
+  };
+
+  String _translateSpecValue(String key, String value) {
+    final lowerVal = value.toLowerCase().trim();
+    if (lowerVal == 'smartphone') return 'Điện thoại thông minh';
+    if (lowerVal == 'tablet') return 'Máy tính bảng';
+    if (lowerVal == 'laptop') return 'Máy tính xách tay';
+    if (lowerVal == 'used') return 'Cũ';
+    if (lowerVal == 'new') return 'Mới';
+    if (lowerVal == 'like new') return 'Như mới';
+    if (lowerVal == 'refurbished') return 'Tân trang';
+    return value;
+  }
+
+  String _getVietnameseLabel(String key) {
+    return _specLabelMap[key.toLowerCase().trim()] ?? (key[0].toUpperCase() + key.substring(1));
   }
 
   Widget _buildTechSpecs(Product product) {
@@ -520,26 +699,59 @@ class ProductDetailState extends State<ProductDetail> {
     }
 
     if (specs.isEmpty) {
-      specs = {'Ram': '12 GB', 'CPU': 'Intel core i7 12800H', 'Storage': '16 GB', 'OS': 'Android 17 One UI 9.0', 'Battery': '1200 mAh'};
+      specs = {
+        'Cpu': 'Apple A14 Bionic',
+        'Ram': '6 GB',
+        'Storage': '128 GB',
+        'Model': 'iPhone 12 Pro',
+        'Battery': '2815 mAh',
+      };
     }
 
-    return Column(
-      children: specs.entries.map((entry) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              entry.key[0].toUpperCase() + entry.key.substring(1),
-              style: GoogleFonts.roboto(fontSize: 14, color: const Color(0xFF3F3F46).withOpacity(0.7), fontWeight: FontWeight.w500),
-            ),
-            Text(
-              entry.value,
-              style: GoogleFonts.roboto(fontSize: 14, color: const Color(0xFF3F3F46).withOpacity(0.62), fontWeight: FontWeight.normal),
-            ),
-          ],
-        ),
-      )).toList(),
+    final entries = specs.entries.toList();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF3F4F6), width: 1),
+      ),
+      child: Column(
+        children: List.generate(entries.length, (index) {
+          final entry = entries[index];
+          final isLast = index == entries.length - 1;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _getVietnameseLabel(entry.key),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: const Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      _translateSpecValue(entry.key, entry.value),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: const Color(0xFF111827),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isLast)
+                Divider(height: 1, color: Colors.grey[200]),
+            ],
+          );
+        }),
+      ),
     );
   }
 
@@ -547,7 +759,6 @@ class ProductDetailState extends State<ProductDetail> {
     final LatLng productPos = LatLng(product.latitude!, product.longitude!);
     final String? avatarUrl = product.userInfo?.avatarUrl;
 
-    // Determine initial center: if we have current position, center between them roughly
     LatLng center = productPos;
     if (_currentPosition != null) {
       center = LatLng(
@@ -557,7 +768,7 @@ class ProductDetailState extends State<ProductDetail> {
     }
 
     return Container(
-      height: 250, // Slightly taller to fit two points
+      height: 350, // Đã tăng chiều cao theo yêu cầu của bạn
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.grey[200],
@@ -572,103 +783,372 @@ class ProductDetailState extends State<ProductDetail> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: center,
-            initialZoom: _currentPosition != null ? 12.0 : 14.5, 
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all), 
-          ),
+        child: Stack(
           children: [
-            TileLayer(
-              urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              userAgentPackageName: 'com.temo.app',
-              retinaMode: MediaQuery.of(context).devicePixelRatio > 1.0,
-            ),
-            MarkerLayer(
-              markers: [
-                // SELLER MARKER
-                Marker(
-                  point: productPos,
-                  width: 60,
-                  height: 60,
-                  child: Stack(
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      Positioned(
-                        bottom: 0,
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: _currentPosition != null ? 12.0 : 14.5, 
+                interactionOptions: const InteractionOptions(flags: InteractiveFlag.all), 
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.temo.app',
+                  retinaMode: MediaQuery.of(context).devicePixelRatio > 1.0,
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: productPos,
+                      width: 60,
+                      height: 60,
+                      child: Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          Positioned(
+                            bottom: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              transform: Matrix4.rotationZ(0.785398),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: avatarUrl != null && avatarUrl.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: avatarUrl,
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) => Container(color: Colors.grey[300]),
+                                        errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
+                                      )
+                                    : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    if (_currentPosition != null)
+                      Marker(
+                        point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                        width: 40,
+                        height: 40,
                         child: Container(
-                          width: 12,
-                          height: 12,
-                          transform: Matrix4.rotationZ(0.785398),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))
-                            ],
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.blue.withOpacity(0.4), blurRadius: 10, spreadRadius: 5)
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      Positioned(
-                        top: 0,
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: avatarUrl != null && avatarUrl.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: avatarUrl,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(color: Colors.grey[300]),
-                                    errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
-                                  )
-                                : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
-                          ),
-                        ),
+                  ],
+                ),
+              ],
+            ),
+            // FULLSCREEN TOGGLE BUTTON
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: GestureDetector(
+                onTap: () => _showFullScreenMap(product),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
+                  child: const Icon(Icons.fullscreen_rounded, color: Color(0xFF374151), size: 28),
                 ),
-                
-                // CURRENT USER MARKER (Buyer)
-                if (_currentPosition != null)
-                  Marker(
-                    point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-                    width: 40,
-                    height: 40,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [
-                              BoxShadow(color: Colors.blue.withOpacity(0.4), blurRadius: 10, spreadRadius: 5)
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showFullScreenMap(Product product) {
+    final LatLng productPos = LatLng(product.latitude!, product.longitude!);
+    final String? avatarUrl = product.userInfo?.avatarUrl;
+    List<LatLng> routePoints = [];
+    bool isLoadingRoute = true;
+    final MapController mapController = MapController();
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "Map",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Fetch route on first build
+            if (isLoadingRoute && _currentPosition != null) {
+              _getRoutePoints(
+                LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                productPos,
+              ).then((points) {
+                if (context.mounted) {
+                  setModalState(() {
+                    routePoints = points;
+                    isLoadingRoute = false;
+                  });
+                }
+              });
+            } else if (isLoadingRoute) {
+              isLoadingRoute = false; // No current position, skip routing
+            }
+
+            return Scaffold(
+              body: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: mapController,
+                    options: MapOptions(
+                      initialCenter: productPos,
+                      initialZoom: 15.0,
+                      interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.temo.app',
+                      ),
+                      if (routePoints.isNotEmpty)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: routePoints,
+                              color: AppColors.primary,
+                              strokeWidth: 5,
+                              borderColor: AppColors.primary.withOpacity(0.3),
+                              borderStrokeWidth: 2,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: productPos,
+                            width: 60,
+                            height: 60,
+                            child: Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                Positioned(
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    transform: Matrix4.rotationZ(0.785398),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 0,
+                                  child: Container(
+                                    width: 50,
+                                    height: 50,
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: avatarUrl != null && avatarUrl.isNotEmpty
+                                          ? CachedNetworkImage(
+                                              imageUrl: avatarUrl.startsWith('http') ? avatarUrl : '${ApiConstants.baseUrl}$avatarUrl',
+                                              fit: BoxFit.cover,
+                                              errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
+                                            )
+                                          : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_currentPosition != null)
+                            Marker(
+                              point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                              width: 30,
+                              height: 30,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.blue.withOpacity(0.4), blurRadius: 10, spreadRadius: 5)
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // BACK BUTTON
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    left: 16,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                        ),
+                        child: const Icon(Icons.close_rounded, color: Colors.black87),
+                      ),
+                    ),
+                  ),
+                  
+                  // ZOOM HUD
+                  Positioned(
+                    right: 16,
+                    top: MediaQuery.of(context).padding.top + 16,
+                    child: Column(
+                      children: [
+                        _buildMapControl(
+                          icon: Icons.add_rounded,
+                          onTap: () => mapController.move(mapController.camera.center, mapController.camera.zoom + 1),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMapControl(
+                          icon: Icons.remove_rounded,
+                          onTap: () => mapController.move(mapController.camera.center, mapController.camera.zoom - 1),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_currentPosition != null)
+                          _buildMapControl(
+                            icon: Icons.my_location_rounded,
+                            onTap: () => mapController.move(LatLng(_currentPosition!.latitude, _currentPosition!.longitude), 15.0),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // INFO PANEL
+                  Positioned(
+                    bottom: 24,
+                    left: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                "Vị trí giao dịch",
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const Spacer(),
+                              if (isLoadingRoute)
+                                const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            product.productAddress?.fullAddress ?? "Khu vực người bán",
+                            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMapControl({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
+        ),
+        child: Icon(icon, color: const Color(0xFF374151), size: 24),
       ),
     );
   }
@@ -700,7 +1180,7 @@ class ProductDetailState extends State<ProductDetail> {
       child: Container(
         width: 245,
         height: 327,
-        margin: const EdgeInsets.only(right: 12), // Reduced slightly
+        margin: const EdgeInsets.only(right: 12),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(26),
           child: Stack(
@@ -800,8 +1280,8 @@ class ProductDetailState extends State<ProductDetail> {
       if (mounted) {
         UIHelpers.showSuccessDialog(
           context,
-          title: "Request Sent!",
-          message: "Your purchase request has been sent to the seller. Please wait for their response via notification.",
+          title: "Đã gửi yêu cầu!",
+          message: "Yêu cầu mua hàng của bạn đã được gửi đến người bán. Vui lòng chờ phản hồi qua thông báo.",
         );
       }
     } catch (e) {
@@ -816,9 +1296,9 @@ class ProductDetailState extends State<ProductDetail> {
   void _confirmDelete() async {
     final confirmed = await UIHelpers.confirmDialog(
       context,
-      title: "Confirm Delete",
-      message: "Are you sure you want to delete this product? This action cannot be undone.",
-      confirmText: "Delete Now",
+      title: "Xác nhận xóa",
+      message: "Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác.",
+      confirmText: "Xóa ngay",
       confirmColor: Colors.red,
       icon: HeroiconsOutline.trash,
     );
@@ -828,6 +1308,65 @@ class ProductDetailState extends State<ProductDetail> {
   }
 
 
+  void _showReportProductDialog() {
+    final List<Map<String, dynamic>> reasons = [
+      {'label': 'Hàng giả / Nhái', 'icon': HeroiconsOutline.archiveBox},
+      {'label': 'Lừa đảo', 'icon': HeroiconsOutline.exclamationCircle},
+      {'label': 'Sản phẩm cấm', 'icon': HeroiconsOutline.noSymbol},
+      {'label': 'Nội dung phản cảm', 'icon': HeroiconsOutline.eyeSlash},
+      {'label': 'Khác', 'icon': HeroiconsOutline.ellipsisHorizontal},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(45),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+                const Text("Báo cáo sản phẩm", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                const Text("Vui lòng chọn lý do bạn muốn báo cáo sản phẩm này.", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(height: 24),
+                ...reasons.map((r) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildMenuItem(
+                    icon: r['icon'] as IconData,
+                    iconColor: Colors.red,
+                    bgColor: Colors.red.withOpacity(0.1),
+                    title: r['label'] as String,
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét sớm nhất!"), backgroundColor: Colors.green),
+                      );
+                    },
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showMoreOptions() {
     final currentUser = StorageHelper.getUser();
     final bool isOwner = currentUser?.userId == _product?.userId;
@@ -835,73 +1374,99 @@ class ProductDetailState extends State<ProductDetail> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        margin: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -5))
-          ]
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 10),
-            if (isOwner) ...[
-              _buildMenuItem(
-                icon: HeroiconsOutline.arrowTrendingUp,
-                iconColor: Colors.orange,
-                bgColor: const Color(0xFFFFF7ED),
-                title: "Promote Product",
-                onTap: () { Navigator.pop(context); _showPushPromotionDialog(); },
-              ),
-              _buildDivider(),
-              _buildMenuItem(
-                icon: HeroiconsOutline.pencilSquare,
-                iconColor: Colors.blue,
-                bgColor: const Color(0xFFEFF6FF),
-                title: "Edit Product",
-                onTap: () { Navigator.pop(context); /* Edit Logic */ },
-              ),
-              _buildDivider(),
-              _buildMenuItem(
-                icon: HeroiconsOutline.trash,
-                iconColor: Colors.red,
-                bgColor: const Color(0xFFFEF2F2),
-                title: "Delete Product",
-                onTap: () { Navigator.pop(context); _confirmDelete(); },
-              ),
-            ]
-            else ...[
-              _buildMenuItem(
-                icon: HeroiconsOutline.shoppingBag,
-                iconColor: Colors.green,
-                bgColor: const Color(0xFFF0FDF4),
-                title: "Send Purchase Request",
-                onTap: () { Navigator.pop(context); _requestPurchase(); },
-              ),
-              _buildDivider(),
-              _buildMenuItem(
-                icon: HeroiconsOutline.flag,
-                iconColor: Colors.grey,
-                bgColor: const Color(0xFFF9FAFB),
-                title: "Report Product",
-                onTap: () => Navigator.pop(context),
-              ),
-              _buildDivider(),
-              _buildMenuItem(
-                icon: HeroiconsOutline.share,
-                iconColor: Colors.purple,
-                bgColor: const Color(0xFFFAF5FF),
-                title: "Share",
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-            const SizedBox(height: 10),
-          ],
+      isScrollControlled: true,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(45),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+                if (isOwner) ...[
+                  _buildMenuItem(
+                    icon: HeroiconsOutline.arrowTrendingUp,
+                    iconColor: Colors.orange,
+                    bgColor: const Color(0xFFFFF7ED),
+                    title: "Đẩy tin sản phẩm",
+                    onTap: () { Navigator.pop(context); _showPushPromotionDialog(); },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuItem(
+                    icon: HeroiconsOutline.pencilSquare,
+                    iconColor: Colors.blue,
+                    bgColor: const Color(0xFFEFF6FF),
+                    title: "Chỉnh sửa sản phẩm",
+                    onTap: () { Navigator.pop(context); /* logic chỉnh sửa */ },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuItem(
+                    icon: HeroiconsOutline.trash,
+                    iconColor: Colors.red,
+                    bgColor: const Color(0xFFFEF2F2),
+                    title: "Xóa sản phẩm",
+                    onTap: () { Navigator.pop(context); _confirmDelete(); },
+                  ),
+                ]
+                else ...[
+                  _buildMenuItem(
+                    icon: HeroiconsOutline.shoppingBag,
+                    iconColor: Colors.green,
+                    bgColor: const Color(0xFFF0FDF4),
+                    title: "Gửi yêu cầu mua",
+                    onTap: () { Navigator.pop(context); _requestPurchase(); },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuItem(
+                    icon: HeroiconsOutline.flag,
+                    iconColor: Colors.red,
+                    bgColor: Colors.red.withOpacity(0.1),
+                    title: "Báo cáo sản phẩm",
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showReportProductDialog();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuItem(
+                    icon: HeroiconsOutline.share,
+                    iconColor: Colors.purple,
+                    bgColor: const Color(0xFFFAF5FF),
+                    title: "Chia sẻ",
+                    onTap: () => Navigator.pop(context),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _buildMenuItem(
+                  icon: HeroiconsOutline.sparkles,
+                  iconColor: Colors.purple,
+                  bgColor: Colors.purple.withOpacity(0.1),
+                  title: "Cải tiến ứng dụng",
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AppImprovementScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -914,18 +1479,33 @@ class ProductDetailState extends State<ProductDetail> {
     required String title,
     required VoidCallback onTap,
   }) {
-    return ListTile(
+    return GestureDetector(
       onTap: onTap,
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
-        child: Icon(icon, color: iconColor, size: 22),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(45),
+          border: Border.all(color: Colors.grey.shade100),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              title,
+              style: GoogleFonts.roboto(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF1F2937)),
+            ),
+            const Spacer(),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 18),
+          ],
+        ),
       ),
-      title: Text(
-        title,
-        style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF3F3F46)),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
     );
   }
 
@@ -937,12 +1517,12 @@ class ProductDetailState extends State<ProductDetail> {
       await _productService.deleteProduct(_product!.productId);
       if (mounted) {
         Navigator.pop(context); // Quay về trang trước
-        UIHelpers.showSuccessSnackBar(context, "Product deleted successfully");
+        UIHelpers.showSuccessSnackBar(context, "Sản phẩm đã được xóa thành công");
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        UIHelpers.showErrorSnackBar(context, "Error deleting: $e");
+        UIHelpers.showErrorSnackBar(context, "Lỗi khi xóa: $e");
       }
     }
   }
@@ -996,7 +1576,7 @@ class ProductDetailState extends State<ProductDetail> {
       if (mounted) {
         UIHelpers.showErrorDialog(
           context,
-          title: "Promotion Failed",
+          title: "Đẩy tin thất bại",
           message: e.toString().replaceAll("Exception:", ""),
         );
       }
@@ -1006,60 +1586,72 @@ class ProductDetailState extends State<ProductDetail> {
   }
 
 
-  Widget _buildFloatingActionBar() {
-    return Positioned(
-      bottom: 25, left: 0, right: 0,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 25,
-                offset: const Offset(0, 8),
-              )
-            ],
+  Widget _buildBottomBar() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildBottomButton(
+              icon: HeroiconsOutline.phone,
+              label: "Gọi ngay",
+              onTap: _showCallDialog,
+              isSolid: false,
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildActionItem(HeroiconsOutline.phone, "Call", _showCallDialog),
-              const SizedBox(width: 24),
-              _buildActionItem(HeroiconsOutline.chatBubbleOvalLeft, "Message", () {
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildBottomButton(
+              icon: HeroiconsOutline.chatBubbleOvalLeft,
+              label: "Nhắn tin",
+              onTap: () {
                 if (_product?.userInfo != null) {
                   final userInfo = _product!.userInfo!;
                   final partner = ChatPartner(userId: userInfo.userId, fullName: userInfo.fullName, avatarUrl: userInfo.avatarUrl, email: userInfo.email);
                   smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
                 }
-              }),
-            ],
+              },
+              isSolid: true,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildActionItem(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildBottomButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required bool isSolid,
+  }) {
     return GestureDetector(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 80, // Đảm bảo không gian căn giữa cho cả Icon và Label
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: isSolid ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: isSolid ? null : Border.all(color: AppColors.primary, width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: AppColors.primaryLight, size: 24),
-            const SizedBox(height: 4),
+            Icon(icon, color: isSolid ? Colors.white : AppColors.primary, size: 20),
+            const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.roboto(
-                color: AppColors.primaryLight,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              style: GoogleFonts.inter(
+                color: isSolid ? Colors.white : AppColors.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -1070,7 +1662,7 @@ class ProductDetailState extends State<ProductDetail> {
 
   void _showCallDialog() {
     final phoneNumber = _product?.userInfo?.phoneNumber.toString() ?? '';
-    final sellerName = _product?.userInfo?.fullName ?? 'Seller';
+    final sellerName = _product?.userInfo?.fullName ?? 'Người bán';
     if (phoneNumber.isEmpty || phoneNumber == '0') return;
 
     UIHelpers.showModernDialog(
@@ -1078,8 +1670,8 @@ class ProductDetailState extends State<ProductDetail> {
       icon: HeroiconsOutline.phone,
       iconColor: Colors.blue,
       bgColor: const Color(0xFFEFF6FF),
-      title: "Call $sellerName",
-      description: "Do you want to call this seller at $phoneNumber?",
+      title: "Gọi cho $sellerName",
+      description: "Bạn có muốn gọi cho người bán tại số $phoneNumber?",
       content: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,
@@ -1087,10 +1679,13 @@ class ProductDetailState extends State<ProductDetail> {
           minimumSize: const Size(double.infinity, 50),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         ),
-        onPressed: () { Navigator.pop(context); _makePhoneCall(phoneNumber); },
-        child: const Text("Call Now", style: TextStyle(fontWeight: FontWeight.bold)),
+        onPressed: () {
+          Navigator.pop(context);
+          _makePhoneCall(phoneNumber);
+        },
+        child: const Text("Gọi ngay", style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      primaryButtonText: "Cancel",
+      primaryButtonText: "Hủy",
     );
   }
 
@@ -1102,11 +1697,183 @@ class ProductDetailState extends State<ProductDetail> {
 
   Widget _buildMediaItem(MediaItem item) {
     if (item.type == MediaType.image) {
-      return Image.network(item.url, fit: BoxFit.cover, width: double.infinity, height: double.infinity,
-          loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const Center(child: ModernLoader(size: 30)),
-          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 60))));
+      return CachedNetworkImage(
+        imageUrl: item.url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        placeholder: (context, url) => const Center(child: ModernLoader(size: 30)),
+        errorWidget: (context, url, error) => Container(
+          color: Colors.grey[300],
+          child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 60)),
+        ),
+      );
     } else {
-      return VideoPlayerWidget(videoUrl: item.url);
+      return VideoPlayerWidget(
+        videoUrl: item.url,
+        onFullscreen: () => _showFullScreenGallery(_mediaItems.indexOf(item)),
+      );
     }
+  }
+
+  void _showFullScreenGallery(int initialIndex) {
+    int tempCurrentPage = initialIndex;
+    final PageController galleryController = PageController(initialPage: initialIndex);
+
+    showGeneralDialog(
+      context: context,
+      barrierColor: Colors.black,
+      barrierDismissible: false,
+      barrierLabel: "Gallery",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Scaffold(
+              backgroundColor: Colors.black,
+              body: Stack(
+                children: [
+                  PageView.builder(
+                    controller: galleryController,
+                    itemCount: _mediaItems.length,
+                    onPageChanged: (index) => setModalState(() => tempCurrentPage = index),
+                    itemBuilder: (context, index) {
+                      final item = _mediaItems[index];
+                      if (item.type == MediaType.image) {
+                        return InteractiveViewer(
+                          minScale: 1.0,
+                          maxScale: 5.0,
+                          child: Center(
+                            child: CachedNetworkImage(
+                              imageUrl: item.url,
+                              fit: BoxFit.contain,
+                              placeholder: (context, url) => const ModernLoader(size: 30),
+                              errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return Center(child: VideoPlayerWidget(videoUrl: item.url));
+                      }
+                    },
+                  ),
+                  // TOP BAR
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 10,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Index Indicator
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              "${tempCurrentPage + 1} / ${_mediaItems.length}",
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          // Close Button
+                          GestureDetector(
+                            onTap: () {
+                              _pageController.jumpToPage(tempCurrentPage);
+                              Navigator.pop(context);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+class _BookmarkButton extends StatefulWidget {
+  final bool isSaved;
+  final VoidCallback onTap;
+
+  const _BookmarkButton({required this.isSaved, required this.onTap});
+
+  @override
+  State<_BookmarkButton> createState() => _BookmarkButtonState();
+}
+
+class _BookmarkButtonState extends State<_BookmarkButton> {
+  double _scale = 1.0;
+
+  void _handleTap() {
+    setState(() => _scale = 1.15);
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) setState(() => _scale = 1.0);
+    });
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutBack,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: widget.isSaved ? AppColors.primary : Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.isSaved ? AppColors.primary : const Color(0xFFE5E7EB),
+              width: 1,
+            ),
+            boxShadow: [
+              if (widget.isSaved)
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+            ],
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child),
+            ),
+            child: Icon(
+              widget.isSaved ? HeroiconsSolid.bookmark : HeroiconsOutline.bookmark,
+              key: ValueKey<bool>(widget.isSaved),
+              color: widget.isSaved ? Colors.white : const Color(0xFF4B5563),
+              size: 22,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
