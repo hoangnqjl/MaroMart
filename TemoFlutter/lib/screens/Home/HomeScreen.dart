@@ -70,16 +70,7 @@ class HomeScreenState extends State<HomeScreen> {
   List<Product> _recommendedProducts = [];
   bool _isRecommendedLoading = true;
 
-  final List<Map<String, dynamic>> _staticCategories = [
-    {'id': 'technology', 'name': 'Electronics', 'image': 'assets/images/electronics.png'},
-    {'id': 'hobby', 'name': 'Hobbies', 'image': 'assets/images/hobbies.png'},
-    {'id': 'style', 'name': 'Fashion', 'image': 'assets/images/fashion.png'},
-    {'id': 'auto', 'name': 'Auto', 'image': 'assets/images/auto.png'},
-    {'id': 'kids', 'name': 'Kids', 'image': 'assets/images/kids.png'},
-    {'id': 'services', 'name': 'Service', 'image': 'assets/images/service.png'},
-    {'id': 'appliances', 'name': 'Appliances', 'image': 'assets/images/appliances.png'},
-    {'id': 'offices', 'name': 'Offices', 'image': 'assets/images/offices.png'},
-  ];
+
 
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -152,6 +143,18 @@ class HomeScreenState extends State<HomeScreen> {
     setState(() => _isCategoriesLoading = true);
     try {
       final cats = await _productService.getCategories();
+      cats.sort((a, b) {
+        final String idA = (a['categoryId'] ?? a['id'] ?? '').toString().toLowerCase();
+        final String idB = (b['categoryId'] ?? b['id'] ?? '').toString().toLowerCase();
+        
+        if (idA == 'other' || idA == 'khac') {
+          if (idB == 'other' || idB == 'khac') return 0;
+          return 1;
+        }
+        if (idB == 'other' || idB == 'khac') return -1;
+        
+        return idA.compareTo(idB);
+      });
       if (mounted) {
         setState(() {
           _categories = cats;
@@ -181,17 +184,14 @@ class HomeScreenState extends State<HomeScreen> {
   Widget _buildCategoryItem(dynamic cat) {
     final String id = cat['categoryId']?.toString() ?? cat['id']?.toString() ?? '';
     final String name = cat['categoryName']?.toString() ?? cat['name']?.toString() ?? '';
-    final String? iconName = cat['categoryIcon']?.toString(); // Filename from backend
-    final String localImage = cat['image']?.toString() ?? 'assets/images/logo.png';
-
-    // Construct full URL from backend
+    final String? iconName = cat['categoryIcon']?.toString(); // URL from backend
+    
     String? iconUrl;
     if (iconName != null && iconName.isNotEmpty) {
       if (iconName.startsWith('http')) {
         iconUrl = iconName;
       } else {
-        // Build the backend URL pointing to /uploads/categories/
-        iconUrl = '${ApiConstants.baseUrl}/uploads/categories/$iconName';
+        iconUrl = '${ApiConstants.baseUrl}/storage/system/category/$iconName';
       }
     }
 
@@ -219,21 +219,32 @@ class HomeScreenState extends State<HomeScreen> {
                     child: const Icon(Icons.grid_view_rounded,
                         color: Colors.white, size: 24),
                   )
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(27),
-                    child: iconUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: iconUrl,
-                            width: 54,
-                            height: 54,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => const CircleSkeleton(size: 54),
-                            errorWidget: (_, __, ___) => Image.asset(localImage,
-                                width: 54, height: 54, fit: BoxFit.contain),
-                          )
-                        : Image.asset(localImage,
-                            width: 54, height: 54, fit: BoxFit.contain),
-                  ),
+                : iconUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: iconUrl,
+                        width: 54,
+                        height: 54,
+                        fit: BoxFit.contain,
+                        placeholder: (_, __) => const CircleSkeleton(size: 54),
+                        errorWidget: (_, __, ___) => Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.category, color: Colors.orange),
+                        ),
+                      )
+                    : Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.category, color: Colors.orange),
+                      ),
             const SizedBox(height: 8),
             Text(
               name,
@@ -381,6 +392,7 @@ class HomeScreenState extends State<HomeScreen> {
           RefreshIndicator(
             onRefresh: () async {
               _fetchLocation();
+              _loadCategories();
               _loadRecommendedProducts();
               await _loadProducts(isRefresh: true);
             },
@@ -524,16 +536,15 @@ class HomeScreenState extends State<HomeScreen> {
                           : ListView.builder(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 10),
-                          itemCount: _categories.isNotEmpty ? _categories.length + 1 : _staticCategories.length + 1,
+                          itemCount: _categories.length + 1,
                           itemBuilder: (context, index) {
-                            if (index == (_categories.isNotEmpty ? _categories.length : _staticCategories.length)) {
+                            if (index == _categories.length) {
                               return _buildCategoryItem({
                                 'id': 'all',
                                 'name': 'Tất cả',
-                                'image': 'assets/images/logo.png'
                               });
                             }
-                            final cat = _categories.isNotEmpty ? _categories[index] : _staticCategories[index];
+                            final cat = _categories[index];
                             return _buildCategoryItem(cat);
                           },
                         ),

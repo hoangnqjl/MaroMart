@@ -6,6 +6,8 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    Area,
+    AreaChart,
 } from 'recharts';
 
 interface LineChartProps {
@@ -16,36 +18,46 @@ interface LineChartProps {
 export function LineChart({ data, title }: LineChartProps) {
     return (
         <div className="glass-card p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-6">{title}</h3>
             <ResponsiveContainer width="100%" height={300}>
-                <RechartsLineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <AreaChart data={data}>
+                    <defs>
+                        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#FB9A40" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#FB9A40" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                     <XAxis
                         dataKey="name"
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
                     />
                     <YAxis
-                        tick={{ fill: '#6b7280', fontSize: 12 }}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        tick={{ fill: '#9ca3af', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
                     />
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                            border: 'none',
+                            borderRadius: '16px',
+                            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
+                            padding: '12px 16px',
                         }}
                     />
-                    <Line
+                    <Area
                         type="monotone"
                         dataKey="value"
-                        stroke="#8B5CF6"
-                        strokeWidth={2}
-                        dot={{ fill: '#8B5CF6', r: 4 }}
-                        activeDot={{ r: 6 }}
+                        stroke="#FB9A40"
+                        strokeWidth={2.5}
+                        fill="url(#lineGrad)"
+                        dot={{ fill: '#FB9A40', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                        activeDot={{ r: 6, fill: '#FF6B35', stroke: '#fff', strokeWidth: 2 }}
                     />
-                </RechartsLineChart>
+                </AreaChart>
             </ResponsiveContainer>
         </div>
     );

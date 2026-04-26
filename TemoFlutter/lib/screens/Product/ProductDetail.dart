@@ -1534,8 +1534,8 @@ class ProductDetailState extends State<ProductDetail> {
     UIHelpers.showModernDialog(
       context,
       icon: HeroiconsOutline.megaphone,
-      iconColor: Colors.blue,
-      bgColor: const Color(0xFFEFF6FF),
+      iconColor: AppColors.primary,
+      bgColor: AppColors.primary.withOpacity(0.1),
       title: "Promote Product",
       description: "Your product will appear in the recommended section, reaching more customers.",
       content: Column(
@@ -1664,13 +1664,13 @@ class ProductDetailState extends State<ProductDetail> {
     UIHelpers.showModernDialog(
       context,
       icon: HeroiconsOutline.phone,
-      iconColor: Colors.blue,
-      bgColor: const Color(0xFFEFF6FF),
+      iconColor: AppColors.primary,
+      bgColor: AppColors.primary.withOpacity(0.1),
       title: "Gọi cho $sellerName",
       description: "Bạn có muốn gọi cho người bán tại số $phoneNumber?",
       content: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 50),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),

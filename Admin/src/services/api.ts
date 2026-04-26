@@ -28,10 +28,32 @@ export interface Product {
     };
 }
 
+export interface AttributeTemplate {
+    id: string;
+    categoryId?: string;
+    productTypeId?: string;
+    name: string;
+    displayName: string;
+    isRequired: boolean;
+    isCommon: boolean;
+    fieldType: 'TEXT' | 'NUMBER' | 'DROPDOWN';
+    options?: any;
+}
+
+export interface ProductType {
+    id: string;
+    categoryId: string;
+    typeName: string;
+    attributes?: AttributeTemplate[];
+}
+
 export interface Category {
     categoryId: string;
     categoryName: string;
+    categoryIcon?: string;
     categorySpec: string;
+    productTypes?: ProductType[];
+    attributes?: AttributeTemplate[];
 }
 
 export interface ProductsResponse {
@@ -161,6 +183,16 @@ export const productsAPI = {
         const response = await axiosInstance.post('/admin/products/bulk-delete', { productIds });
         return response.data;
     },
+
+    approveProduct: async (productId: string) => {
+        const response = await axiosInstance.patch(`/admin/products/${productId}/approve`);
+        return response.data;
+    },
+
+    rejectProduct: async (productId: string) => {
+        const response = await axiosInstance.patch(`/admin/products/${productId}/reject`);
+        return response.data;
+    },
 };
 
 // Categories API
@@ -180,8 +212,51 @@ export const categoriesAPI = {
         return response.data;
     },
 
+    uploadCategoryIcon: async (id: string, file: File) => {
+        const formData = new FormData();
+        formData.append('icon', file);
+        const response = await axiosInstance.post(`/categories/${id}/icon`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
     deleteCategory: async (id: string) => {
         const response = await axiosInstance.delete(`/categories/${id}`);
+        return response.data;
+    },
+
+    // Product Types
+    createProductType: async (categoryId: string, typeName: string) => {
+        const response = await axiosInstance.post('/categories/types', { categoryId, typeName });
+        return response.data;
+    },
+
+    updateProductType: async (id: string, typeName: string) => {
+        const response = await axiosInstance.patch(`/categories/types/${id}`, { typeName });
+        return response.data;
+    },
+
+    deleteProductType: async (id: string) => {
+        const response = await axiosInstance.delete(`/categories/types/${id}`);
+        return response.data;
+    },
+
+    // Attributes
+    createAttribute: async (data: Partial<AttributeTemplate>) => {
+        const response = await axiosInstance.post('/categories/attributes', data);
+        return response.data;
+    },
+
+    updateAttribute: async (id: string, data: Partial<AttributeTemplate>) => {
+        const response = await axiosInstance.patch(`/categories/attributes/${id}`, data);
+        return response.data;
+    },
+
+    deleteAttribute: async (id: string) => {
+        const response = await axiosInstance.delete(`/categories/attributes/${id}`);
         return response.data;
     },
 };

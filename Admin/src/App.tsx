@@ -15,10 +15,10 @@ function AdminLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-white">
+    <div className="min-h-screen bg-[var(--color-bg)]">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="transition-all duration-300 md:ml-64">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6">
+      <div className="transition-all duration-300 md:pl-[120px]">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">
           <Header onToggleSidebar={() => setIsSidebarOpen(true)} />
           <main>
             <Outlet />

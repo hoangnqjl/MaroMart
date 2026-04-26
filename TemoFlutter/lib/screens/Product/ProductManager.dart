@@ -354,8 +354,8 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
               _buildOptionButton(
                 icon: HeroiconsOutline.pencilSquare,
                 label: 'Chỉnh sửa tin',
-                iconColor: Colors.blue,
-                bgColor: const Color(0xFFE3F2FD),
+                iconColor: AppColors.primary,
+                bgColor: AppColors.primary.withOpacity(0.1),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final result = await smoothPush(context, UpdateProduct(product: product));

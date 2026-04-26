@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Eye, Trash2 } from 'lucide-react';
+import { Plus, Eye, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import {
@@ -34,6 +34,7 @@ export function Products() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const { toast } = useToast();
 
     // Client-side search hook
@@ -42,7 +43,7 @@ export function Products() {
         setQuery,
         selectedCategory,
         setSelectedCategory,
-        filteredItems: filteredProducts,
+        filteredItems: searchFilteredProducts,
         isSearching,
         clearSearch
     } = useSearch<Product>({
@@ -51,6 +52,12 @@ export function Products() {
         categoryField: 'categoryId',
         debounceMs: 250,
         enableVietnameseNormalization: true,
+    });
+
+    const filteredProducts = searchFilteredProducts.filter((product) => {
+        if (selectedStatus === 'all') return true;
+        const status = (product as any).status;
+        return status === selectedStatus;
     });
 
     // Fetch categories
@@ -106,6 +113,42 @@ export function Products() {
                 type: 'error',
                 title: 'Error',
                 description: err.response?.data?.message || 'Failed to delete product.',
+            });
+        }
+    };
+
+    const handleApprove = async (productId: string) => {
+        try {
+            await productsAPI.approveProduct(productId);
+            toast({
+                type: 'success',
+                title: 'Product approved',
+                description: 'The product has been successfully approved.',
+            });
+            fetchProducts();
+        } catch (err: any) {
+            toast({
+                type: 'error',
+                title: 'Error',
+                description: err.response?.data?.message || 'Failed to approve product.',
+            });
+        }
+    };
+
+    const handleReject = async (productId: string) => {
+        try {
+            await productsAPI.rejectProduct(productId);
+            toast({
+                type: 'success',
+                title: 'Product rejected',
+                description: 'The product has been successfully rejected.',
+            });
+            fetchProducts();
+        } catch (err: any) {
+            toast({
+                type: 'error',
+                title: 'Error',
+                description: err.response?.data?.message || 'Failed to reject product.',
             });
         }
     };
@@ -194,7 +237,30 @@ export function Products() {
             </div>
 
             {/* Filters */}
-            <div className="glass-card p-6">
+            <div className="glass-card p-6 space-y-4">
+                {/* Status Filter Tabs */}
+                <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100">
+                    {[
+                        { id: 'all', label: 'Tất cả' },
+                        { id: 'active', label: 'Đang bán' },
+                        { id: 'pending_admin_review', label: 'Chờ duyệt' },
+                        { id: 'draft', label: 'Bản tin nháp' },
+                        { id: 'rejected', label: 'Bị từ chối' }
+                    ].map((status) => (
+                        <button
+                            key={status.id}
+                            onClick={() => setSelectedStatus(status.id)}
+                            className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
+                                selectedStatus === status.id
+                                    ? 'bg-primary text-white shadow-md transform scale-105'
+                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/50'
+                            }`}
+                        >
+                            {status.label}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="flex flex-col md:flex-row items-center gap-4">
                     <div className="flex-1 w-full">
                         <SearchBar
@@ -250,6 +316,7 @@ export function Products() {
                                     <TableHead>Price</TableHead>
                                     <TableHead>Owner</TableHead>
                                     <TableHead>Category</TableHead>
+                                    <TableHead>Status</TableHead>
                                     <TableHead>Created</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -330,11 +397,46 @@ export function Products() {
                                                     {category?.categoryName || 'Unknown'}
                                                 </Badge>
                                             </TableCell>
+                                            <TableCell>
+                                                {(() => {
+                                                    const status = (product as any).status || 'active';
+                                                    if (status === 'active') return <Badge variant="success">Active</Badge>;
+                                                    if (status === 'pending_admin_review') return <Badge variant="warning">Pending Review</Badge>;
+                                                    if (status === 'rejected') return <Badge variant="danger">Rejected</Badge>;
+                                                    if (status === 'draft') return <Badge variant="default">Draft</Badge>;
+                                                    return <Badge>{status}</Badge>;
+                                                })()}
+                                            </TableCell>
                                             <TableCell className="text-gray-500">
                                                 {formatDate(product.createdAt)}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {(() => {
+                                                        const status = (product as any).status || 'active';
+                                                        return (
+                                                            <>
+                                                                {(status === 'pending_admin_review' || status === 'draft' || status === 'rejected') && (
+                                                                    <button
+                                                                        onClick={() => handleApprove(product.productId)}
+                                                                        className="p-2 rounded-lg hover:bg-emerald-50 transition-colors group"
+                                                                        title="Duyệt Tin"
+                                                                    >
+                                                                        <CheckCircle className="h-4 w-4 text-gray-600 group-hover:text-emerald-500" />
+                                                                    </button>
+                                                                )}
+                                                                {(status === 'pending_admin_review' || status === 'draft' || status === 'active') && (
+                                                                    <button
+                                                                        onClick={() => handleReject(product.productId)}
+                                                                        className="p-2 rounded-lg hover:bg-orange-50 transition-colors group"
+                                                                        title="Từ Chối"
+                                                                    >
+                                                                        <XCircle className="h-4 w-4 text-gray-600 group-hover:text-orange-500" />
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
                                                     <button
                                                         onClick={() => setSelectedProduct(product)}
                                                         className="p-2 rounded-lg hover:bg-gray-100 transition-colors group"
@@ -400,6 +502,8 @@ export function Products() {
                 isOpen={!!selectedProduct}
                 onClose={() => setSelectedProduct(null)}
                 product={selectedProduct || undefined}
+                onApprove={handleApprove}
+                onReject={handleReject}
             />
         </div>
     );

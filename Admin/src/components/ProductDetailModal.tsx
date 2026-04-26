@@ -21,6 +21,8 @@ interface ProductDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     product?: Product;
+    onApprove?: (productId: string) => void;
+    onReject?: (productId: string) => void;
 }
 
 interface LocationData {
@@ -83,6 +85,8 @@ export function ProductDetailModal({
     isOpen,
     onClose,
     product,
+    onApprove,
+    onReject,
 }: ProductDetailModalProps) {
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -494,6 +498,28 @@ export function ProductDetailModal({
                                                             </div>
                                                         ))}
                                                     </div>
+                                                </div>
+                                            )}
+                                            {((product as any).status === 'pending_admin_review') && (
+                                                <div className="flex gap-4 pt-4 border-t border-gray-200">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (onApprove) onApprove(product.productId);
+                                                            onClose();
+                                                        }}
+                                                        className="flex-1 py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-md flex items-center justify-center gap-2"
+                                                    >
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (onReject) onReject(product.productId);
+                                                            onClose();
+                                                        }}
+                                                        className="flex-1 py-3 px-6 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors shadow-md flex items-center justify-center gap-2"
+                                                    >
+                                                        Reject
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>

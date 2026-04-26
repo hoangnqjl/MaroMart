@@ -12,6 +12,7 @@ class FloatingHeader extends StatelessWidget {
   final bool isMenu;
   final AlignmentGeometry contentAlignment;
   final bool hasBackground;
+  final double titleOpacity;
 
   const FloatingHeader({
     super.key,
@@ -24,6 +25,7 @@ class FloatingHeader extends StatelessWidget {
     this.isMenu = false,
     this.contentAlignment = Alignment.center,
     this.hasBackground = true,
+    this.titleOpacity = 1.0,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
   });
 
@@ -68,15 +70,18 @@ class FloatingHeader extends StatelessWidget {
                       ),
                     ],
                   ) : null,
-                  child: titleWidget ?? Text(
-                    title,
-                    style: GoogleFonts.roboto(
-                      fontSize: hasBackground ? 15 : 17,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827),
+                  child: Opacity(
+                    opacity: titleOpacity,
+                    child: titleWidget ?? Text(
+                      title,
+                      style: GoogleFonts.roboto(
+                        fontSize: hasBackground ? 15 : 17,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF111827),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

@@ -10,7 +10,7 @@ interface ModalProps {
     title: string;
     children: ReactNode;
     footer?: ReactNode;
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
 }
 
 export function Modal({
@@ -25,6 +25,11 @@ export function Modal({
         sm: 'max-w-md',
         md: 'max-w-lg',
         lg: 'max-w-2xl',
+        xl: 'max-w-3xl',
+        '2xl': 'max-w-4xl',
+        '3xl': 'max-w-5xl',
+        '4xl': 'max-w-6xl',
+        '5xl': 'max-w-7xl',
     };
 
     return (
@@ -39,7 +44,7 @@ export function Modal({
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+                    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" />
                 </Transition.Child>
 
                 <div className="fixed inset-0 overflow-y-auto">
@@ -54,7 +59,7 @@ export function Modal({
                             leaveTo="opacity-0 scale-95"
                         >
                             <Dialog.Panel
-                                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-card glass-card text-left align-middle shadow-2xl transition-all`}
+                                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-[2rem] bg-white border border-gray-100 p-6 text-left align-middle shadow-2xl transition-all`}
                             >
                                 <div className="flex items-center justify-between border-b border-gray-200/50 pb-4 mb-4">
                                     <Dialog.Title
@@ -65,9 +70,9 @@ export function Modal({
                                     </Dialog.Title>
                                     <button
                                         onClick={onClose}
-                                        className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                                        className="rounded-full p-2 hover:bg-gray-100 transition-all duration-200"
                                     >
-                                        <X className="h-5 w-5 text-gray-500" />
+                                        <X className="h-4 w-4 text-gray-400" />
                                     </button>
                                 </div>
 

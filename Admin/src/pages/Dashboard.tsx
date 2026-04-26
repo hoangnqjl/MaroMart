@@ -18,6 +18,7 @@ import {
     FileText,
     TrendingUp,
     TrendingDown,
+    ArrowUpRight,
 } from 'lucide-react';
 import { StatCardSkeleton, TableSkeleton, CardSkeleton } from '../components/skeletons/Skeletons';
 import type { Product, Category } from '../services/api';
@@ -32,6 +33,13 @@ interface StatCard {
     trend: string;
     isPositive: boolean;
 }
+
+const statColors = [
+    { bg: 'from-orange-500 to-amber-400', light: 'bg-orange-50' },
+    { bg: 'from-blue-500 to-cyan-400', light: 'bg-blue-50' },
+    { bg: 'from-emerald-500 to-teal-400', light: 'bg-emerald-50' },
+    { bg: 'from-violet-500 to-purple-400', light: 'bg-violet-50' },
+];
 
 export function Dashboard() {
     const [stats, setStats] = useState<StatCard[]>([]);
@@ -53,28 +61,28 @@ export function Dashboard() {
 
                 const statsData: StatCard[] = [
                     {
-                        title: 'Total Categories',
+                        title: 'Tổng Danh mục',
                         value: data.totalCategories?.toString() || '0',
                         icon: Grid3x3,
                         trend: data.trends?.categories || '+0%',
                         isPositive: data.trends?.categories?.startsWith('+') ?? true,
                     },
                     {
-                        title: 'Total Products',
+                        title: 'Tổng Sản phẩm',
                         value: data.totalProducts?.toString() || '0',
                         icon: Package,
                         trend: data.trends?.products || '+0%',
                         isPositive: data.trends?.products?.startsWith('+') ?? true,
                     },
                     {
-                        title: 'Total Users',
+                        title: 'Tổng Người dùng',
                         value: data.totalUsers?.toString() || '0',
                         icon: Users,
                         trend: data.trends?.users || '+0%',
                         isPositive: data.trends?.users?.startsWith('+') ?? true,
                     },
                     {
-                        title: 'Posts Today',
+                        title: 'Bài đăng Hôm nay',
                         value: data.postsToday?.toString() || '0',
                         icon: FileText,
                         trend: data.trends?.posts || '+0%',
@@ -108,17 +116,11 @@ export function Dashboard() {
                     statsAPI.getDailyPosts(),
                 ]);
 
-                // Transform productsData to match BarChart format
-                // API returns: [{ categoryName: "...", count: 123 }]
-                // BarChart expects: [{ name: "...", value: 123 }]
                 const transformedProductsData = (productsData || []).map((item: any) => ({
                     name: item.categoryName,
                     value: item.count,
                 }));
 
-                // Transform dailyPosts for LineChart
-                // API returns: [{ _id: "2025-04-01", count: 25 }]
-                // LineChart expects: [{ name: "...", value: 123 }]
                 const transformedPostsData = (postsData || []).map((item: any) => ({
                     name: item._id,
                     value: item.count,
@@ -151,7 +153,6 @@ export function Dashboard() {
                     categoriesAPI.getCategories(),
                 ]);
 
-                // Backend returns { products[], total, page, limit }
                 setLatestProducts(productsResponse.products || []);
                 setCategories(categoriesData);
             } catch (err: any) {
@@ -170,9 +171,15 @@ export function Dashboard() {
     }, []);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-fade-in">
+            {/* Welcome Section */}
+            <div>
+                <h1 className="text-2xl font-extrabold text-gray-900">Dashboard</h1>
+                <p className="text-gray-400 mt-1 text-sm">Tổng quan hoạt động hệ thống MaroMart</p>
+            </div>
+
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {isLoadingStats ? (
                     <>
                         {[1, 2, 3, 4].map((i) => (
@@ -180,34 +187,37 @@ export function Dashboard() {
                         ))}
                     </>
                 ) : (
-                    stats.map((stat) => (
-                        <Card key={stat.title} hover className="relative overflow-hidden">
-                            <div className="flex items-start justify-between">
+                    stats.map((stat, index) => (
+                        <div key={stat.title} className="glass-card p-5 relative overflow-hidden group animate-slide-up" style={{ animationDelay: `${index * 80}ms` }}>
+                            <div className="flex items-start justify-between relative z-10">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                                    <p className="text-3xl font-bold text-gray-900 mt-2">
+                                    <p className="text-sm font-medium text-gray-400">{stat.title}</p>
+                                    <p className="text-3xl font-extrabold text-gray-900 mt-1.5">
                                         {stat.value}
                                     </p>
-                                    <div className="flex items-center gap-1 mt-2">
-                                        {stat.isPositive ? (
-                                            <TrendingUp className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                            <TrendingDown className="h-4 w-4 text-red-500" />
-                                        )}
-                                        <span
-                                            className={`text-sm font-medium ${stat.isPositive ? 'text-green-500' : 'text-red-500'
-                                                }`}
-                                        >
+                                    <div className="flex items-center gap-1.5 mt-2.5">
+                                        <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                            stat.isPositive 
+                                                ? 'bg-emerald-50 text-emerald-600' 
+                                                : 'bg-red-50 text-red-500'
+                                        }`}>
+                                            {stat.isPositive ? (
+                                                <TrendingUp className="h-3 w-3" />
+                                            ) : (
+                                                <TrendingDown className="h-3 w-3" />
+                                            )}
                                             {stat.trend}
-                                        </span>
-                                        <span className="text-sm text-gray-500">vs last month</span>
+                                        </div>
+                                        <span className="text-xs text-gray-400">so với tháng trước</span>
                                     </div>
                                 </div>
-                                <div className="rounded-xl bg-gradient-to-br from-primary to-primary-hover p-3">
-                                    <stat.icon className="h-6 w-6 text-white" />
+                                <div className={`rounded-2xl bg-gradient-to-br ${statColors[index].bg} p-3 shadow-lg shadow-${statColors[index].bg}/20`}>
+                                    <stat.icon className="h-5 w-5 text-white" />
                                 </div>
                             </div>
-                        </Card>
+                            {/* Bottom accent */}
+                            <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${statColors[index].bg} opacity-60`} />
+                        </div>
                     ))
                 )}
             </div>
@@ -224,11 +234,11 @@ export function Dashboard() {
                         {productsPerCategory.length > 0 && (
                             <BarChart
                                 data={productsPerCategory}
-                                title="Products per Category"
+                                title="Sản phẩm theo Danh mục"
                             />
                         )}
                         {dailyPosts.length > 0 && (
-                            <LineChart data={dailyPosts} title="Daily Posts (Last 7 Days)" />
+                            <LineChart data={dailyPosts} title="Bài đăng trong tuần" />
                         )}
                     </>
                 )}
@@ -236,26 +246,38 @@ export function Dashboard() {
 
             {/* Latest Products Table */}
             <div className="glass-card p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                    Latest Products
-                </h2>
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">
+                            Sản phẩm Mới nhất
+                        </h2>
+                        <p className="text-sm text-gray-400 mt-0.5">5 sản phẩm vừa được đăng tải</p>
+                    </div>
+                    <a href="/products" className="text-sm text-primary font-semibold flex items-center gap-1 hover:text-primary-hover transition-colors">
+                        Xem tất cả
+                        <ArrowUpRight className="h-4 w-4" />
+                    </a>
+                </div>
 
                 {isLoadingProducts ? (
                     <TableSkeleton rows={5} />
                 ) : latestProducts.length === 0 ? (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500 text-lg">No products yet</p>
-                        <p className="text-gray-400 text-sm mt-2">Products will appear here once added</p>
+                    <div className="text-center py-16">
+                        <div className="h-16 w-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Package className="h-8 w-8 text-primary" />
+                        </div>
+                        <p className="text-gray-600 font-medium">Chưa có sản phẩm nào</p>
+                        <p className="text-gray-400 text-sm mt-1">Sản phẩm sẽ hiển thị ở đây khi được tải lên</p>
                     </div>
                 ) : (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Owner</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Date</TableHead>
+                                <TableHead>Sản phẩm</TableHead>
+                                <TableHead>Giá</TableHead>
+                                <TableHead>Người bán</TableHead>
+                                <TableHead>Danh mục</TableHead>
+                                <TableHead>Ngày đăng</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -271,8 +293,8 @@ export function Dashboard() {
                                                     const firstMedia = product.productMedia?.[0];
                                                     if (!firstMedia) {
                                                         return (
-                                                            <div className="h-14 w-14 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                                                                <span className="text-xs text-gray-400">No image</span>
+                                                            <div className="h-12 w-12 bg-orange-50 rounded-xl flex items-center justify-center">
+                                                                <Package className="h-5 w-5 text-primary/40" />
                                                             </div>
                                                         );
                                                     }
@@ -288,14 +310,14 @@ export function Dashboard() {
                                                             <img
                                                                 src={url}
                                                                 alt={product.productName}
-                                                                className="h-14 w-14 rounded-lg object-cover"
+                                                                className="h-12 w-12 rounded-xl object-cover ring-1 ring-gray-100"
                                                                 onError={(e) => {
-                                                                    e.currentTarget.src = "https://via.placeholder.com/56/6366F1/FFFFFF?text=IMG";
+                                                                    e.currentTarget.src = "https://via.placeholder.com/48/FB9A40/FFFFFF?text=IMG";
                                                                 }}
                                                             />
                                                             {firstMedia.startsWith('video:') && (
-                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg pointer-events-none">
-                                                                    <svg className="w-7 h-7 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl pointer-events-none">
+                                                                    <svg className="w-5 h-5 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
                                                                         <path d="M8 5v14l11-7z" />
                                                                     </svg>
                                                                 </div>
@@ -303,10 +325,10 @@ export function Dashboard() {
                                                         </div>
                                                     );
                                                 })()}
-                                                <span className="font-medium text-gray-900">{product.productName}</span>
+                                                <span className="font-medium text-gray-800 text-sm">{product.productName}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="font-semibold text-primary">
+                                        <TableCell className="font-bold text-primary">
                                             {formatPrice(product.productPrice)}
                                         </TableCell>
                                         <TableCell>
@@ -314,17 +336,17 @@ export function Dashboard() {
                                                 <img
                                                     src={product.userInfo.avatarUrl}
                                                     alt={product.userInfo.fullName}
-                                                    className="h-8 w-8 rounded-full"
+                                                    className="h-7 w-7 rounded-lg object-cover ring-1 ring-gray-100"
                                                 />
-                                                <span className="text-sm">{product.userInfo.fullName}</span>
+                                                <span className="text-sm text-gray-600">{product.userInfo.fullName}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="info">
+                                            <Badge variant="warning">
                                                 {category?.categoryName || 'Unknown'}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-gray-500">
+                                        <TableCell className="text-gray-400 text-sm">
                                             {formatDate(product.createdAt)}
                                         </TableCell>
                                     </TableRow>

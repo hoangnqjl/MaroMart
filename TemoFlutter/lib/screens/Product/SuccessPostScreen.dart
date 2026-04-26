@@ -77,22 +77,21 @@ class _SuccessPostScreenState extends State<SuccessPostScreen> with SingleTicker
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                      Navigator.pushNamed(context, '/product-manager');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       minimumSize: const Size(double.infinity, 56),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
-                    child: const Text("Về trang chủ", style: TextStyle(color: Colors.white, fontSize: 16)),
+                    child: const Text("Quản lý tin đăng", style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
-                       // Navigate to management
-                       // Navigator.pushNamed(context, '/manage_products'); // TODO: Add route
-                       Navigator.pop(context); 
+                      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
                     },
-                    child: const Text("Quản lý tin đăng", style: TextStyle(color: Colors.black)),
+                    child: const Text("Về trang chủ", style: TextStyle(color: Colors.black)),
                   )
                 ],
               ),

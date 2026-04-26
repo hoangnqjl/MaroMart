@@ -145,6 +145,8 @@ class ProductService {
     required String visualDetails,
     String? style,
     String? length,
+    List<String>? allowedAttributes,
+    String? selectedCondition,
   }) async {
     try {
       final response = await _apiService.post(
@@ -153,7 +155,9 @@ class ProductService {
           "productName": productName,
           "visualDetails": visualDetails,
           "style": style ?? "Professional",
-          "length": length ?? "Medium"
+          "length": length ?? "Medium",
+          "allowedAttributes": allowedAttributes ?? [],
+          "selectedCondition": selectedCondition ?? ""
         },
         needAuth: true,
       );
@@ -479,6 +483,56 @@ class ProductService {
       return [];
     } catch (e) {
       throw Exception('Lỗi lấy sản phẩm đề xuất: $e');
+    }
+  }
+
+  Future<List<dynamic>> getPresets() async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/products/presets',
+        needAuth: true,
+      );
+      if (response is List) return response;
+      return [];
+    } catch (e) {
+      print("Lỗi lấy presets: $e");
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createPreset({
+    required String presetName,
+    required String productName,
+    required String categoryId,
+    String? productType,
+    required Map<String, dynamic> productAttribute,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        endpoint: '/products/presets',
+        body: {
+          "presetName": presetName,
+          "productName": productName,
+          "categoryId": categoryId,
+          "productType": productType,
+          "productAttribute": productAttribute,
+        },
+        needAuth: true,
+      );
+      return response['data'] ?? response;
+    } catch (e) {
+      throw Exception('Lỗi lưu preset: $e');
+    }
+  }
+
+  Future<void> deletePreset(String presetId) async {
+    try {
+      await _apiService.delete(
+        endpoint: '/products/presets/$presetId',
+        needAuth: true,
+      );
+    } catch (e) {
+      throw Exception('Lỗi xóa preset: $e');
     }
   }
 }

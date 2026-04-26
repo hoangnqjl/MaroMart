@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://maromart-server.onrender.com';
+const API_BASE_URL = 'http://192.168.16.12:5000';
 
 // Create axios instance
 export const axiosInstance = axios.create({

@@ -33,8 +33,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     });
 
     try {
+      final String categoryId = widget.category['categoryId']?.toString() ?? widget.category['id']?.toString() ?? '';
+      
       final results = await _productService.getProductsByCategory(
-          categoryId: widget.category['id']
+          categoryId: categoryId == 'all' ? null : categoryId
       );
 
       if (mounted) {
@@ -66,7 +68,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.category['name'],
+          widget.category['categoryName']?.toString() ?? widget.category['name']?.toString() ?? '',
           style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         centerTitle: false,
@@ -102,7 +104,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             const Icon(HeroiconsOutline.archiveBoxXMark, size: 60, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              'Không có sản phẩm nào cho danh mục "${widget.category['name']}"',
+              'Không có sản phẩm nào cho danh mục "${widget.category['categoryName']?.toString() ?? widget.category['name']?.toString() ?? ''}"',
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
           ],

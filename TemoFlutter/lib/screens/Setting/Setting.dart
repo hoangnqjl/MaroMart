@@ -29,18 +29,37 @@ class Setting extends StatefulWidget {
 class _Setting extends State<Setting> {
   final UserService _userService = UserService();
   final ImagePicker _picker = ImagePicker();
+  late ScrollController _scrollController;
 
   String _fullName = '';
   String _email = '';
   String _avatarUrl = '';
-  // String _email = '';
-  // String _avatarUrl = '';
   bool _isUploading = false;
+  double _titleOpacity = 1.0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    double offset = _scrollController.offset;
+    // Fade out over the first 100 pixels of scroll
+    double newOpacity = 1.0 - (offset / 100).clamp(0.0, 1.0);
+    if (newOpacity != _titleOpacity) {
+      setState(() {
+        _titleOpacity = newOpacity;
+      });
+    }
   }
 
   void _loadUserData() {
@@ -111,6 +130,7 @@ class _Setting extends State<Setting> {
         children: [
           Positioned.fill(
             child: SingleChildScrollView(
+              controller: _scrollController,
               physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -202,6 +222,7 @@ class _Setting extends State<Setting> {
             title: l10n.settings,
             isMenu: true,
             hasBackground: false,
+            titleOpacity: _titleOpacity,
             onMenuTap: widget.onMenuTap,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             actions: [
