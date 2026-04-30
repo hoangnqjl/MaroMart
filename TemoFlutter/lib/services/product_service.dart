@@ -97,6 +97,8 @@ class ProductService {
     required String productName,
     required String description,
     required String condition,
+    String? category,
+    String? productType,
   }) async {
     try {
       final response = await _apiService.post(
@@ -105,20 +107,58 @@ class ProductService {
           "productName": productName,
           "description": description,
           "condition": condition,
+          "category": category ?? "",
+          "productType": productType ?? "",
         },
         needAuth: true,
       );
 
-      if (response is Map<String, dynamic>) {
-        return response;
+      print("[AI-SUGGEST] Raw response: $response");
+
+      if (response == null) return null;
+
+      // Case 1: n8n AI Agent trả về { "output": "{ \"attributes\": {...} }" }
+      if (response is Map && response['output'] != null) {
+        final outputStr = response['output'].toString();
+        try {
+          // Strip markdown code block nếu có
+          String cleaned = outputStr
+              .replaceAll('```json', '')
+              .replaceAll('```', '')
+              .trim();
+          final parsed = jsonDecode(cleaned);
+          if (parsed is Map<String, dynamic>) return parsed;
+        } catch (e) {
+          print("[AI-SUGGEST] Failed to parse output string: $e");
+        }
       }
+
+      // Case 2: n8n trả về array [ { "output": "..." } ]
+      if (response is List && response.isNotEmpty) {
+        final first = response[0];
+        if (first is Map && first['output'] != null) {
+          final outputStr = first['output'].toString();
+          try {
+            String cleaned = outputStr
+                .replaceAll('```json', '')
+                .replaceAll('```', '')
+                .trim();
+            final parsed = jsonDecode(cleaned);
+            if (parsed is Map<String, dynamic>) return parsed;
+          } catch (e) {
+            print("[AI-SUGGEST] Failed to parse list output: $e");
+          }
+        }
+      }
+
+      if (response is Map<String, dynamic>) return response;
+
       return null;
     } catch (e) {
       print("Lỗi AI Suggestion: $e");
       return null;
     }
   }
-
   // --- NEW AI METHODS ---
   Future<Map<String, dynamic>> validateMedia(List<XFile> files, String productName, {List<String>? remoteUrls}) async {
     try {
@@ -533,6 +573,42 @@ class ProductService {
       );
     } catch (e) {
       throw Exception('Lỗi xóa preset: $e');
+    }
+  }
+
+  // --- AI SEARCH & SUGGESTIONS ---
+  Future<List<String>> getAiSuggestions(String query) async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/products/ai-suggest',
+        queryParameters: {'query': query},
+        needAuth: false,
+      );
+      if (response is Map && response['data'] is List) {
+        return List<String>.from(response['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint("AI Suggestion error: $e");
+      return [];
+    }
+  }
+
+  Future<List<Product>> semanticSearch(String query) async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/products/ai-search',
+        queryParameters: {'query': query},
+        needAuth: false,
+      );
+
+      if (response is Map && response['data'] is List) {
+        return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Semantic Search error: $e");
+      return [];
     }
   }
 }

@@ -59,6 +59,10 @@ class HomeScreenState extends State<HomeScreen> {
   ];
   int _currentHintIndex = 0;
   Timer? _hintTimer;
+  Timer? _debounce;
+
+  final TextEditingController _searchController = TextEditingController();
+  List<String> _suggestions = [];
 
   String? _filterCategoryId;
   String? _filterProvince;
@@ -126,9 +130,25 @@ class HomeScreenState extends State<HomeScreen> {
     _bannerTimer?.cancel();
     _bannerController.dispose();
     _hintTimer?.cancel();
+    _debounce?.cancel();
+    _searchController.dispose();
     _searchFocusNode.dispose();
     _productService.productChangeNotifier.removeListener(_onProductChanged);
     super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      if (query.trim().isEmpty) {
+        setState(() => _suggestions = []);
+        return;
+      }
+      final suggestions = await _productService.getAiSuggestions(query);
+      if (mounted) {
+        setState(() => _suggestions = suggestions);
+      }
+    });
   }
 
   void reload() {
@@ -484,10 +504,13 @@ class HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(width: 16),
                                 Icon(HeroiconsOutline.magnifyingGlass, color: Colors.grey[500], size: 20),
                                 const SizedBox(width: 12),
-                                Expanded(
+                                 Expanded(
                                   child: TextField(
+                                    controller: _searchController,
                                     focusNode: _searchFocusNode,
+                                    onChanged: _onSearchChanged,
                                     onSubmitted: (value) {
+                                      setState(() => _suggestions = []);
                                       if (value.trim().isNotEmpty) {
                                         Navigator.push(
                                           context,
@@ -521,6 +544,68 @@ class HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 5),
+                      // Suggestions Overlay
+                      if (_searchController.text.trim().isNotEmpty && _searchFocusNode.hasFocus)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
+                              ],
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _suggestions.length + 1, // +1 cho tùy chọn AI
+                              itemBuilder: (context, index) {
+                                if (index == _suggestions.length) {
+                                  // Dòng cuối cùng: Tìm kiếm bằng AI
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.auto_awesome, size: 18, color: Color(0xFFFFB86A)),
+                                    title: Text("Tìm '${_searchController.text}' bằng AI... ->", 
+                                      style: const TextStyle(
+                                        fontFamily: 'Quicksand', 
+                                        fontSize: 13, 
+                                        fontWeight: FontWeight.w800, 
+                                        color: Color(0xFFFFB86A)
+                                      )),
+                                    onTap: () {
+                                      final query = _searchController.text;
+                                      setState(() => _suggestions = []);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => SearchResultScreen(keyword: query),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                }
+                                return ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.history, size: 18, color: Colors.grey),
+                                  title: Text(_suggestions[index], style: const TextStyle(fontFamily: 'Quicksand', fontSize: 13)),
+                                  onTap: () {
+                                    final selected = _suggestions[index];
+                                    _searchController.text = selected;
+                                    setState(() => _suggestions = []);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SearchResultScreen(keyword: selected),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 10),
 
                       // Categories List

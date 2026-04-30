@@ -326,16 +326,20 @@ class _AddProductState extends State<AddProduct> {
             _categoryNames[catId] = catName;
             
             List<String> types = [];
+            Set<String> uniqueTypes = {};
             if (cat['productTypes'] != null) {
               for (var t in cat['productTypes']) {
-                types.add(t['typeName']);
-                List<String> typeAttrs = [];
-                if (t['attributes'] != null) {
-                  for (var ta in t['attributes']) {
-                    typeAttrs.add(ta['name']);
+                if (!uniqueTypes.contains(t['typeName'])) {
+                  uniqueTypes.add(t['typeName']);
+                  types.add(t['typeName']);
+                  List<String> typeAttrs = [];
+                  if (t['attributes'] != null) {
+                    for (var ta in t['attributes']) {
+                      typeAttrs.add(ta['name']);
+                    }
                   }
+                  _apiTypeSpecificAttributes[t['typeName']] = typeAttrs;
                 }
-                _apiTypeSpecificAttributes[t['typeName']] = typeAttrs;
               }
             }
             _allowedTypes[catId] = types;
@@ -517,7 +521,7 @@ class _AddProductState extends State<AddProduct> {
   }
 
   // --- LOGIC MANUAL TYPE ---
-  void _onTypeChanged(String newType) {
+  Future<void> _onTypeChanged(String newType) async {
     // 1. Capture current values of all existing attributes
     Map<String, String> preservedValues = {};
     for (var attr in _attributes) {
@@ -590,7 +594,136 @@ class _AddProductState extends State<AddProduct> {
         ),
       );
     });
+
+    // 4. Sau khi build template xong, tự động gọi n8n để điền giá trị
+    await _fetchAttributesFromN8N(newType);
   }
+
+  // Gọi n8n để điền giá trị attribute tự động sau khi chọn Type
+  Future<void> _fetchAttributesFromN8N(String productType) async {
+    if (_selectedCategory == null || _titleController.text.trim().isEmpty) return;
+
+    setState(() => _isAiLoading = true);
+    try {
+      final result = await _productService.getAISuggestion(
+        productName: _titleController.text.trim(),
+        description: _descController.text.trim(),
+        condition: _conditionController.text.trim(),
+        category: _selectedCategory,
+        productType: productType,
+      );
+
+      print("[AI-ATTR] Raw result: $result");
+
+      if (result == null) return;
+
+      // --- PARSE ATTRIBUTES TỪ NHIỀU DẠNG RESPONSE KHÁC NHAU ---
+      Map<String, dynamic> aiAttrs = {};
+
+      // Case 1: { "output": "{ \"attributes\": {...} }" } — n8n AI Agent wrap trong string
+      if (result['output'] != null) {
+        try {
+          String cleaned = result['output']
+              .toString()
+              .replaceAll('```json', '')
+              .replaceAll('```', '')
+              .trim();
+          final parsed = jsonDecode(cleaned);
+          if (parsed is Map) {
+            if (parsed['attributes'] is Map) {
+              aiAttrs = Map<String, dynamic>.from(parsed['attributes']);
+            } else {
+              aiAttrs = Map<String, dynamic>.from(parsed);
+            }
+          }
+        } catch (e) {
+          print("[AI-ATTR] Failed to parse output string: $e");
+        }
+      }
+
+      // Case 2: { "attributes": { "brand": "Apple", ... } } — đúng format
+      if (aiAttrs.isEmpty && result['attributes'] is Map) {
+        aiAttrs = Map<String, dynamic>.from(result['attributes']);
+      }
+
+      // Case 3: flat object { "brand": "Apple", "ram": "8GB" } — không có wrapper
+      if (aiAttrs.isEmpty && result.isNotEmpty) {
+        aiAttrs = Map<String, dynamic>.from(result);
+      }
+
+      print("[AI-ATTR] Extracted attributes: $aiAttrs");
+
+      if (aiAttrs.isEmpty) return;
+
+      setState(() {
+        aiAttrs.forEach((key, value) {
+          String cleanKey = key.toString().toLowerCase().trim();
+          String cleanVal = value.toString().trim();
+
+          // Bỏ qua giá trị rỗng / không xác định
+          if (cleanVal.isEmpty ||
+              cleanVal.toUpperCase() == 'N/A' ||
+              cleanVal.toUpperCase() == 'UNKNOWN' ||
+              cleanVal.toUpperCase() == 'KHÔNG XÁC ĐỊNH') return;
+
+          // Xử lý riêng field brand
+          if (cleanKey == 'brand') {
+            bool isBrandEmptyOrNA = _brandController.text.trim().isEmpty ||
+                _brandController.text.trim().toUpperCase() == 'N/A' ||
+                _brandController.text.trim().toUpperCase() == 'UNKNOWN';
+            if (isBrandEmptyOrNA) {
+              _brandController.text = cleanVal;
+            }
+            return;
+          }
+
+          // Tìm attribute đã có trong danh sách và điền vào (chỉ khi đang trống)
+          String normalize(String s) => s.toLowerCase().trim().replaceAll(' ', '_');
+          
+          int idx = _attributes.indexWhere(
+                (a) => normalize(a.nameController.text) == normalize(cleanKey),
+          );
+
+          if (idx != -1) {
+            String currentVal = _attributes[idx].valueController.text.trim();
+            bool isEmptyOrNA = currentVal.isEmpty ||
+                currentVal.toUpperCase() == 'N/A' ||
+                currentVal.toUpperCase() == 'UNKNOWN';
+            if (isEmptyOrNA) {
+              _attributes[idx].valueController.text = cleanVal;
+            } else {
+              // Bổ sung: Nếu user bấm Lấy thông số mà ô đã có giá trị, thì ghi đè luôn để cập nhật thông số mới nhất
+              _attributes[idx].valueController.text = cleanVal;
+            }
+          } else {
+            // Attribute chưa có trong danh sách → thêm mới trước dòng cuối
+            int insertIdx =
+            _attributes.isNotEmpty ? _attributes.length - 1 : 0;
+            _attributes.insert(
+              insertIdx,
+              AttributeItem(name: _formatKey(cleanKey), value: cleanVal),
+            );
+          }
+        });
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✨ AI đã gợi ý thông số kỹ thuật!"),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print("[AI-ATTR] n8n suggestion failed: $e");
+      // Không hiện lỗi to — để user tự điền
+    } finally {
+      if (mounted) setState(() => _isAiLoading = false);
+    }
+  }
+
 
   // --- LOGIC AI SUGGESTION ---
   // --- LOGIC AI HANDLERS ---
@@ -629,30 +762,32 @@ class _AddProductState extends State<AddProduct> {
       }
 
       // Trích xuất thông tin từ AI nếu có
+      String? detectedCategory = result['category'];
+      String? detectedType;
+      Map<String, dynamic> attrs = result['attributes'] ?? {};
+
       setState(() {
         if (result['condition'] != null)
           _conditionController.text = result['condition'];
 
         // A. Handle Category Auto-Selection
-        String? detectedCategory = result['category'];
         if (detectedCategory != null &&
             _attributeTemplates.containsKey(detectedCategory.toLowerCase())) {
           _onCategoryChanged(detectedCategory.toLowerCase());
         }
 
-        Map<String, dynamic> attrs = result['attributes'] ?? {};
-
         // B. Handle Type Auto-Selection
-        String? detectedType;
         attrs.forEach((k, v) {
           if (k.toString().toLowerCase() == 'type')
             detectedType = v.toString().trim();
         });
+      }); // end setState
 
-        if (detectedType != null) {
-          _onTypeChanged(detectedType!);
-        }
+      if (detectedType != null) {
+        await _onTypeChanged(detectedType!);
+      }
 
+      setState(() {
         // C. Deep Fill Attributes (Brand, and others)
         attrs.forEach((key, value) {
           String cleanKey = key.toString().trim();
@@ -2027,9 +2162,64 @@ class _AddProductState extends State<AddProduct> {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text(
-              "Thông số chi tiết",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Thông số chi tiết",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                TextButton(
+                  onPressed: _isAiLoading 
+                      ? null 
+                      : () {
+                          // Find current type
+                          String currentType = "";
+                          try {
+                            var typeAttr = _attributes.firstWhere(
+                              (a) => a.nameController.text.toLowerCase() == 'type',
+                            );
+                            currentType = typeAttr.valueController.text;
+                          } catch (e) {}
+                          _fetchAttributesFromN8N(currentType);
+                        },
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.green.withOpacity(0.1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                  ),
+                  child: _isAiLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              HeroiconsSolid.sparkles,
+                              size: 16,
+                              color: Colors.green,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              "Lấy thông số",
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             ListView.builder(

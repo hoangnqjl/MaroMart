@@ -18,6 +18,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
   final ProductService _productService = ProductService();
   List<Product> _products = [];
   bool _isLoading = true;
+  bool _isAISearch = false;
   String _errorMessage = '';
 
   @override
@@ -30,10 +31,42 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
+      _isAISearch = false;
     });
 
     try {
       final results = await _productService.searchProducts(widget.keyword);
+
+      if (mounted) {
+        if (results.length < 2) {
+          // Nếu kết quả quá ít hoặc không có, gọi AI để bổ sung
+          _doAISearch();
+        } else {
+          setState(() {
+            _products = results;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString().replaceAll("Exception: ", "");
+        });
+      }
+    }
+  }
+
+  Future<void> _doAISearch() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+      _isAISearch = true;
+    });
+
+    try {
+      final results = await _productService.semanticSearch(widget.keyword);
 
       if (mounted) {
         setState(() {
@@ -45,7 +78,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceAll("Exception: ", "");
+          _errorMessage = "Lỗi AI Search: ${e.toString()}";
         });
       }
     }
@@ -111,36 +144,43 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
       );
     }
 
-    if (_products.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(HeroiconsOutline.magnifyingGlass, size: 60, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(
-              'No products found for "${widget.keyword}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-          ],
-        ),
-      );
-    }
-
     final double screenWidth = MediaQuery.of(context).size.width;
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
-      itemCount: _products.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 20),
-          child: SizedBox(
-            height: screenWidth * 1.05,
-            child: Post(product: _products[index]),
+    return Column(
+      children: [
+        if (_products.isEmpty)
+           Expanded(
+             child: Center(
+               child: Column(
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   const Icon(HeroiconsOutline.magnifyingGlass, size: 60, color: Colors.grey),
+                   const SizedBox(height: 16),
+                   Text(
+                     'No products found for "${widget.keyword}"',
+                     style: const TextStyle(color: Colors.grey, fontSize: 16),
+                   ),
+                 ],
+               ),
+             ),
+           )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+              itemCount: _products.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: SizedBox(
+                    height: screenWidth * 1.05,
+                    child: Post(product: _products[index]),
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      },
+      ],
     );
   }
 }
