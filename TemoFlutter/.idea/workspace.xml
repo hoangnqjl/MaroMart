@@ -5,14 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d6fe65fb-6f29-4d6b-9d4a-462758daa4c0" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../MaroMart_Server_Version_01" beforeDir="false" afterPath="$PROJECT_DIR$/../MaroMart_Server_Version_01" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/android/build/reports/problems/problems-report.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/Home/HomeScreen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/Home/HomeScreen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/Product/AddProduct.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/Product/AddProduct.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/Search/SearchResult.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/Search/SearchResult.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/product_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/product_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/utils/constants.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/utils/constants.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
