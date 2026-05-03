@@ -25,13 +25,16 @@ import 'package:temo/utils/string_utils.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:temo/services/order_service.dart';
+import 'package:temo/services/chat_service.dart';
 import 'package:temo/services/api_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:temo/models/User/User.dart' as model_user;
+import 'package:temo/utils/UIHelper.dart';
 import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/screens/Setting/AppImprovementScreen.dart';
+import 'ProductManager.dart';
 
 class ProductDetail extends StatefulWidget {
   final String productId;
@@ -64,6 +67,10 @@ class ProductDetailState extends State<ProductDetail> {
   final MapController _mapController = MapController();
   final ScrollController _scrollController = ScrollController();
   double _headerOpacity = 1.0;
+  
+  double? _marketPriceMin;
+  double? _marketPriceMax;
+  bool _isLoadingMarketPrice = false;
 
   @override
   void initState() {
@@ -126,7 +133,7 @@ class ProductDetailState extends State<ProductDetail> {
             } else if (distanceInMeters < 10000) {
               _distanceText = "Gần bạn";
             } else {
-              _distanceText = "~${(distanceInMeters / 1000).toStringAsFixed(1)} km";
+              _distanceText = "~${NumberFormat('#,###.#').format(distanceInMeters / 1000)} km";
             }
           });
         }
@@ -180,6 +187,7 @@ class ProductDetailState extends State<ProductDetail> {
         });
         _calculateDistance(product);
         _fetchRelatedProducts(product.categoryId);
+        _fetchMarketPrice();
       }
     } catch (e) {
       if (mounted) {
@@ -190,6 +198,24 @@ class ProductDetailState extends State<ProductDetail> {
           SnackBar(content: Text('Không thể tải chi tiết sản phẩm: ${e.toString()}')),
         );
       }
+    }
+  }
+
+  Future<void> _fetchMarketPrice() async {
+    setState(() => _isLoadingMarketPrice = true);
+    try {
+      final data = await _productService.getMarketPrice(widget.productId);
+      if (data != null && mounted) {
+        setState(() {
+          _marketPriceMin = (data['minPrice'] as num).toDouble();
+          _marketPriceMax = (data['maxPrice'] as num).toDouble();
+          _isLoadingMarketPrice = false;
+        });
+      } else {
+        if (mounted) setState(() => _isLoadingMarketPrice = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingMarketPrice = false);
     }
   }
 
@@ -252,6 +278,7 @@ class ProductDetailState extends State<ProductDetail> {
                         _buildProductHeader(product),
                         const SizedBox(height: 16),
                         _buildTagButtons(product),
+                        _buildMarketPriceDiagram(product),
                         const SizedBox(height: 24),
                         _buildSellerInfo(product),
                         const SizedBox(height: 24),
@@ -267,7 +294,7 @@ class ProductDetailState extends State<ProductDetail> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        _buildSectionTitle("Thông số sản phẩm"),
+                        _buildSectionTitle("Chi tiết sản phẩm"),
                         const SizedBox(height: 12),
                         _buildTechSpecs(product),
                         const SizedBox(height: 24),
@@ -338,13 +365,43 @@ class ProductDetailState extends State<ProductDetail> {
                   ),
                 ),
               ),
-              _buildRoundIconButton(
-                HeroiconsSolid.ellipsisVertical, 
-                _showMoreOptions,
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTopBarAction(HeroiconsSolid.shoppingBag, _requestPurchase),
+                    Container(width: 1, height: 20, color: Colors.grey[200]),
+                    _buildTopBarAction(HeroiconsSolid.ellipsisVertical, _showMoreOptions),
+                  ],
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTopBarAction(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 45,
+        height: 45,
+        alignment: Alignment.center,
+        color: Colors.transparent, // Ensures the entire area is tappable
+        child: Icon(icon, color: const Color(0xFF3F3F46), size: 20),
       ),
     );
   }
@@ -375,7 +432,7 @@ class ProductDetailState extends State<ProductDetail> {
   Widget _buildGallery() {
     return Container(
       height: MediaQuery.of(context).size.height * 0.55,
-      margin: const EdgeInsets.fromLTRB(16, 120, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 95, 16, 0),
       child: Stack(
         children: [
           ClipRRect(
@@ -446,25 +503,7 @@ class ProductDetailState extends State<ProductDetail> {
           ],
         ),
         
-        // MARKET PRICE INFO
-        if (product.marketPrice != null && product.marketPrice! > product.productPrice) ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              "Rẻ hơn ${(product.marketPrice! - product.productPrice).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ so với thị trường",
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF059669),
-              ),
-            ),
-          ),
-        ],
+        // MARKET PRICE INFO moved to tags and diagram
       ],
     );
   }
@@ -593,6 +632,41 @@ class ProductDetailState extends State<ProductDetail> {
         'bg': const Color(0xFFF3F4F6),
       });
     }
+
+    if (_isLoadingMarketPrice) {
+      tags.add({
+        'label': 'Đang kiểm tra giá...',
+        'icon': HeroiconsOutline.currencyDollar,
+        'color': const Color(0xFF6B7280),
+        'bg': const Color(0xFFF3F4F6),
+      });
+    } else if (_marketPriceMin != null && _marketPriceMax != null) {
+      final price = product.productPrice;
+      if (price < _marketPriceMin!) {
+        final percent = (((_marketPriceMin! - price) / _marketPriceMin!) * 100).toStringAsFixed(0);
+        tags.add({
+          'label': 'Rẻ hơn ~$percent%',
+          'icon': HeroiconsOutline.arrowTrendingDown,
+          'color': const Color(0xFF059669),
+          'bg': const Color(0xFFECFDF5),
+        });
+      } else if (price > _marketPriceMax!) {
+        final percent = (((price - _marketPriceMax!) / _marketPriceMax!) * 100).toStringAsFixed(0);
+        tags.add({
+          'label': 'Cao hơn ~$percent%',
+          'icon': HeroiconsOutline.arrowTrendingUp,
+          'color': const Color(0xFFDC2626),
+          'bg': const Color(0xFFFEF2F2),
+        });
+      } else {
+        tags.add({
+          'label': 'Đúng giá',
+          'icon': HeroiconsOutline.checkBadge,
+          'color': const Color(0xFF2563EB),
+          'bg': const Color(0xFFEFF6FF),
+        });
+      }
+    }
     
     if (tags.isEmpty) return const SizedBox.shrink();
 
@@ -621,6 +695,125 @@ class ProductDetailState extends State<ProductDetail> {
             ),
           ),
         )).toList(),
+      ),
+    );
+  }
+
+  Widget _buildMarketPriceDiagram(Product product) {
+    if (_isLoadingMarketPrice || _marketPriceMin == null || _marketPriceMax == null) {
+      return const SizedBox.shrink();
+    }
+
+    final minPriceStr = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(_marketPriceMin);
+    final maxPriceStr = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(_marketPriceMax);
+
+    double percent = 0.5; // default center
+    final range = _marketPriceMax! - _marketPriceMin!;
+    if (range > 0) {
+      percent = (product.productPrice - _marketPriceMin!) / range;
+      percent = percent.clamp(-0.2, 1.2); 
+    } else {
+       if (product.productPrice < _marketPriceMin!) percent = -0.2;
+       else if (product.productPrice > _marketPriceMax!) percent = 1.2;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0xFFF3F4F6), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(HeroiconsOutline.chartBar, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                "Biểu đồ giá thị trường",
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF374151),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              
+              final markerWidth = 50.0;
+              final maxPos = width - markerWidth;
+              
+              double pos = percent * width;
+              pos = pos - (markerWidth / 2);
+              pos = pos.clamp(0.0, maxPos);
+              
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 14),
+                    height: 8,
+                    width: width,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.green.shade400, Colors.orange.shade400, Colors.red.shade400],
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: 28,
+                    child: Text(
+                      minPriceStr,
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 28,
+                    child: Text(
+                      maxPriceStr,
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Positioned(
+                    left: pos,
+                    top: -12,
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            "Giá bán",
+                            style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Container(
+                          width: 2,
+                          height: 10,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 38),
+        ],
       ),
     );
   }
@@ -660,6 +853,12 @@ class ProductDetailState extends State<ProductDetail> {
     'material': 'Chất liệu',
     'warranty': 'Bảo hành',
     'origin': 'Xuất xứ',
+    'compatibility': 'Tương thích',
+    'tình_trạng': 'Tình trạng',
+    'dòng_máy_/_mã': 'Dòng máy / Mã',
+    'power_consumption': 'Mức tiêu thụ điện',
+    'power': 'Công suất',
+    'status': 'Trạng thái',
   };
 
   String _translateSpecValue(String key, String value) {
@@ -790,9 +989,9 @@ class ProductDetailState extends State<ProductDetail> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                   userAgentPackageName: 'com.temo.app',
-                  retinaMode: MediaQuery.of(context).devicePixelRatio > 1.0,
+                  retinaMode: true,
                 ),
                 MarkerLayer(
                   markers: [
@@ -833,7 +1032,7 @@ class ProductDetailState extends State<ProductDetail> {
                               child: ClipOval(
                                 child: avatarUrl != null && avatarUrl.isNotEmpty
                                     ? CachedNetworkImage(
-                                        imageUrl: avatarUrl,
+                                        imageUrl: StringUtils.normalizeUrl(avatarUrl),
                                         fit: BoxFit.cover,
                                         placeholder: (context, url) => Container(color: Colors.grey[300]),
                                         errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
@@ -950,8 +1149,9 @@ class ProductDetailState extends State<ProductDetail> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                         userAgentPackageName: 'com.temo.app',
+                        retinaMode: true,
                       ),
                       if (routePoints.isNotEmpty)
                         PolylineLayer(
@@ -1004,7 +1204,7 @@ class ProductDetailState extends State<ProductDetail> {
                                     child: ClipOval(
                                       child: avatarUrl != null && avatarUrl.isNotEmpty
                                           ? CachedNetworkImage(
-                                              imageUrl: avatarUrl.startsWith('http') ? avatarUrl : '${ApiConstants.baseUrl}$avatarUrl',
+                                              imageUrl: StringUtils.normalizeUrl(avatarUrl),
                                               fit: BoxFit.cover,
                                               errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
                                             )
@@ -1183,8 +1383,10 @@ class ProductDetailState extends State<ProductDetail> {
             fit: StackFit.expand,
             children: [
               CachedNetworkImage(
-                imageUrl: imageUrl,
+                imageUrl: StringUtils.normalizeUrl(imageUrl),
                 fit: BoxFit.cover,
+                maxWidthDiskCache: 1080,
+                maxHeightDiskCache: 1080,
                 placeholder: (context, url) => Container(color: Colors.grey[100]),
                 errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image)),
               ),
@@ -1272,13 +1474,34 @@ class ProductDetailState extends State<ProductDetail> {
     
     setState(() => _isLoading = true);
     try {
-      await _orderService.createPurchaseRequest(_product!.productId, _product!.userId);
-      if (mounted) {
-        UIHelpers.showSuccessDialog(
-          context,
-          title: "Đã gửi yêu cầu!",
-          message: "Yêu cầu mua hàng của bạn đã được gửi đến người bán. Vui lòng chờ phản hồi qua thông báo.",
+      final response = await _orderService.createPurchaseRequest(_product!.productId, _product!.userId);
+      
+      // Sau khi tạo order thành công, gửi tin nhắn vào chat
+      if (response['orderId'] != null) {
+        final orderId = response['orderId'];
+        final chatService = ChatService();
+        
+        final orderData = {
+          "orderId": orderId,
+          "productId": _product!.productId,
+          "productName": _product!.productName,
+          "price": _product!.productPrice,
+        };
+        
+        final content = "[[ORDER_REQUEST:${jsonEncode(orderData)}]]";
+        
+        await chatService.sendMessage(
+          receiverId: _product!.userId,
+          content: content,
         );
+        
+        if (mounted) {
+          UIHelpers.showSuccessDialog(
+            context,
+            title: "Đã gửi yêu cầu!",
+            message: "Yêu cầu mua hàng của bạn đã được gửi trực tiếp trong tin nhắn đến người bán.",
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1583,6 +1806,8 @@ class ProductDetailState extends State<ProductDetail> {
 
 
   Widget _buildBottomBar() {
+    final bool isOwner = _currentUserId != null && _product != null && _currentUserId == _product!.userId;
+
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
       decoration: BoxDecoration(
@@ -1592,33 +1817,40 @@ class ProductDetailState extends State<ProductDetail> {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildBottomButton(
-              icon: HeroiconsOutline.phone,
-              label: "Gọi ngay",
-              onTap: _showCallDialog,
-              isSolid: false,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildBottomButton(
-              icon: HeroiconsOutline.chatBubbleOvalLeft,
-              label: "Nhắn tin",
-              onTap: () {
-                if (_product?.userInfo != null) {
-                  final userInfo = _product!.userInfo!;
-                  final partner = ChatPartner(userId: userInfo.userId, fullName: userInfo.fullName, avatarUrl: userInfo.avatarUrl, email: userInfo.email);
-                  smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
-                }
-              },
+      child: isOwner
+          ? _buildBottomButton(
+              icon: HeroiconsSolid.pencilSquare,
+              label: "Quản lý sản phẩm",
+              onTap: () => smoothPush(context, const ProductManager()),
               isSolid: true,
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: _buildBottomButton(
+                    icon: HeroiconsSolid.phone,
+                    label: "Gọi ngay",
+                    onTap: _showCallDialog,
+                    isSolid: false,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildBottomButton(
+                    icon: HeroiconsSolid.chatBubbleOvalLeft,
+                    label: "Nhắn tin",
+                    onTap: () {
+                      if (_product?.userInfo != null) {
+                        final userInfo = _product!.userInfo!;
+                        final partner = ChatPartner(userId: userInfo.userId, fullName: userInfo.fullName, avatarUrl: userInfo.avatarUrl, email: userInfo.email);
+                        smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner, product: _product));
+                      }
+                    },
+                    isSolid: true,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1633,9 +1865,12 @@ class ProductDetailState extends State<ProductDetail> {
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          color: isSolid ? AppColors.primary : Colors.white,
+          color: isSolid ? AppColors.primary : const Color(0xFFFFF7ED),
           borderRadius: BorderRadius.circular(50),
-          border: isSolid ? null : Border.all(color: AppColors.primary, width: 1.5),
+          border: Border.all(
+            color: isSolid ? AppColors.primary : const Color(0xFFFFF7ED),
+            width: 1.5,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1694,10 +1929,12 @@ class ProductDetailState extends State<ProductDetail> {
   Widget _buildMediaItem(MediaItem item) {
     if (item.type == MediaType.image) {
       return CachedNetworkImage(
-        imageUrl: item.url,
+        imageUrl: StringUtils.normalizeUrl(item.url),
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
+        maxWidthDiskCache: 1920,
+        maxHeightDiskCache: 1080,
         placeholder: (context, url) => const Center(child: ModernLoader(size: 30)),
         errorWidget: (context, url, error) => Container(
           color: Colors.grey[300],
@@ -1741,7 +1978,7 @@ class ProductDetailState extends State<ProductDetail> {
                           maxScale: 5.0,
                           child: Center(
                             child: CachedNetworkImage(
-                              imageUrl: item.url,
+                              imageUrl: StringUtils.normalizeUrl(item.url),
                               fit: BoxFit.contain,
                               placeholder: (context, url) => const ModernLoader(size: 30),
                               errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
@@ -1760,9 +1997,28 @@ class ProductDetailState extends State<ProductDetail> {
                     right: 0,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
+                          // Close Button
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () {
+                                _pageController.jumpToPage(tempCurrentPage);
+                                Navigator.pop(context);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                              ),
+                            ),
+                          ),
                           // Index Indicator
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1777,21 +2033,6 @@ class ProductDetailState extends State<ProductDetail> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
-                            ),
-                          ),
-                          // Close Button
-                          GestureDetector(
-                            onTap: () {
-                              _pageController.jumpToPage(tempCurrentPage);
-                              Navigator.pop(context);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
                             ),
                           ),
                         ],

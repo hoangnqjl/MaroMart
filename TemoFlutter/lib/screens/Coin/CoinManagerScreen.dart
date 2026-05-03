@@ -167,21 +167,9 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          Positioned(
-            top: -50, left: 0, right: 0, height: 350,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [const Color(0xFFFFD09F).withOpacity(0.8), const Color(0xFFFFD09F).withOpacity(0)],
-                  stops: const [0.2, 1.0],
-                ),
-              ),
-            ),
-          ),
           
           // 2. Main Content
           CustomScrollView(

@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:temo/utils/string_utils.dart';
 import 'package:temo/services/product_service.dart';
 import 'package:temo/utils/storage.dart';
+import 'package:geolocator/geolocator.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -32,6 +33,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   final ProductService _productService = ProductService();
   int _currentMediaIndex = 0;
   bool isExpanded = false;
+  String? _distanceText;
 
   // Flip Animation Variables
   late AnimationController _flipController;
@@ -51,7 +53,42 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
       CurvedAnimation(parent: _flipController, curve: Curves.easeInOutBack),
     );
 
+
     _productService.fetchSavedProductsIfNeeded();
+    _calculateDistance();
+  }
+
+  Future<void> _calculateDistance() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) return;
+      
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low
+      );
+      
+      final product = widget.product;
+      if (product.latitude != null && product.longitude != null) {
+        double distanceInMeters = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude, 
+          product.latitude!, product.longitude!
+        );
+
+        if (mounted) {
+          setState(() {
+            if (distanceInMeters < 1000) {
+              _distanceText = "Rất gần bạn";
+            } else if (distanceInMeters < 10000) {
+              _distanceText = "Gần bạn";
+            } else {
+              _distanceText = "~${NumberFormat('#,###.#').format(distanceInMeters / 1000)} km";
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Lỗi tính khoảng cách: $e");
+    }
   }
 
   @override
@@ -69,23 +106,19 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
 
   void _toggleExpanded() => setState(() => isExpanded = !isExpanded);
 
-  String _getFullUrl(String path) {
-    if (path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return '${ApiConstants.baseUrl}$path';
-  }
+
 
   List<MediaItem> _parseProductMedia(List<String> rawMedia) {
     return rawMedia.map((mediaString) {
       String cleanUrl = mediaString;
       if (mediaString.toLowerCase().startsWith('video:')) {
         cleanUrl = mediaString.substring(6).trim();
-        return MediaItem(type: MediaType.video, url: _getFullUrl(cleanUrl));
+        return MediaItem(type: MediaType.video, url: StringUtils.normalizeUrl(cleanUrl));
       } else {
         if (mediaString.toLowerCase().startsWith('image:')) {
           cleanUrl = mediaString.substring(6).trim();
         }
-        return MediaItem(type: MediaType.image, url: _getFullUrl(cleanUrl));
+        return MediaItem(type: MediaType.image, url: StringUtils.normalizeUrl(cleanUrl));
       }
     }).toList();
   }
@@ -162,12 +195,8 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
             ),
           ),
 
-          // Price Tag (Top Left)
-          Positioned(
-            top: 15, left: 15,
-            child: _buildBlurTag(_formatPrice(product.productPrice)),
-          ),
-
+          // Price Tag removed from top left as it's now at the bottom
+          
           // Image Indicator (Top Right)
           if (_mediaItems.length > 1)
             Positioned(
@@ -175,13 +204,74 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               child: _buildBlurTag('${_currentMediaIndex + 1}/${_mediaItems.length}'),
             ),
 
-          // Sidebar Action Bar
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            top: 60, bottom: 80,
-            right: isExpanded ? 16 : -85,
-            child: Row(
+
+          // --- Progressive Blur: Overlapping strips, each adds sigma 5 ---
+          // Bottom gets all 8 layers stacked = very blurry
+          // Top gets only 1 layer = slightly blurry
+          // Smooth transition because each layer only adds a tiny amount
+          ...[140, 128, 116, 104, 92, 80, 68, 56, 44, 32].map((h) => Positioned(
+            bottom: 0, left: 0, right: 0, height: h.toDouble(),
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
+                child: Container(color: Colors.black.withOpacity(0.002)),
+              ),
+            ),
+          )),
+          
+          // --- Content Overlay ---
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 50, 20, 25),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    product.productName,
+                    style: const TextStyle(
+                      color: Colors.white, 
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 19, 
+                      fontFamily: 'QuickSand',
+                      shadows: [Shadow(blurRadius: 10, color: Colors.black38, offset: Offset(0, 2))]
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formatPrice(product.productPrice),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900, 
+                      fontSize: 22, 
+                      fontFamily: 'QuickSand',
+                      shadows: [Shadow(blurRadius: 8, color: Colors.black26, offset: Offset(0, 2))]
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      _buildConditionTag(product.productCondition),
+                      const SizedBox(width: 8),
+                      _buildLocationTag(_distanceText ?? StringUtils.simplifyAddress(product.productAddress?.province ?? "")),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+
+          // Sidebar Action Bar (Moved to the end of Stack to stay above progressive blur)
+          if (widget.product.userId != StorageHelper.getUserId())
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              top: 60, bottom: 80,
+              right: isExpanded ? 16 : -85,
+              child: Row(
               children: [
                 GestureDetector(
                   onTap: _toggleExpanded,
@@ -204,23 +294,26 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
                       width: 80,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.4),
-                        border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                        color: Colors.white.withOpacity(0.85),
+                        border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
                         borderRadius: BorderRadius.circular(50),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(-5, 0))
+                        ],
                       ),
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildAction(Icons.person, "Hồ sơ", isAvatar: true, avatarUrl: seller?.avatarUrl, onTap: () {
+                            _buildAction(HeroiconsSolid.user, "Hồ sơ", isAvatar: true, avatarUrl: seller?.avatarUrl, onTap: () {
                               smoothPush(context, UserProfileScreen(userId: widget.product.userId));
                             }),
                             const SizedBox(height: 16),
-                            _buildAction(HeroiconsSolid.chatBubbleOvalLeftEllipsis, "Chat", onTap: () {
+                            _buildAction(HeroiconsSolid.chatBubbleOvalLeft, "Chat", onTap: () {
                               if (seller != null) {
                                 final partner = ChatPartner(userId: seller.userId, fullName: seller.fullName, avatarUrl: seller.avatarUrl);
-                                smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                                smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner, product: widget.product));
                               }
                             }),
                             const SizedBox(height: 18),
@@ -236,51 +329,6 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               ],
             ),
           ),
-
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 60, 20, 25),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.9), Colors.black.withOpacity(0.6), Colors.transparent],
-                  stops: const [0.0, 0.6, 1.0],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(HeroiconsOutline.user, color: Colors.white70, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        seller?.fullName ?? "Người dùng",
-                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    product.productName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'QuickSand', shadows: [Shadow(offset: Offset(0, 1), blurRadius: 3.0, color: Colors.black)]),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _buildConditionTag(product.productCondition),
-                      const SizedBox(width: 8),
-                      // Hiển thị một tag địa điểm ngắn gọn nếu có
-                      if (product.productAddress?.province != null)
-                        _buildLocationTag(product.productAddress!.province),
-                    ],
-                  )
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -294,11 +342,11 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
-            child: const Icon(HeroiconsSolid.ellipsisHorizontal, color: Colors.white, size: 24),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+            child: const Icon(HeroiconsSolid.ellipsisHorizontal, color: AppColors.primary, size: 24),
           ),
           const SizedBox(height: 4),
-          const Text("More", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'QuickSand', shadows: [Shadow(blurRadius: 2, color: Colors.black)])),
+          const Text("More", style: TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'QuickSand')),
         ],
       ),
       onSelected: (value) {
@@ -339,23 +387,31 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
 
   Widget _buildConditionTag(String condition) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white.withOpacity(0.3))),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15), 
+        borderRadius: BorderRadius.circular(50), 
+        border: Border.all(color: Colors.white.withOpacity(0.25))
+      ),
       child: Text(condition.isNotEmpty ? condition : "Mới/Cũ", style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600, fontFamily: 'QuickSand')),
     );
   }
 
   Widget _buildLocationTag(String location) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white.withOpacity(0.3))),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15), 
+        borderRadius: BorderRadius.circular(50), 
+        border: Border.all(color: Colors.white.withOpacity(0.25))
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(HeroiconsOutline.mapPin, color: Colors.white, size: 12),
           const SizedBox(width: 4),
           Text(
-            StringUtils.simplifyAddress(location),
+            location,
             style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'QuickSand'),
           ),
         ],
@@ -378,6 +434,8 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
              CachedNetworkImage(
                 imageUrl: bgUrl,
                 fit: BoxFit.cover,
+                maxWidthDiskCache: 1920,
+                maxHeightDiskCache: 1080,
                 errorWidget: (context, url, err) => Container(color: Colors.grey[800]),
              ),
            // Glassmorphism overlay
@@ -402,7 +460,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
                          radius: 20,
                          backgroundColor: Colors.white24,
                          backgroundImage: (seller?.avatarUrl != null && seller!.avatarUrl.isNotEmpty)
-                             ? CachedNetworkImageProvider(_getFullUrl(seller.avatarUrl))
+                             ? CachedNetworkImageProvider(StringUtils.normalizeUrl(seller.avatarUrl))
                              : null,
                          child: (seller?.avatarUrl == null || seller!.avatarUrl.isEmpty) 
                             ? const Icon(Icons.person, color: Colors.white) : null,
@@ -463,7 +521,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildMediaContent(MediaItem item) {
-    if (item.type == MediaType.image) return CachedNetworkImage(imageUrl: item.url, fit: BoxFit.cover, width: double.infinity, placeholder: (context, url) => Container(color: Colors.grey[200]));
+    if (item.type == MediaType.image) return CachedNetworkImage(imageUrl: item.url, fit: BoxFit.cover, width: double.infinity, maxWidthDiskCache: 1920, maxHeightDiskCache: 1080, placeholder: (context, url) => Container(color: Colors.grey[200]));
     return VideoPlayerWidget(videoUrl: item.url);
   }
 
@@ -481,18 +539,18 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               child: CircleAvatar(
                 radius: 22,
                 backgroundColor: Colors.white24,
-                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? CachedNetworkImageProvider(_getFullUrl(avatarUrl)) : null,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? CachedNetworkImageProvider(StringUtils.normalizeUrl(avatarUrl)) : null,
                 child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(icon, color: Colors.white, size: 24) : null,
               ),
             )
           else
             Container(
               padding: const EdgeInsets.all(10), 
-              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle), 
-              child: Icon(icon, color: Colors.white, size: 24)
+              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle), 
+              child: Icon(icon, color: AppColors.primary, size: 24)
             ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'QuickSand', shadows: [Shadow(blurRadius: 2, color: Colors.black)])),
+          Text(label, style: const TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'QuickSand')),
         ],
       ),
     );

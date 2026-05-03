@@ -71,7 +71,8 @@ class _AddProductState extends State<AddProduct> {
   // AI Data
   String? _visualDetails;
   String? _aiCondition;
-  bool _isAiValidated = false; // Trạng thái đã duyệt AI
+  bool _isAiValidated = false; // Trạng thái đã duyệt AI (Media)
+  bool _contentAlreadyValidated = false; // Trạng thái đã duyệt nội dung (Step 2)
 
   // Remote Media (For Drafts)
   List<String> _draftImages = [];
@@ -1000,64 +1001,40 @@ class _AddProductState extends State<AddProduct> {
           }
         }
 
-        // Clear UI
-        for (var attr in _attributes) attr.dispose();
-        _attributes.clear();
-
+        // B. Update existing attributes with AI data (Merge Logic)
         Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
-
-        // B. Merge Logic: User/Visual Data + AI Text Backup
-        Map<String, String> finalAttrs = {};
-
-        // 1. Give priority to what is ALREADY in the form (User/Visual attrs)
-        visualAttributes.forEach((k, v) {
-          String cleanKey = k.toString().toLowerCase().trim();
-          String cleanValue = v.toString().trim();
-          if (cleanValue.isNotEmpty && cleanValue != "N/A" && cleanValue != "Unknown") {
-            finalAttrs[cleanKey] = cleanValue;
-          }
-        });
-
-        // 2. Fill in the gaps with AI attrs
-        aiAttrs.forEach((k, v) {
-          String cleanKey = k.toString().toLowerCase().trim();
-          String cleanValue = v.toString().trim();
-          if (!finalAttrs.containsKey(cleanKey) || finalAttrs[cleanKey]!.isEmpty) {
-            if (cleanValue != "N/A" && cleanValue != "Unknown") {
-              finalAttrs[cleanKey] = cleanValue;
+        
+        for (var attr in _attributes) {
+          String cleanKey = attr.nameController.text.toLowerCase().trim();
+          String currentValue = attr.valueController.text.trim();
+          
+          // Chỉ điền nếu ô hiện tại đang trống hoặc là N/A
+          if (currentValue.isEmpty || currentValue.toUpperCase() == "N/A" || currentValue.toUpperCase() == "UNKNOWN") {
+            // Tìm trong aiAttrs (thử cả key gốc và key đã format)
+            var aiValue = aiAttrs[cleanKey] ?? aiAttrs[attr.nameController.text.trim()];
+            if (aiValue != null && aiValue.toString().trim().isNotEmpty) {
+              attr.valueController.text = aiValue.toString().trim();
             }
           }
-        });
-
-        // 3. Rebuild Attributes List (Expected Keys first, then extra AI keys)
-        Set<String> addedKeys = {};
-
-        // A. Add expected keys (filled or empty)
-        for (var key in expectedKeys) {
-          String value = finalAttrs[key] ?? "";
-          _attributes.add(AttributeItem(name: key, value: value));
-          addedKeys.add(key);
         }
 
-        // C. Standard fields backup (Check root first, then aiAttrs) - Fill ONLY IF EMPTY
+        // C. Handle special AI fields (Brand, Origin, etc.) if root controllers are empty
         String? aiBrand = result['brand'] ?? aiAttrs['brand'];
-        if (_brandController.text.trim().isEmpty) {
-          if (aiBrand != null && aiBrand != "N/A" && aiBrand.toString().trim().isNotEmpty) {
-            _brandController.text = aiBrand.toString();
-          } else if (visualAttributes.containsKey('brand')) {
-            _brandController.text = visualAttributes['brand']!;
-          }
+        if (_brandController.text.trim().isEmpty && aiBrand != null && aiBrand.toString().isNotEmpty) {
+          _brandController.text = aiBrand.toString();
         }
 
         String? aiOrigin = result['origin'] ?? aiAttrs['origin'];
-        if (_originController.text.trim().isEmpty && aiOrigin != null && aiOrigin != "N/A" && aiOrigin.toString().trim().isNotEmpty) {
+        if (_originController.text.trim().isEmpty && aiOrigin != null && aiOrigin.toString().isNotEmpty) {
           _originController.text = aiOrigin.toString();
         }
 
         String? aiCondition = result['condition'] ?? aiAttrs['condition'];
-        if (_conditionController.text.trim().isEmpty && aiCondition != null && aiCondition != "N/A" && aiCondition.toString().trim().isNotEmpty) {
+        if (_conditionController.text.trim().isEmpty && aiCondition != null && aiCondition.toString().isNotEmpty) {
           _conditionController.text = aiCondition.toString();
         }
+        _isAiValidated = true;
+        _contentAlreadyValidated = true;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1075,6 +1052,7 @@ class _AddProductState extends State<AddProduct> {
 
   // STEP 2 END: VALIDATE CONTENT
   Future<bool> _handleValidateContent() async {
+    if (_contentAlreadyValidated) return true;
     setState(() => _isAiLoading = true);
     try {
       // Prepare data (Convert Display Keys to Snake Case for Backend)
@@ -2408,16 +2386,27 @@ class _AddProductState extends State<AddProduct> {
 
     setState(() {
       String detail = "";
-      if (place.street != null && place.street!.isNotEmpty && !place.street!.contains('+')) {
-        detail += "${place.street}, ";
+      String streetName = place.thoroughfare ?? "";
+      String houseNumber = place.subThoroughfare ?? place.name ?? "";
+
+      // Kết hợp số nhà và tên đường
+      if (houseNumber.isNotEmpty) {
+        detail += houseNumber;
       }
-      if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-        detail += "${place.subLocality}";
+      if (streetName.isNotEmpty) {
+        if (detail.isNotEmpty && !streetName.startsWith(" ")) {
+          detail += " ";
+        }
+        detail += streetName;
       }
-      if (detail.endsWith(', ')) {
-        detail = detail.substring(0, detail.length - 2);
+
+      // Nếu vẫn rỗng hoặc chỉ có số nhà, dùng street làm fallback
+      if (detail.isEmpty || detail == houseNumber) {
+        if (place.street != null && place.street!.isNotEmpty && !place.street!.contains('+')) {
+          detail = place.street!;
+        }
       }
-      
+
       if (detail.isNotEmpty) {
         _addressDetailController.text = detail;
       }
@@ -2452,136 +2441,153 @@ class _AddProductState extends State<AddProduct> {
       barrierLabel: "MapPicker",
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
+        final gpsPressed = ValueNotifier<bool>(false);
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Scaffold(
               body: Stack(
-                children: [
-                  FlutterMap(
-                    mapController: mapController,
-                    options: MapOptions(
-                      initialCenter: _mapCenter ?? const latlong.LatLng(16.0544, 108.2022),
-                      initialZoom: 15.0,
-                      interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
-                      onTap: (tapPosition, point) async {
-                        setModalState(() {
-                          _mapCenter = point;
-                        });
-                        
-                        try {
-                          List<Placemark> placemarks = await placemarkFromCoordinates(
-                            point.latitude,
-                            point.longitude,
-                          );
-
-                          if (placemarks.isNotEmpty) {
-                            await _updateAddressFromPlacemark(placemarks.first);
-                            setModalState(() {}); // Force update address panel
-                          }
-                        } catch (e) {
-                          print("Map reverse geocoding error: $e");
-                        }
-                      },
-                    ),
                     children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.temo.app',
-                      ),
-                      if (_mapCenter != null)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: _mapCenter!,
-                              width: 50,
-                              height: 50,
-                              child: const Icon(Icons.location_on, color: Colors.red, size: 50),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                  // BACK BUTTON
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 16,
-                    left: 16,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
-                        ),
-                        child: const Icon(Icons.close_rounded, color: Colors.black87),
-                      ),
-                    ),
-                  ),
-                  
-                  // ZOOM HUD
-                  Positioned(
-                    right: 16,
-                    top: MediaQuery.of(context).padding.top + 16,
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: () => mapController.move(mapController.camera.center, mapController.camera.zoom + 1),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)]),
-                            child: const Icon(Icons.add_rounded, color: Color(0xFF374151)),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () => mapController.move(mapController.camera.center, mapController.camera.zoom - 1),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)]),
-                            child: const Icon(Icons.remove_rounded, color: Color(0xFF374151)),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () async {
+                      FlutterMap(
+                        mapController: mapController,
+                        options: MapOptions(
+                          initialCenter: _mapCenter ?? const latlong.LatLng(16.0544, 108.2022),
+                          initialZoom: 15.0,
+                          interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+                          onTap: (tapPosition, point) async {
+                            setModalState(() {
+                              _mapCenter = point;
+                            });
+                            
                             try {
-                              LocationPermission permission = await Geolocator.checkPermission();
-                              if (permission == LocationPermission.denied) {
-                                permission = await Geolocator.requestPermission();
-                                if (permission == LocationPermission.denied) return;
-                              }
-                              if (permission == LocationPermission.deniedForever) return;
+                              List<Placemark> placemarks = await placemarkFromCoordinates(
+                                point.latitude,
+                                point.longitude,
+                              );
 
-                              Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-                              
-                              final newPoint = latlong.LatLng(position.latitude, position.longitude);
-                              mapController.move(newPoint, 15.0);
-                              setModalState(() {
-                                _mapCenter = newPoint;
-                              });
-
-                              List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
                               if (placemarks.isNotEmpty) {
                                 await _updateAddressFromPlacemark(placemarks.first);
-                                setModalState(() {});
+                                setModalState(() {}); // Force update address panel
                               }
                             } catch (e) {
-                              print("GPS HUD Error: $e");
+                              print("Map reverse geocoding error: $e");
                             }
                           },
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                            userAgentPackageName: 'com.temo.app',
+                            retinaMode: true,
+                          ),
+                          if (_mapCenter != null)
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: _mapCenter!,
+                                  width: 50,
+                                  height: 50,
+                                  child: const Icon(Icons.location_on, color: Colors.red, size: 50),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      // BACK BUTTON
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 16,
+                        left: 16,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
                           child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)]),
-                            child: const Icon(Icons.my_location_rounded, color: Color(0xFF374151)),
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.black87),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                      
+                      // ZOOM HUD
+                      Positioned(
+                        right: 16,
+                        top: MediaQuery.of(context).padding.top + 16,
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: gpsPressed,
+                          builder: (context, isPressed, _) {
+                            return Column(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => mapController.move(mapController.camera.center, mapController.camera.zoom + 1),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)]),
+                                    child: const Icon(Icons.add_rounded, color: Color(0xFF374151)),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTap: () => mapController.move(mapController.camera.center, mapController.camera.zoom - 1),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)]),
+                                    child: const Icon(Icons.remove_rounded, color: Color(0xFF374151)),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTapDown: (_) => gpsPressed.value = true,
+                                  onTapCancel: () => gpsPressed.value = false,
+                                  onTapUp: (_) => gpsPressed.value = false,
+                                  onTap: () async {
+                                    try {
+                                      LocationPermission permission = await Geolocator.checkPermission();
+                                      if (permission == LocationPermission.denied) {
+                                        permission = await Geolocator.requestPermission();
+                                        if (permission == LocationPermission.denied) return;
+                                      }
+                                      if (permission == LocationPermission.deniedForever) return;
+
+                                      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+                                      
+                                      final newPoint = latlong.LatLng(position.latitude, position.longitude);
+                                      mapController.move(newPoint, 15.0);
+                                      setModalState(() {
+                                        _mapCenter = newPoint;
+                                      });
+
+                                      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+                                      if (placemarks.isNotEmpty) {
+                                        await _updateAddressFromPlacemark(placemarks.first);
+                                        setModalState(() {});
+                                      }
+                                    } catch (e) {
+                                      print("GPS HUD Error: $e");
+                                    }
+                                  },
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: isPressed ? Colors.orange : Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
+                                    ),
+                                    child: Icon(
+                                      Icons.my_location_rounded,
+                                      color: isPressed ? Colors.white : const Color(0xFF374151),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                        ),
+                      ),
 
                   // INFO PANEL
                   Positioned(
@@ -2611,6 +2617,13 @@ class _AddProductState extends State<AddProduct> {
                           const SizedBox(height: 12),
                           ElevatedButton(
                             onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("✅ Đã lưu vị trí giao dịch!"),
+                                  backgroundColor: Colors.blue,
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
                               Navigator.pop(context);
                               setState(() {}); // Update the main page map
                             },
@@ -2684,9 +2697,27 @@ class _AddProductState extends State<AddProduct> {
 
       if (placemarks.isNotEmpty) {
         _updateAddressFromPlacemark(placemarks.first);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("📍 Đã cập nhật vị trí hiện tại của bạn!"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       print("GPS error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("❌ Không thể lấy vị trí. Vui lòng bật GPS và thử lại."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -2732,8 +2763,9 @@ class _AddProductState extends State<AddProduct> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                         userAgentPackageName: 'com.temo.app',
+                        retinaMode: true,
                       ),
                       if (_mapCenter != null)
                         MarkerLayer(
@@ -2827,14 +2859,29 @@ class _AddProductState extends State<AddProduct> {
 
   // STEP 4: REVIEW
   Widget _buildStep4Review() {
-    String formattedPrice = "0 VND";
+    String formattedPrice = "0 đ";
     try {
-      final parsedPrice = double.tryParse(_priceController.text) ?? 0.0;
-      formattedPrice = NumberFormat.currency(
-        locale: 'vi_VN',
-        symbol: 'đ',
-        decimalDigits: 0,
-      ).format(parsedPrice);
+      // Loại bỏ tất cả ký tự không phải số trước khi parse (tránh lỗi dấu chấm/phẩy)
+      String cleanText = _priceController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      double price = double.tryParse(cleanText) ?? 0.0;
+      
+      if (price >= 1000000000) {
+        // Trên 1 tỷ
+        formattedPrice = "${(price / 1000000000).toStringAsFixed(1).replaceAll('.0', '')} tỷ";
+      } else if (price >= 10000000) { 
+        // Từ 10 triệu trở lên: ghi tắt "tr" không lẻ (ví dụ: 15 tr)
+        formattedPrice = "${(price / 1000000).toStringAsFixed(0)} tr";
+      } else if (price >= 1000000) { 
+        // Từ 1 triệu đến dưới 10 triệu: ghi tắt "tr" có 1 chữ số thập phân (ví dụ: 1.5 tr)
+        formattedPrice = "${(price / 1000000).toStringAsFixed(1).replaceAll('.0', '')} tr";
+      } else {
+        // Dưới 1 triệu: hiển thị đầy đủ có dấu chấm phân cách
+        formattedPrice = NumberFormat.currency(
+          locale: 'vi_VN',
+          symbol: 'đ',
+          decimalDigits: 0,
+        ).format(price);
+      }
     } catch (_) {
       formattedPrice = "${_priceController.text} đ";
     }
@@ -3318,7 +3365,11 @@ class _AddProductState extends State<AddProduct> {
       maxLines: maxLines,
       minLines: minLines,
       readOnly: readOnly,
-      onChanged: (_) => setState(() {}),
+      onChanged: (val) {
+        setState(() {
+          _contentAlreadyValidated = false;
+        });
+      },
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),

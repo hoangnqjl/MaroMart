@@ -1,11 +1,13 @@
 class ApiConstants {
   // static const String baseUrl = 'https://temo-server.onrender.com';
 
-  static const String baseUrl = 'http://172.20.10.3:5000';
+  static const String baseUrl = 'http://192.168.16.221:5000';
 
   // auth
   static const String loginEndpoint = '/auth/v1/login';
   static const String registerEndpoint = '/auth/v1/register';
+  static const String forgotPasswordEndpoint = '/auth/v1/forgot-password';
+  static const String changePasswordEndpoint = '/auth/v1/change-password';
 
   // product
   static const String productsBaseEndpoint = '/products';

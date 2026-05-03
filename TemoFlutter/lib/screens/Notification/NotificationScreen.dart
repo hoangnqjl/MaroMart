@@ -138,13 +138,36 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   List<NotificationModel> get _displayNotifications {
-    return _allNotifications;
+    // Loại bỏ thông báo tin nhắn khỏi danh sách thông báo (MaroMart yêu cầu)
+    return _allNotifications.where((n) => n.type != 'new_message' && n.type != 'message').toList();
   }
 
-  void _deleteAll() {
-    setState(() {
-      _allNotifications.clear();
-    });
+  Future<void> _deleteAll() async {
+    try {
+      await _notificationService.deleteAllNotifications();
+      setState(() {
+        _allNotifications.clear();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll("Exception: ", ""))),
+      );
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    try {
+      await _notificationService.markAllAsRead();
+      setState(() {
+        for (int i = 0; i < _allNotifications.length; i++) {
+          _allNotifications[i] = _allNotifications[i].copyWith(isRead: true);
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll("Exception: ", ""))),
+      );
+    }
   }
 
   @override
@@ -154,34 +177,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
       body: Stack(
         children: [
-          Column(
-            children: [
-              const SizedBox(height: 130), // Space for floating header
-          Expanded(
-            child: _isLoading
-                ? Center(child: ModernLoader(color: primaryThemeColor))
-                : _displayNotifications.isEmpty
-                ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(HeroiconsOutline.bellSlash, size: 64, color: Colors.grey[200]),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Không có thông báo nào",
-                        style: GoogleFonts.roboto(
-                          color: Colors.grey[400],
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500
-                        ),
+          _isLoading
+              ? Center(child: ModernLoader(color: primaryThemeColor))
+              : _displayNotifications.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(HeroiconsOutline.bellSlash, size: 64, color: Colors.grey[200]),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Không có thông báo nào",
+                            style: GoogleFonts.roboto(
+                              color: Colors.grey[400],
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                )
-                : _buildGroupedList(),
-          ),
-            ],
-          ),
+                    )
+                  : _buildGroupedList(),
           Positioned(
             top: 0, left: 0, right: 0,
             child: Container(
@@ -244,9 +260,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
               children: [
                 MenuItemButton(
-                  onPressed: () {
-                    // Logic for marking all as read
-                  },
+                  onPressed: _markAllAsRead,
                   child: _buildPopupItem(
                     icon: HeroiconsOutline.checkCircle,
                     label: "Đánh dấu tất cả đã đọc",
@@ -307,7 +321,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final list = _displayNotifications;
     return AnimationLimiter(
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        padding: const EdgeInsets.fromLTRB(16, 100, 16, 40),
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         itemCount: list.length,
         itemBuilder: (context, index) {
           final noti = list[index];

@@ -138,7 +138,6 @@ class AuthService {
   // Đăng xuất Google
   Future<void> signOutGoogle() async {
     try {
-      await signOutGoogle();
       await _googleSignIn.signOut();
     } catch (e) {
       print('Lỗi đăng xuất Google: $e');
@@ -214,14 +213,12 @@ class AuthService {
 
   // Đổi mật khẩu
   Future<void> changePassword({
-    required String oldPassword,
     required String newPassword,
   }) async {
     try {
       await _apiService.post(
-        endpoint: '/auth/change-password',
+        endpoint: ApiConstants.changePasswordEndpoint,
         body: {
-          'oldPassword': oldPassword,
           'newPassword': newPassword,
         },
         needAuth: true,
@@ -235,7 +232,7 @@ class AuthService {
   Future<void> forgotPassword(String email) async {
     try {
       await _apiService.post(
-        endpoint: '/auth/forgot-password',
+        endpoint: ApiConstants.forgotPasswordEndpoint,
         body: {'email': email},
         needAuth: false,
       );

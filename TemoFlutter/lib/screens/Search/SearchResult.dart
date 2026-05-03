@@ -173,7 +173,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: SizedBox(
-                    height: screenWidth * 1.05,
+                    height: screenWidth * 1.4,
                     child: Post(product: _products[index]),
                   ),
                 );

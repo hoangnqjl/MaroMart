@@ -19,7 +19,9 @@ import 'package:temo/components/Skeleton.dart';
 import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/components/PremiumTabSwitcher.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/utils/UIHelper.dart';
+import 'package:temo/utils/string_utils.dart';
 
 
 class MessageScreen extends StatefulWidget {
@@ -104,11 +106,7 @@ class _MessageScreenState extends State<MessageScreen> {
     });
   }
 
-  String _getFullUrl(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return '${ApiConstants.baseUrl}$path';
-  }
+
 
   Future<void> _fetchConversations() async {
     if (_conversations.isEmpty) setState(() => _isLoading = true);
@@ -130,6 +128,33 @@ class _MessageScreenState extends State<MessageScreen> {
 
   Future<void> _deleteSelectedConversations() async {
     if (_selectedConversations.isEmpty) return;
+
+    final confirmed = await UIHelpers.confirmDialog(
+      context,
+      title: "Xóa cuộc trò chuyện",
+      message: "Bạn có chắc chắn muốn xóa ${_selectedConversations.length} cuộc trò chuyện này không? Hành động này không thể hoàn tác.",
+      confirmText: "Xóa ngay",
+      cancelText: "Hủy",
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        for (String conId in _selectedConversations) {
+          await _chatService.deleteConversation(conId);
+        }
+        
+        UIHelpers.showSuccessSnackBar(context, "Đã xóa các cuộc trò chuyện được chọn");
+        setState(() {
+          _isSelectionMode = false;
+          _selectedConversations.clear();
+        });
+        _fetchConversations();
+      } catch (e) {
+        UIHelpers.showErrorSnackBar(context, "Lỗi khi xóa: $e");
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _toggleSelection(String conId) {
@@ -199,72 +224,73 @@ class _MessageScreenState extends State<MessageScreen> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 160), // Space for new taller 2-row floating header
-          // const SizedBox(height: 50), // Removed manual spacing
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (_isSelectionMode)
-                  Row(
+              const SizedBox(height: 150), 
+              if (_isSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          setState(() {
-                            _isSelectionMode = false;
-                            _selectedConversations.clear();
-                          });
-                        },
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _isSelectionMode = false;
+                                _selectedConversations.clear();
+                              });
+                            },
+                          ),
+                          Text('${_selectedConversations.length} đã chọn', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        ],
                       ),
-                      Text('${_selectedConversations.length} đã chọn', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ],
-                  )
-                else
-                  const SizedBox.shrink(),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: _isLoading
-                ? ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: 8,
-                    itemBuilder: (context, index) => const ListTileSkeleton(),
-                  )
-                : displayList.isEmpty
-                ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(HeroiconsOutline.chatBubbleLeftRight, size: 64, color: Colors.grey[200]),
-                      const SizedBox(height: 16),
-                      Text(
-                        _selectedTab == 0 ? "Chưa có cuộc trò chuyện nào" : "Không có tin nhắn mới",
-                        style: GoogleFonts.roboto(
-                          color: Colors.grey[400],
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500
+                      if (_selectedConversations.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(HeroiconsOutline.trash, color: Colors.red, size: 24),
+                          onPressed: _deleteSelectedConversations,
                         ),
-                      ),
                     ],
                   ),
-                )
-                : RefreshIndicator(
-              onRefresh: _fetchConversations,
-              color: primaryThemeColor,
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-                itemCount: displayList.length,
-                itemBuilder: (context, index) {
-                  final conv = displayList[index];
-                  return _buildConversationItem(conv);
-                },
+                ),
+              Expanded(
+                child: _isLoading
+                    ? ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: 8,
+                        itemBuilder: (context, index) => const ListTileSkeleton(),
+                      )
+                    : displayList.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(HeroiconsOutline.chatBubbleLeftRight, size: 64, color: Colors.grey[200]),
+                          const SizedBox(height: 16),
+                          Text(
+                            _selectedTab == 0 ? "Chưa có cuộc trò chuyện nào" : "Không có tin nhắn mới",
+                            style: GoogleFonts.roboto(
+                              color: Colors.grey[400],
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : RefreshIndicator(
+                  onRefresh: _fetchConversations,
+                  color: primaryThemeColor,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                    itemCount: displayList.length,
+                    itemBuilder: (context, index) {
+                      final conv = displayList[index];
+                      return _buildConversationItem(conv);
+                    },
+                  ),
+                ),
               ),
-            ),
-          ),
             ],
           ),
           Positioned(
@@ -417,7 +443,7 @@ class _MessageScreenState extends State<MessageScreen> {
         borderRadius: BorderRadius.circular(20),
         child: avatarUrl != null && avatarUrl.isNotEmpty
             ? CachedNetworkImage(
-                imageUrl: _getFullUrl(avatarUrl),
+                imageUrl: StringUtils.normalizeUrl(avatarUrl),
                 fit: BoxFit.cover,
                 errorWidget: (context, url, error) => _buildLetterAvatar(fullName, size: 40),
               )
@@ -621,7 +647,7 @@ class _MessageScreenState extends State<MessageScreen> {
   }
 
   Widget _buildAvatar(String? avatarUrl, String name) {
-    final fullUrl = _getFullUrl(avatarUrl);
+    final fullUrl = StringUtils.normalizeUrl(avatarUrl);
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: Container(

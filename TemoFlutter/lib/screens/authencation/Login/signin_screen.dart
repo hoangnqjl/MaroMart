@@ -1,11 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:temo/Colors/AppColors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/services/auth_service.dart';
 import 'package:temo/services/socket_service.dart';
-import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/utils/ui_helpers.dart';
+import 'package:temo/utils/storage.dart';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/ModernLoader.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -45,18 +46,23 @@ class _SignInScreenState extends State<SignInScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await _authService.login(email: email, password: password);
+      final loginResponse = await _authService.login(email: email, password: password);
       if (!mounted) return;
       SocketService().connect();
       _showSuccess('Login successful!');
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      
+      if (loginResponse.mustChangePassword) {
+        await StorageHelper.saveMustChangePassword(true);
+        Navigator.pushReplacementNamed(context, '/force-change-password');
+      } else {
+        await StorageHelper.saveMustChangePassword(false);
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } catch (e) {
       if (!mounted) return;
-      _showError(e.toString()
-          .replaceAll('Exception: ', '')
-          .replaceAll('Đăng nhập thất bại: ', ''));
+      _showError('Thông tin đăng nhập không đúng!');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -84,21 +90,57 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.red,
-      behavior: SnackBarBehavior.floating,
-    ));
+    UIHelpers.showErrorSnackBar(context, message);
   }
 
   void _showSuccess(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: AppColors.success,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 1),
-    ));
+    UIHelpers.showSuccessSnackBar(context, message);
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Forgot Password', style: GoogleFonts.roboto(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter your email to receive a temporary password.', style: GoogleFonts.roboto(fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(
+                hintText: 'Email',
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty) return;
+              Navigator.pop(context);
+              try {
+                await _authService.forgotPassword(email);
+                _showSuccess('Mật khẩu tạm thời đã được gửi!');
+              } catch (e) {
+                _showError(e.toString().replaceAll('Exception: ', ''));
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: Text('Send'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -112,10 +154,21 @@ class _SignInScreenState extends State<SignInScreen> {
           Image.asset(kBg, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(color: Colors.grey[800])),
 
-          // Blur nhẹ
+          // Premium Dark Blur Overlay
           BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.22)),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.25),
+                    Colors.black.withOpacity(0.55),
+                  ],
+                ),
+              ),
+            ),
           ),
 
           SafeArea(
@@ -238,7 +291,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap: () {}, // TODO: forgot password
+                        onTap: _showForgotPasswordDialog,
                         child: Text(
                           'Forgot password?',
                           style: GoogleFonts.roboto(
@@ -323,7 +376,7 @@ class _Field extends StatelessWidget {
         hintStyle: GoogleFonts.roboto(
             color: Colors.black38, fontSize: 14, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: const Color(0xFFF3F5F5).withOpacity(0.70),
+        fillColor: const Color(0xFFF3F5F5).withOpacity(0.85),
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         suffixIcon: suffixIcon,

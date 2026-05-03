@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:temo/utils/string_utils.dart';
 
 class UserAvatar extends StatelessWidget {
   final String avatarUrl;
@@ -27,23 +29,19 @@ class UserAvatar extends StatelessWidget {
     );
   }
 
+
   Widget _buildAvatar() {
     if (avatarUrl.isEmpty) {
       return _buildLetterAvatar();
     }
 
-    return Image.network(
-      avatarUrl,
+    return CachedNetworkImage(
+      imageUrl: StringUtils.normalizeUrl(avatarUrl),
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return _buildLetterAvatar();
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: ModernLoader(size: size * 0.4),
-        );
-      },
+      placeholder: (context, url) => Center(
+        child: ModernLoader(size: size * 0.4),
+      ),
+      errorWidget: (context, url, error) => _buildLetterAvatar(),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:temo/models/User/ChatPartner.dart';
 import 'package:temo/screens/Message/ChatScreen.dart';
 import 'package:temo/components/Skeletons/ProductCardSkeleton.dart';
+import 'package:temo/components/Skeletons/RecommendedProductSkeleton.dart';
 import 'package:temo/app_router.dart';
 import 'package:flutter/services.dart';
 import 'package:temo/utils/string_utils.dart';
@@ -73,6 +75,7 @@ class HomeScreenState extends State<HomeScreen> {
   
   List<Product> _recommendedProducts = [];
   bool _isRecommendedLoading = true;
+  Position? _currentPosition;
 
 
 
@@ -189,11 +192,17 @@ class HomeScreenState extends State<HomeScreen> {
   Future<void> _loadRecommendedProducts() async {
     setState(() => _isRecommendedLoading = true);
     try {
-      final products = await _productService.getRecommendedProducts(limit: 6);
+      final pos = await _locationService.getCurrentPosition();
+      final products = await _productService.getRecommendedProducts(
+        limit: 15,
+        lat: pos?.latitude,
+        lng: pos?.longitude,
+      );
       if (mounted) {
         setState(() {
           _recommendedProducts = products;
           _isRecommendedLoading = false;
+          if (pos != null) _currentPosition = pos;
         });
       }
     } catch (e) {
@@ -241,7 +250,7 @@ class HomeScreenState extends State<HomeScreen> {
                   )
                 : iconUrl != null
                     ? CachedNetworkImage(
-                        imageUrl: iconUrl,
+                        imageUrl: StringUtils.normalizeUrl(iconUrl),
                         width: 54,
                         height: 54,
                         fit: BoxFit.contain,
@@ -670,14 +679,66 @@ class HomeScreenState extends State<HomeScreen> {
                             scrollDirection: Axis.horizontal,
                             itemCount: 3,
                             separatorBuilder: (_, __) => const SizedBox(width: 16),
-                            itemBuilder: (context, index) => const ProductCardSkeleton(),
+                            itemBuilder: (context, index) => const RecommendedProductSkeleton(),
                           )
                         : ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         scrollDirection: Axis.horizontal,
-                        itemCount: _recommendedProducts.length,
+                        itemCount: _recommendedProducts.length + 1,
                         separatorBuilder: (_, __) => const SizedBox(width: 16),
                         itemBuilder: (context, index) {
+                          if (index == _recommendedProducts.length) {
+                            return GestureDetector(
+                              onTap: () {
+                                smoothPush(
+                                  context,
+                                  CategoryProductsScreen(
+                                    category: {'categoryId': 'all', 'categoryName': 'Tất cả'},
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 140,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8F1),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(color: const Color(0xFFFFB86A).withOpacity(0.3)),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFFFB86A).withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(HeroiconsOutline.arrowRight, color: Color(0xFFFFB86A)),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      "Xem tất cả",
+                                      style: TextStyle(
+                                        fontFamily: 'Quicksand',
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFFFB86A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          
                           final product = _recommendedProducts[index];
                           String imageUrl = product.productMedia.isNotEmpty ? product.productMedia[0] : '';
                           if (imageUrl.startsWith('image:')) imageUrl = imageUrl.substring(6).trim();
@@ -687,6 +748,41 @@ class HomeScreenState extends State<HomeScreen> {
                               symbol: 'đ',
                               decimalDigits: 0
                           ).format(product.productPrice);
+
+                          Widget? discountTag;
+                          if (product.marketPrice != null && product.marketPrice! > 0 && product.marketPrice! > product.productPrice) {
+                            int percent = ((product.marketPrice! - product.productPrice) / product.marketPrice! * 100).round();
+                            if (percent > 0) {
+                              discountTag = Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5).withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: const [
+                                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const Icon(HeroiconsOutline.arrowTrendingDown, color: Color(0xFF059669), size: 10),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      "$percent%",
+                                      style: const TextStyle(
+                                        fontFamily: 'Quicksand',
+                                        color: Color(0xFF059669),
+                                        fontSize: 10,
+                                        height: 1.1,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          }
 
                           return GestureDetector(
                             onTap: () => Navigator.pushNamed(context, '/product_detail', arguments: product.productId),
@@ -709,8 +805,10 @@ class HomeScreenState extends State<HomeScreen> {
                                   fit: StackFit.expand,
                                   children: [
                                     CachedNetworkImage(
-                                      imageUrl: imageUrl,
+                                      imageUrl: StringUtils.normalizeUrl(imageUrl),
                                       fit: BoxFit.cover,
+                                      maxWidthDiskCache: 1080,
+                                      maxHeightDiskCache: 1080,
                                       placeholder: (context, url) => Container(color: AppColors.background),
                                       errorWidget: (context, url, error) => Container(
                                           color: Colors.grey[200],
@@ -756,15 +854,24 @@ class HomeScreenState extends State<HomeScreen> {
                                                   overflow: TextOverflow.ellipsis
                                               ),
                                               const SizedBox(height: 6),
-                                              Text(
-                                                  formattedPrice,
-                                                  style: const TextStyle(
-                                                      fontFamily: 'Quicksand',
-                                                      color: Colors.white,
-                                                      fontSize: 15,
-                                                      fontWeight: FontWeight.w600,
-                                                      shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))]
-                                                  )
+                                              Row(
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                      formattedPrice,
+                                                      style: const TextStyle(
+                                                          fontFamily: 'Quicksand',
+                                                          color: Colors.white,
+                                                          fontSize: 15,
+                                                          fontWeight: FontWeight.w600,
+                                                          shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))]
+                                                      )
+                                                  ),
+                                                  if (discountTag != null) ...[
+                                                    const SizedBox(width: 8),
+                                                    discountTag!,
+                                                  ],
+                                                ],
                                               ),
                                             ],
                                           ),
@@ -791,9 +898,18 @@ class HomeScreenState extends State<HomeScreen> {
                                                           const SizedBox(width: 6),
                                                           Expanded(
                                                               child: Text(
-                                                                  StringUtils.simplifyAddress(
-                                                                   product.productAddress?.province ?? 'Location',
-                                                                  ),
+                                                                   (() {
+                                                                     if (_currentPosition != null && product.latitude != null && product.longitude != null) {
+                                                                       double dist = Geolocator.distanceBetween(
+                                                                         _currentPosition!.latitude, _currentPosition!.longitude,
+                                                                         product.latitude!, product.longitude!
+                                                                       );
+                                                                       if (dist < 1000) return "Rất gần bạn";
+                                                                       if (dist < 10000) return "Gần bạn";
+                                                                       return "~${NumberFormat('#,###.#').format(dist / 1000)} km";
+                                                                     }
+                                                                     return StringUtils.simplifyAddress(product.productAddress?.province ?? 'Location');
+                                                                   })(),
                                                                   style: const TextStyle(
                                                                       fontFamily: 'Quicksand',
                                                                       color: Colors.white,
@@ -818,10 +934,10 @@ class HomeScreenState extends State<HomeScreen> {
                                                     final partner = ChatPartner(
                                                       userId: userInfo.userId,
                                                       fullName: userInfo.fullName,
-                                                      avatarUrl: userInfo.avatarUrl,
+                                                      avatarUrl: StringUtils.normalizeUrl(product.userInfo?.avatarUrl ?? ''),
                                                       email: userInfo.email,
                                                     );
-                                                    smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner));
+                                                    smoothPush(context, ChatScreen(conversationId: "", partnerUser: partner, product: product));
                                                   }
                                                 },
                                                 child: ClipOval(

@@ -239,7 +239,7 @@ class _Setting extends State<Setting> {
 );
 }
 
-  String _appVersion = "2.0";
+  String _appVersion = "10.0";
 
   Future<void> _checkForUpdates() async {
     showDialog(

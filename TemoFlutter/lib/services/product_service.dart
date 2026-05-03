@@ -351,6 +351,22 @@ class ProductService {
     }
   }
 
+  Future<Map<String, dynamic>?> getMarketPrice(String productId) async {
+    try {
+      final response = await _apiService.get(
+        endpoint: '/products/$productId/market-price',
+        needAuth: false,
+      );
+      if (response != null && response['success'] == true) {
+        return response['data'];
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Lỗi lấy giá thị trường: $e");
+      return null;
+    }
+  }
+
   Future<Product> createProduct({
     required Map<String, String> fields,
     List<XFile>? files,
@@ -507,11 +523,15 @@ class ProductService {
     }
   }
 
-  Future<List<Product>> getRecommendedProducts({int limit = 10}) async {
+  Future<List<Product>> getRecommendedProducts({int limit = 10, double? lat, double? lng}) async {
     try {
+      final queryParams = {'limit': limit.toString()};
+      if (lat != null) queryParams['lat'] = lat.toString();
+      if (lng != null) queryParams['lng'] = lng.toString();
+
       final response = await _apiService.get(
         endpoint: '/products/recommended',
-        queryParameters: {'limit': limit.toString()},
+        queryParameters: queryParams,
         needAuth: false,
       );
 

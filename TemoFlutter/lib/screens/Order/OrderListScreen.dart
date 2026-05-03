@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/TopBarCustom.dart';
+import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/services/order_service.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -60,21 +61,47 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            TopBarCustom(title: "Quản lý đơn hàng"),
-            TabBar(
-              controller: _tabController,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: AppColors.primary,
-              tabs: const [
-                Tab(text: "Đơn mua"),
-                Tab(text: "Đơn bán"),
-              ],
+            FloatingHeader(
+              title: "Quản lý đơn hàng",
+              hasBackground: false,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
+            const SizedBox(height: 24),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  color: AppColors.primary,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                dividerColor: Colors.transparent,
+                labelStyle: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14),
+                tabs: const [
+                  Tab(text: "Đơn mua"),
+                  Tab(text: "Đơn bán"),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
             Expanded(
               child: _isLoading 
                 ? const Center(child: ModernLoader())
@@ -120,8 +147,15 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFF3F4F6), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              )
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,13 +163,46 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("ID: ${order['id'].substring(0, 8)}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text("ID: ${order['id'].substring(0, 8)}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
                   _buildStatusChip(status),
                 ],
               ),
               const SizedBox(height: 12),
-              const Text("Yêu cầu giao dịch sản phẩm", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Quicksand')),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(HeroiconsOutline.shoppingBag, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order['product']?['productName'] ?? "Sản phẩm không xác định",
+                          style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 15),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                        if (!isBuy)
+                          Text(
+                            "Được yêu cầu bởi: ${order['buyer']?['fullName'] ?? 'Người dùng'}",
+                            style: GoogleFonts.quicksand(fontSize: 12, color: Colors.grey[600]),
+                          )
+                        else
+                          Text(
+                            "Người bán: ${order['seller']?['fullName'] ?? 'MaroMart'}",
+                            style: GoogleFonts.quicksand(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
+              const Text("Yêu cầu giao dịch sản phẩm", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 8),
               if (!isBuy && isPending)
                 Row(
                   children: [
@@ -145,9 +212,10 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text("Từ chối"),
+                        child: Text("Từ chối", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -156,10 +224,12 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                         onPressed: () => _respondToOrder(order['id'], 'accepted'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text("Chấp nhận", style: TextStyle(color: Colors.white)),
+                        child: Text("Chấp nhận", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
                       ),
                     ),
                   ],
@@ -181,9 +251,12 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text("Đánh giá người bán", style: TextStyle(color: Colors.white)),
+                    child: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
                   ),
                 ),
             ],

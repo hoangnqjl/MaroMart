@@ -11,6 +11,7 @@ import 'package:temo/screens/authencation/Sign_up/SignUpStep2PasswordScreen.dart
 import 'package:temo/screens/authencation/Sign_up/SignUpStep3AddressScreen.dart';
 import 'package:temo/screens/authencation/get_started_screen.dart';
 import '../screens/authencation/Login/signin_screen.dart';
+import '../screens/authencation/Login/force_change_password_screen.dart';
 import 'package:temo/screens/Product/SuccessPostScreen.dart';
 import 'package:temo/screens/Coin/CoinManagerScreen.dart';
 import 'package:temo/screens/Setting/AboutScreen.dart';
@@ -106,6 +107,8 @@ Route? onGenerateRoute(RouteSettings settings) {
       return smoothRoute(ChangeInformationScreen(), settings);
     case '/change-password':
       return smoothRoute(ChangePasswordScreen(), settings);
+    case '/force-change-password':
+      return smoothRoute(const ForceChangePasswordScreen(), settings);
     case '/product-manager':
       return smoothRoute(ProductManager(), settings);
     case '/success_post':

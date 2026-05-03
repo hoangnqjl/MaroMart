@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:temo/Colors/AppColors.dart';
 
 class SuccessPostScreen extends StatefulWidget {
   const SuccessPostScreen({Key? key}) : super(key: key);
@@ -34,69 +34,97 @@ class _SuccessPostScreenState extends State<SuccessPostScreen> with SingleTicker
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: Container(
-                padding: const EdgeInsets.all(30),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  HeroiconsOutline.checkBadge,
-                  color: Colors.green,
-                  size: 100,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 2),
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: Image.asset(
+                  'assets/images/success_otter.png',
+                  height: 180,
+                  fit: BoxFit.contain,
                 ),
               ),
-            ),
-            const SizedBox(height: 40),
-            const Text(
-              "Thành công!",
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'QuickSand',
+              const SizedBox(height: 24),
+              const Text(
+                "Chúc mừng bạn!",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'QuickSand',
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "Sản phẩm của bạn đã được đăng thành công.",
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 60),
-            
-            // Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-                      Navigator.pushNamed(context, '/product-manager');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    ),
-                    child: const Text("Quản lý tin đăng", style: TextStyle(color: Colors.white, fontSize: 16)),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  "Sản phẩm đã được đăng bán thành công",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF3F3F46),
+                    fontFamily: 'QuickSand',
                   ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-                    },
-                    child: const Text("Về trang chủ", style: TextStyle(color: Colors.black)),
-                  )
-                ],
+                ),
               ),
-            )
-          ],
+              const Spacer(flex: 3),
+              
+              // Buttons
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                        Navigator.pushNamed(context, '/product-manager');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: const StadiumBorder(),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "Quản lý tin đăng",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'QuickSand',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFDF3E7),
+                        foregroundColor: AppColors.primary,
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: const StadiumBorder(),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "Về trang chủ",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'QuickSand',
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );

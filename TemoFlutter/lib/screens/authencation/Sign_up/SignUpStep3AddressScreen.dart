@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/services/auth_service.dart';
+import 'package:temo/utils/ui_helpers.dart';
 
 class SignUpStep3AddressScreen extends StatefulWidget {
   const SignUpStep3AddressScreen({super.key});
@@ -45,25 +46,13 @@ class _SignUpStep3AddressScreenState
         phoneNumber: phoneInt,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Account created successfully!'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      UIHelpers.showSuccessSnackBar(context, 'Account created successfully!');
       await Future.delayed(const Duration(milliseconds: 600));
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/signin');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      UIHelpers.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -78,9 +67,21 @@ class _SignUpStep3AddressScreenState
         children: [
           Image.asset(kBg, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(color: Colors.grey[800])),
+          // Premium Dark Blur Overlay
           BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.22)),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.25),
+                    Colors.black.withOpacity(0.55),
+                  ],
+                ),
+              ),
+            ),
           ),
           SafeArea(
             child: Column(
@@ -262,7 +263,7 @@ class _Field extends StatelessWidget {
         hintStyle: GoogleFonts.roboto(
             color: Colors.black38, fontSize: 14, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: const Color(0xFFF3F5F5).withOpacity(0.70),
+        fillColor: const Color(0xFFF3F5F5).withOpacity(0.85),
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(

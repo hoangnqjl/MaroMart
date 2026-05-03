@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:temo/services/product_service.dart';
 import 'package:temo/utils/storage.dart';
+import 'package:temo/utils/string_utils.dart';
 import 'package:temo/Colors/AppColors.dart';
 
 class ProductFlashCard extends StatefulWidget {
@@ -74,7 +75,7 @@ class _ProductFlashCardState extends State<ProductFlashCard> {
               // 1. Background Image
               product.productMedia.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: product.productMedia.first,
+                      imageUrl: StringUtils.normalizeUrl(product.productMedia.first),
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(color: Colors.grey[200]),
                       errorWidget: (context, url, error) => const Icon(Icons.error),

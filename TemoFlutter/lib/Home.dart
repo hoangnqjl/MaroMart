@@ -46,8 +46,17 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
+    _userService.userNotifier.addListener(_handleUserUpdate);
     _fetchAndSaveUserDetails();
     _initSocketListeners();
+  }
+
+  void _handleUserUpdate() {
+    if (mounted) {
+      setState(() {
+        _currentUser = _userService.userNotifier.value;
+      });
+    }
   }
 
   void _toggleDrawer() {
@@ -64,6 +73,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    _userService.userNotifier.removeListener(_handleUserUpdate);
     _animationController?.dispose();
     _pageController.dispose();
     super.dispose();

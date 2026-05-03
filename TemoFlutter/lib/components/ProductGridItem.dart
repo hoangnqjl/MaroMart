@@ -149,10 +149,12 @@ class _ProductGridItemState extends State<ProductGridItem> {
                   child: Stack(
                     children: [
                       CachedNetworkImage(
-                        imageUrl: imageUrl,
+                        imageUrl: StringUtils.normalizeUrl(imageUrl),
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
+                        maxWidthDiskCache: 1080,
+                        maxHeightDiskCache: 1080,
                         placeholder: (context, url) => Container(color: const Color(0xFFF3F4F6)),
                         errorWidget: (_, __, ___) => Container(
                           color: const Color(0xFFF3F4F6),
@@ -193,10 +195,12 @@ class _ProductGridItemState extends State<ProductGridItem> {
                                 children: [
                                   ClipOval(
                                     child: CachedNetworkImage(
-                                      imageUrl: product.userInfo?.avatarUrl ?? '',
+                                      imageUrl: StringUtils.normalizeUrl(product.userInfo?.avatarUrl ?? ''),
                                       width: 20,
                                       height: 20,
                                       fit: BoxFit.cover,
+                                      maxWidthDiskCache: 1080,
+                                      maxHeightDiskCache: 1080,
                                       errorWidget: (_, __, ___) => Container(
                                         color: const Color(0xFFFFB86A),
                                         child: const Icon(Icons.person, size: 12, color: Colors.white),

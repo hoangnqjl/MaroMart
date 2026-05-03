@@ -12,6 +12,7 @@ import 'package:temo/services/product_service.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/app_router.dart';
+import 'package:temo/screens/Order/OrderListScreen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
@@ -391,7 +392,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
           children: [
             Column(
               children: [
-                const SizedBox(height: 235), 
+                const SizedBox(height: 195), 
                 Expanded(
                   child: _isLoading
                       ? const SizedBox.shrink()
@@ -416,9 +417,26 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                         onMenuTap: widget.onMenuTap,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                         actions: [
-                          FloatingHeader.buildActionBubble(
-                            icon: HeroiconsSolid.ellipsisVertical,
-                            onTap: () => UIHelper.showOptionsMenu(context, screenName: "Quản lý sản phẩm"),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildTopBarAction(HeroiconsOutline.shoppingBag, () => smoothPush(context, const OrderListScreen())),
+                                Container(width: 1, height: 20, color: Colors.grey[200]),
+                                _buildTopBarAction(HeroiconsSolid.ellipsisVertical, () => UIHelper.showOptionsMenu(context, screenName: "Quản lý sản phẩm")),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -553,6 +571,19 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
           _buildSortMenuItem(11, "Giá: Thấp -> Cao", HeroiconsOutline.barsArrowUp, AppColors.warning),
           _buildSortMenuItem(12, "Giá: Cao -> Thấp", HeroiconsOutline.barsArrowDown, AppColors.primary),
         ],
+      ),
+    );
+  }
+  
+  Widget _buildTopBarAction(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 45,
+        height: 45,
+        alignment: Alignment.center,
+        color: Colors.transparent, 
+        child: Icon(icon, color: const Color(0xFF3F3F46), size: 20),
       ),
     );
   }
@@ -732,88 +763,94 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                   const SizedBox(height: 4),
                   Text(
                     "${product.productCategory}${_getProductType(product.productAttribute).isNotEmpty ? ' • ${_getProductType(product.productAttribute)}' : ''}".toUpperCase(), 
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       _buildStatTag(icon: HeroiconsOutline.eye, text: '0', bgColor: const Color(0xFFF5F5F5), textColor: Colors.grey),
-                      const SizedBox(width: 8),
                       _buildStatTag(icon: HeroiconsOutline.banknotes, text: _formatCurrency(product.productPrice), bgColor: const Color(0xFFE8F5E9), textColor: const Color(0xFF2E7D32)),
                     ],
                   ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                MenuAnchor(
-                  style: MenuStyle(
-                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-                    backgroundColor: WidgetStateProperty.all(Colors.white),
-                    elevation: WidgetStateProperty.all(12),
-                    shadowColor: WidgetStateProperty.all(Colors.black26),
-                    surfaceTintColor: WidgetStateProperty.all(Colors.white),
-                    padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 8)),
-                  ),
-                  alignmentOffset: const Offset(-195, 12),
-                  builder: (context, controller, child) {
-                    return GestureDetector(
-                      onTap: () {
-                        if (controller.isOpen) controller.close();
-                        else controller.open();
-                      },
-                      child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
-                    );
-                  },
-                  menuChildren: [
-                    AnimationLimiter(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: AnimationConfiguration.toStaggeredList(
-                          duration: const Duration(milliseconds: 400),
-                          childAnimationBuilder: (widget) => FadeInAnimation(
-                            child: widget,
+            SizedBox(
+              width: 60,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  MenuAnchor(
+                    style: MenuStyle(
+                      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+                      backgroundColor: WidgetStateProperty.all(Colors.white),
+                      elevation: WidgetStateProperty.all(12),
+                      shadowColor: WidgetStateProperty.all(Colors.black26),
+                      surfaceTintColor: WidgetStateProperty.all(Colors.white),
+                      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 8)),
+                    ),
+                    alignmentOffset: const Offset(-160, 10),
+                    builder: (context, controller, child) {
+                      return GestureDetector(
+                        onTap: () {
+                          if (controller.isOpen) controller.close();
+                          else controller.open();
+                        },
+                        child: const Icon(HeroiconsOutline.ellipsisHorizontal, color: Colors.black, size: 22),
+                      );
+                    },
+                    menuChildren: [
+                      AnimationLimiter(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: AnimationConfiguration.toStaggeredList(
+                            duration: const Duration(milliseconds: 400),
+                            childAnimationBuilder: (widget) => FadeInAnimation(
+                              child: widget,
+                            ),
+                            children: [
+                              MenuItemButton(
+                                onPressed: () => _showPushSheet(context, product),
+                                child: _buildPopupItem(
+                                  icon: HeroiconsOutline.arrowTrendingUp,
+                                  label: 'Đẩy tin / Ưu tiên',
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              MenuItemButton(
+                                onPressed: () async {
+                                  final result = await smoothPush(context, UpdateProduct(product: product));
+                                  if (result == true) _fetchUserProducts();
+                                },
+                                child: _buildPopupItem(
+                                  icon: HeroiconsOutline.pencilSquare,
+                                  label: 'Chỉnh sửa tin',
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              MenuItemButton(
+                                onPressed: () => _confirmDelete(product),
+                                child: _buildPopupItem(
+                                  icon: HeroiconsOutline.trash,
+                                  label: 'Xóa tin này',
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
                           ),
-                          children: [
-                            MenuItemButton(
-                              onPressed: () => _showPushSheet(context, product),
-                              child: _buildPopupItem(
-                                icon: HeroiconsOutline.arrowTrendingUp,
-                                label: 'Đẩy tin / Ưu tiên',
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            MenuItemButton(
-                              onPressed: () async {
-                                final result = await smoothPush(context, UpdateProduct(product: product));
-                                if (result == true) _fetchUserProducts();
-                              },
-                              child: _buildPopupItem(
-                                icon: HeroiconsOutline.pencilSquare,
-                                label: 'Chỉnh sửa tin',
-                                color: Colors.blue,
-                              ),
-                            ),
-                            MenuItemButton(
-                              onPressed: () => _confirmDelete(product),
-                              child: _buildPopupItem(
-                                icon: HeroiconsOutline.trash,
-                                label: 'Xóa tin này',
-                                color: Colors.red,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 25),
-                Text(_formatDate(product.createdAt, 'dd MMM'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                Text(_formatDate(product.createdAt, 'hh:mm a'), style: TextStyle(fontSize: 9, color: Colors.grey[500])),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 25),
+                  Text(_formatDate(product.createdAt, 'dd MMM'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  Text(_formatDate(product.createdAt, 'hh:mm a'), style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+                ],
+              ),
             )
           ],
         ),
@@ -826,6 +863,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 10, color: textColor),
           const SizedBox(width: 4),

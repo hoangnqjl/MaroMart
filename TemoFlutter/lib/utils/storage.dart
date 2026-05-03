@@ -43,6 +43,14 @@ class StorageHelper {
     return results.every((result) => result == true);
   }
 
+  static Future<bool> saveMustChangePassword(bool value) async {
+    return await _prefs?.setBool('must_change_password', value) ?? false;
+  }
+
+  static bool getMustChangePassword() {
+    return _prefs?.getBool('must_change_password') ?? false;
+  }
+
   static String? getUserId() => _prefs?.getString('user_id');
   static String? getUserRole() => _prefs?.getString('user_role');
   static String? getUserFullName() => _prefs?.getString('user_fullname');

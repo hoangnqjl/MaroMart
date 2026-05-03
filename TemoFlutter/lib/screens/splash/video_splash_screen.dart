@@ -33,10 +33,16 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
     if (_isNavigated) return;
     _isNavigated = true;
 
-    // Xem xét người dùng đã đăng nhập chưa
-    Widget nextScreen = StorageHelper.isLoggedIn()
-        ? Home()
-        : const GetStartedScreen();
+    Widget nextScreen;
+    if (StorageHelper.isLoggedIn()) {
+      if (StorageHelper.getMustChangePassword()) {
+        Navigator.pushReplacementNamed(context, '/force-change-password');
+        return;
+      }
+      nextScreen = Home();
+    } else {
+      nextScreen = const GetStartedScreen();
+    }
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(

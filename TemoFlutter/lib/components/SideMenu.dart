@@ -9,6 +9,7 @@ import 'package:temo/screens/Coin/CoinManagerScreen.dart';
 import 'package:temo/services/auth_service.dart';
 import 'package:temo/screens/Setting/ChangeInfomation.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:temo/components/UserAvatar.dart';
 
 class SideMenu extends StatelessWidget {
   final User? user;
@@ -114,14 +115,11 @@ class SideMenu extends StatelessWidget {
               )
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: (user?.avatarUrl?.isNotEmpty ?? false)
-                ? Image.network(user!.avatarUrl!, fit: BoxFit.cover)
-                : Container(
-                    color: Colors.grey[200],
-                    child: const Icon(HeroiconsOutline.user, color: Colors.grey),
-                  ),
+          child: UserAvatar(
+            avatarUrl: user?.avatarUrl ?? "",
+            fullName: user?.fullName ?? "User",
+            size: 60,
+            fontSize: 24,
           ),
         ),
         const SizedBox(height: 16),

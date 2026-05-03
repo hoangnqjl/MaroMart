@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:temo/services/auth_service.dart';
 import 'package:temo/services/socket_service.dart';
+import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/components/ModernLoader.dart';
 
 class GetStartedScreen extends StatefulWidget {
@@ -20,25 +21,12 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    UIHelpers.showErrorSnackBar(context, message);
   }
 
   void _showSuccess(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    UIHelpers.showSuccessSnackBar(context, message);
   }
 
   Future<void> _handleGoogleSignIn() async {

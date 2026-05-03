@@ -45,9 +45,21 @@ class _SignUpStep2PasswordScreenState
         children: [
           Image.asset(kBg, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(color: Colors.grey[800])),
+          // Premium Dark Blur Overlay
           BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.22)),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.25),
+                    Colors.black.withOpacity(0.55),
+                  ],
+                ),
+              ),
+            ),
           ),
           SafeArea(
             child: Column(
@@ -271,7 +283,7 @@ class _Field extends StatelessWidget {
         hintStyle: GoogleFonts.roboto(
             color: Colors.black38, fontSize: 14, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: const Color(0xFFF3F5F5).withOpacity(0.70),
+        fillColor: const Color(0xFFF3F5F5).withOpacity(0.85),
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         suffixIcon: suffixIcon,

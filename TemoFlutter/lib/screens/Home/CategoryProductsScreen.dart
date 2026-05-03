@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/components/Post.dart';
 import 'package:temo/models/Product/Product.dart';
 import 'package:temo/services/product_service.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/utils/UIHelper.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final Map<String, dynamic> category;
@@ -17,13 +22,46 @@ class CategoryProductsScreen extends StatefulWidget {
 class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   final ProductService _productService = ProductService();
   List<Product> _products = [];
+  List<dynamic> _categories = [];
   bool _isLoading = true;
+  bool _isCategoriesLoading = true;
   String _errorMessage = '';
+  String _selectedCategoryId = '';
 
   @override
   void initState() {
     super.initState();
+    _selectedCategoryId = widget.category['categoryId']?.toString() ?? widget.category['id']?.toString() ?? 'all';
+    _fetchCategories();
     _fetchProducts();
+  }
+
+  Future<void> _fetchCategories() async {
+    setState(() => _isCategoriesLoading = true);
+    try {
+      final cats = await _productService.getCategories();
+      // Add "All" category if not exists
+      if (!cats.any((c) => (c['categoryId'] ?? c['id']) == 'all')) {
+        cats.insert(0, {'categoryId': 'all', 'categoryName': 'Tất cả'});
+      }
+      
+      cats.sort((a, b) {
+        final String idA = (a['categoryId'] ?? a['id'] ?? '').toString();
+        if (idA == 'all') return -1;
+        final String idB = (b['categoryId'] ?? b['id'] ?? '').toString();
+        if (idB == 'all') return 1;
+        return idA.compareTo(idB);
+      });
+
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          _isCategoriesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isCategoriesLoading = false);
+    }
   }
 
   Future<void> _fetchProducts() async {
@@ -33,10 +71,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     });
 
     try {
-      final String categoryId = widget.category['categoryId']?.toString() ?? widget.category['id']?.toString() ?? '';
-      
       final results = await _productService.getProductsByCategory(
-          categoryId: categoryId == 'all' ? null : categoryId
+          categoryId: _selectedCategoryId == 'all' ? null : _selectedCategoryId
       );
 
       if (mounted) {
@@ -59,21 +95,86 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(HeroiconsOutline.arrowLeft, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          widget.category['categoryName']?.toString() ?? widget.category['name']?.toString() ?? '',
-          style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
+      body: Stack(
+        children: [
+          // Background list
+          Positioned.fill(child: _buildBody()),
+          
+          // Floating Header (Copied from SavedProductsScreen style)
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FloatingHeader(
+                      title: "Tất cả sản phẩm",
+                      hasBackground: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      actions: [
+                        FloatingHeader.buildActionBubble(
+                          icon: HeroiconsSolid.ellipsisVertical,
+                          onTap: () => UIHelper.showOptionsMenu(context, screenName: "Tất cả sản phẩm"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    _buildCategoryFilter(),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: _buildBody(),
+    );
+  }
+
+  Widget _buildCategoryFilter() {
+    if (_isCategoriesLoading) return const SizedBox(height: 40);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: _categories.map((cat) {
+          final String id = (cat['categoryId'] ?? cat['id'] ?? '').toString();
+          final String label = (cat['categoryName'] ?? cat['name'] ?? '').toString();
+          bool isSelected = _selectedCategoryId == id;
+
+          return GestureDetector(
+            onTap: () {
+              if (isSelected) return;
+              setState(() {
+                _selectedCategoryId = id;
+              });
+              _fetchProducts();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Text(
+                label,
+                style: GoogleFonts.quicksand(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -89,8 +190,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           children: [
             const Icon(HeroiconsOutline.exclamationTriangle, size: 48, color: Colors.orange),
             const SizedBox(height: 10),
-            Text("Lỗi: $_errorMessage", style: const TextStyle(color: Colors.grey)),
-            TextButton(onPressed: _fetchProducts, child: const Text("Thử lại"))
+            Text("Lỗi: $_errorMessage", style: const TextStyle(color: Colors.grey, fontFamily: 'Quicksand')),
+            TextButton(onPressed: _fetchProducts, child: const Text("Thử lại", style: TextStyle(fontFamily: 'Quicksand')))
           ],
         ),
       );
@@ -104,8 +205,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             const Icon(HeroiconsOutline.archiveBoxXMark, size: 60, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              'Không có sản phẩm nào cho danh mục "${widget.category['categoryName']?.toString() ?? widget.category['name']?.toString() ?? ''}"',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              'Không có sản phẩm nào',
+              style: const TextStyle(color: Colors.grey, fontSize: 16, fontFamily: 'Quicksand'),
             ),
           ],
         ),
@@ -115,13 +216,13 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     final double screenWidth = MediaQuery.of(context).size.width;
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
+      padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 105, 16, 40),
       itemCount: _products.length,
       itemBuilder: (context, index) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 20),
           child: SizedBox(
-            height: screenWidth * 1.05,
+            height: screenWidth * 1.4,
             child: Post(product: _products[index]),
           ),
         );

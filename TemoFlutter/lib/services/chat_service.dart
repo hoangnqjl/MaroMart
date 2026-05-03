@@ -112,6 +112,18 @@ class ChatService {
       throw Exception('Gửi tin nhắn thất bại: $e');
     }
   }
+  Future<void> markAsRead(String conId) async {
+    try {
+      await _apiService.put(
+        endpoint: '/chat/conversations/$conId/read',
+        body: {},
+        needAuth: true,
+      );
+    } catch (e) {
+      print('Lỗi markAsRead: $e');
+    }
+  }
+
   Future<void> deleteConversation(String conId) async {
     try {
       await _apiService.delete(

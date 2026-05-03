@@ -47,6 +47,33 @@ class NotificationService {
     }
   }
 
+  Future<void> markAllAsRead() async {
+    try {
+      await _apiService.put(
+        endpoint: '/notifications/mark-all-read',
+        body: {},
+        needAuth: true,
+      );
+      unreadCountNotifier.value = 0;
+    } catch (e) {
+      print('Lỗi markAllAsRead: $e');
+      throw Exception('Không thể đánh dấu tất cả đã đọc');
+    }
+  }
+
+  Future<void> deleteAllNotifications() async {
+    try {
+      await _apiService.delete(
+        endpoint: '/notifications',
+        needAuth: true,
+      );
+      unreadCountNotifier.value = 0;
+    } catch (e) {
+      print('Lỗi deleteAllNotifications: $e');
+      throw Exception('Không thể xóa thông báo');
+    }
+  }
+
   Future<void> fetchUnreadCount() async {
     try {
       final response = await _apiService.get(

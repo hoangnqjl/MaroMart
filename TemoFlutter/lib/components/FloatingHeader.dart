@@ -57,8 +57,8 @@ class FloatingHeader extends StatelessWidget {
               child: Align(
                 alignment: contentAlignment,
                 child: Container(
-                  padding: hasBackground ? const EdgeInsets.symmetric(horizontal: 24, vertical: 10) : EdgeInsets.zero,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: hasBackground ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8) : EdgeInsets.zero,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: hasBackground ? BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(100),
