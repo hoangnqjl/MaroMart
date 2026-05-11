@@ -35,6 +35,10 @@ export function Products() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
+    const [rejectModal, setRejectModal] = useState<{
+        isOpen: boolean;
+        productId: string | null;
+    }>({ isOpen: false, productId: null });
     const { toast } = useToast();
 
     // Client-side search hook
@@ -56,7 +60,13 @@ export function Products() {
 
     const filteredProducts = searchFilteredProducts.filter((product) => {
         if (selectedStatus === 'all') return true;
-        const status = (product as any).status;
+        const status = (product as any).status || 'active';
+        
+        // Map 'pending' from mobile app to 'pending_admin_review'
+        if (selectedStatus === 'pending_admin_review') {
+            return status === 'pending_admin_review' || status === 'pending';
+        }
+        
         return status === selectedStatus;
     });
 
@@ -135,15 +145,16 @@ export function Products() {
         }
     };
 
-    const handleReject = async (productId: string) => {
+    const handleReject = async (productId: string, reason?: string) => {
         try {
-            await productsAPI.rejectProduct(productId);
+            await productsAPI.rejectProduct(productId, reason);
             toast({
                 type: 'success',
                 title: 'Product rejected',
-                description: 'The product has been successfully rejected.',
+                description: 'The product has been successfully rejected and user notified.',
             });
             fetchProducts();
+            setRejectModal({ isOpen: false, productId: null });
         } catch (err: any) {
             toast({
                 type: 'error',
@@ -401,7 +412,7 @@ export function Products() {
                                                 {(() => {
                                                     const status = (product as any).status || 'active';
                                                     if (status === 'active') return <Badge variant="success">Active</Badge>;
-                                                    if (status === 'pending_admin_review') return <Badge variant="warning">Pending Review</Badge>;
+                                                    if (status === 'pending_admin_review' || status === 'pending') return <Badge variant="warning">Pending Review</Badge>;
                                                     if (status === 'rejected') return <Badge variant="danger">Rejected</Badge>;
                                                     if (status === 'draft') return <Badge variant="default">Draft</Badge>;
                                                     return <Badge>{status}</Badge>;
@@ -416,7 +427,7 @@ export function Products() {
                                                         const status = (product as any).status || 'active';
                                                         return (
                                                             <>
-                                                                {(status === 'pending_admin_review' || status === 'draft' || status === 'rejected') && (
+                                                                {(status === 'pending_admin_review' || status === 'pending' || status === 'draft' || status === 'rejected') && (
                                                                     <button
                                                                         onClick={() => handleApprove(product.productId)}
                                                                         className="p-2 rounded-lg hover:bg-emerald-50 transition-colors group"
@@ -425,9 +436,9 @@ export function Products() {
                                                                         <CheckCircle className="h-4 w-4 text-gray-600 group-hover:text-emerald-500" />
                                                                     </button>
                                                                 )}
-                                                                {(status === 'pending_admin_review' || status === 'draft' || status === 'active') && (
+                                                                {(status === 'pending_admin_review' || status === 'pending' || status === 'draft' || status === 'active') && (
                                                                     <button
-                                                                        onClick={() => handleReject(product.productId)}
+                                                                        onClick={() => setRejectModal({ isOpen: true, productId: product.productId })}
                                                                         className="p-2 rounded-lg hover:bg-orange-50 transition-colors group"
                                                                         title="Từ Chối"
                                                                     >
@@ -503,7 +514,34 @@ export function Products() {
                 onClose={() => setSelectedProduct(null)}
                 product={selectedProduct || undefined}
                 onApprove={handleApprove}
-                onReject={handleReject}
+                onReject={(id) => setRejectModal({ isOpen: true, productId: id })}
+            />
+
+            {/* Reject Reason Modal */}
+            <ConfirmModal
+                isOpen={rejectModal.isOpen}
+                onClose={() => setRejectModal({ isOpen: false, productId: null })}
+                onConfirm={() => {
+                    const reason = (document.getElementById('reject-reason') as HTMLTextAreaElement)?.value;
+                    if (rejectModal.productId) {
+                        handleReject(rejectModal.productId, reason);
+                    }
+                }}
+                title="Từ chối sản phẩm"
+                message={
+                    <div className="space-y-4">
+                        <p>Vui lòng nhập lý do từ chối tin đăng này để gửi cho người dùng:</p>
+                        <textarea
+                            id="reject-reason"
+                            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none"
+                            placeholder="Ví dụ: Hình ảnh mờ, Giá quá cao, Thông tin không chính xác..."
+                            rows={4}
+                        />
+                    </div>
+                }
+                confirmText="Xác nhận từ chối"
+                cancelText="Hủy"
+                variant="danger"
             />
         </div>
     );

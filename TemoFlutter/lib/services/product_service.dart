@@ -532,7 +532,7 @@ class ProductService {
       final response = await _apiService.get(
         endpoint: '/products/recommended',
         queryParameters: queryParams,
-        needAuth: false,
+        needAuth: true,
       );
 
       if (response is List) {

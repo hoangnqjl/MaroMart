@@ -64,11 +64,11 @@ class _BottomNavigationState extends State<BottomNavigation> {
                     ),
                     child: Row(
                       children: [
-                        _buildNavItem('assets/images/HomeIcon.svg', 0, 'Home'),
+                        _buildNavItem('assets/images/HomeIcon.svg', 0, 'Trang chủ'),
                         const SizedBox(width: 4),
-                        _buildNavItem('assets/images/ItemIcon.svg', 1, 'Items', solidIconPath: 'assets/images/ItemIconSolid.png'),
+                        _buildNavItem('assets/images/ItemIcon.svg', 1, 'Sản phẩm', solidIconPath: 'assets/images/ItemIconSolid.png'),
                         const SizedBox(width: 4),
-                        _buildNavItem('assets/images/MessageIcon.svg', 2, 'Chat',
+                        _buildNavItem('assets/images/MessageIcon.svg', 2, 'Tin nhắn',
                             solidIconPath: 'assets/images/MessageIconSolid.png',
                             badgeCount: widget.notificationCount),
                         const SizedBox(width: 4),

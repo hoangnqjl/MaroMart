@@ -23,6 +23,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:temo/Colors/AppColors.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
@@ -77,6 +78,7 @@ class _AddProductState extends State<AddProduct> {
   // Remote Media (For Drafts)
   List<String> _draftImages = [];
   List<String> _draftVideos = [];
+  String? _createdDraftId; // Lưu productId sau lần tạo nháp đầu tiên
   dynamic _freshProductAttribute;
 
   List<AttributeItem> _attributes = [];
@@ -139,6 +141,7 @@ class _AddProductState extends State<AddProduct> {
   // AI Config
   String _selectedStyle = "Chuyên nghiệp";
   String _selectedLength = "Trung bình";
+  bool _isAiModerationEnabled = true; // Mặc định bật kiểm duyệt AI
   final List<String> _styles = [
     "Chuyên nghiệp",
     "Gần gũi",
@@ -169,6 +172,8 @@ class _AddProductState extends State<AddProduct> {
     super.initState();
     _fetchProvinces();
     _fetchCategoriesFromApi();
+    _initSocketListeners();
+    _loadAIConfig(); // Tải cấu hình AI đã lưu
 
     // Load Draft if available
     if (widget.draftProduct != null) {
@@ -295,6 +300,28 @@ class _AddProductState extends State<AddProduct> {
     _addressDetailController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAIConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _selectedStyle = prefs.getString('ai_style') ?? "Chuyên nghiệp";
+        _selectedLength = prefs.getString('ai_length') ?? "Trung bình";
+        _isAiModerationEnabled = prefs.getBool('ai_moderation') ?? true;
+      });
+    }
+  }
+
+  Future<void> _saveAIConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ai_style', _selectedStyle);
+    await prefs.setString('ai_length', _selectedLength);
+    await prefs.setBool('ai_moderation', _isAiModerationEnabled);
+  }
+
+  void _initSocketListeners() {
+    // Socket initialization
   }
 
   // --- CURRENCY FORMATTER ---
@@ -493,111 +520,139 @@ class _AddProductState extends State<AddProduct> {
 
   // --- LOGIC MANUAL CATEGORY ---
   void _onCategoryChanged(String? newCategory) {
+    if (_selectedCategory == newCategory) return;
+    
     setState(() {
-      // 1. Capture current values into a map
+      // 1. Capture current values
       Map<String, String> currentValues = {};
       for (var attr in _attributes) {
         if (attr.valueController.text.isNotEmpty) {
-          currentValues[attr.nameController.text.toLowerCase()] =
+          currentValues[attr.nameController.text.toLowerCase().trim()] =
               attr.valueController.text;
         }
       }
 
       _selectedCategory = newCategory;
 
-      // 2. Dispose old controllers
-      for (var attr in _attributes) attr.dispose();
-      _attributes.clear();
+      // 2. Rebuild attributes based on template
+      _rebuildAttributeList(preservedValues: currentValues);
+    });
+  }
 
-      // 3. Rebuild based on new template
-      if (newCategory != null && _attributeTemplates.containsKey(newCategory)) {
-        List<String> templates = _attributeTemplates[newCategory]!;
-        for (String key in templates) {
-          // 4. Restore value if matched (fuzzy match key)
-          String initialValue = currentValues[key.toLowerCase()] ?? "";
-          _attributes.add(AttributeItem(name: key, value: initialValue));
+  void _rebuildAttributeList({Map<String, String>? preservedValues, String? forcedType}) {
+    // Note: Call this inside setState if needed
+    
+    // 1. Dispose old
+    for (var attr in _attributes) attr.dispose();
+    _attributes.clear();
+
+    Set<String> addedKeys = {};
+    Map<String, String> values = preservedValues ?? {};
+
+    // A. Category Common Attributes
+    if (_selectedCategory != null && _attributeTemplates.containsKey(_selectedCategory)) {
+      for (String key in _attributeTemplates[_selectedCategory]!) {
+        String cleanKey = key.toLowerCase().trim();
+        _attributes.add(AttributeItem(name: key, value: values[cleanKey] ?? ""));
+        addedKeys.add(cleanKey);
+      }
+    }
+
+    // B. Type-Specific Attributes
+    String? currentType = forcedType;
+    if (currentType == null) {
+      // Find current type value from preserved or existing attributes
+      currentType = values["type"];
+      if (currentType == null || currentType.isEmpty) {
+        var typeAttr = _attributes.firstWhere((a) => a.nameController.text.toLowerCase() == "type", orElse: () => AttributeItem());
+        currentType = typeAttr.valueController.text;
+      }
+    }
+
+    if (currentType != null && currentType.isNotEmpty) {
+      String? matchedKey;
+      String cleanType = currentType.toLowerCase().trim().replaceAll(' ', '');
+      for (String k in _apiTypeSpecificAttributes.keys) {
+        String cleanK = k.toLowerCase().trim().replaceAll(' ', '');
+        if (cleanK == cleanType || cleanK.contains(cleanType) || cleanType.contains(cleanK)) {
+          matchedKey = k;
+          break;
+        }
+      }
+
+      List<String>? typeAttrs = matchedKey != null ? _apiTypeSpecificAttributes[matchedKey] : _typeSpecificAttributes[currentType];
+      if (typeAttrs != null) {
+        for (String key in typeAttrs) {
+          String cleanKey = key.toLowerCase().trim();
+          if (!addedKeys.contains(cleanKey)) {
+            _attributes.add(AttributeItem(name: key, value: values[cleanKey] ?? ""));
+            addedKeys.add(cleanKey);
+          }
+        }
+      }
+    }
+
+    // Ensure type is present
+    if (!addedKeys.contains("type")) {
+      _attributes.add(AttributeItem(name: "type", value: currentType ?? ""));
+    }
+
+    // C. Always add Warranty at end
+    if (!addedKeys.contains("warranty")) {
+      _attributes.add(AttributeItem(name: "warranty", value: values["warranty"] ?? ""));
+    }
+  }
+
+  void _fillAttributesFromMap(Map<String, dynamic> data, {bool overwrite = false}) {
+    data.forEach((key, value) {
+      if (value == null) return;
+      String cleanKey = key.toString().toLowerCase().trim();
+      String valStr = value.toString().trim();
+      if (valStr.isEmpty || valStr.toUpperCase() == "N/A" || valStr.toUpperCase() == "UNKNOWN") return;
+
+      // Handle root fields
+      if (cleanKey == "brand" || cleanKey == "productbrand") {
+        if (overwrite || _brandController.text.isEmpty) _brandController.text = valStr;
+        return;
+      }
+      if (cleanKey == "origin" || cleanKey == "productorigin") {
+        if (overwrite || _originController.text.isEmpty) _originController.text = valStr;
+        return;
+      }
+      if (cleanKey == "condition" || cleanKey == "productcondition") {
+        if (overwrite || _conditionController.text.isEmpty) _conditionController.text = valStr;
+        return;
+      }
+
+      // Handle template attributes
+      String normalize(String s) => s.toLowerCase().trim().replaceAll(' ', '_').replaceAll('-', '_');
+      String normKey = normalize(cleanKey);
+
+      for (var attr in _attributes) {
+        if (normalize(attr.nameController.text) == normKey) {
+          if (overwrite || attr.valueController.text.isEmpty || attr.valueController.text.toUpperCase() == "N/A") {
+            attr.valueController.text = valStr;
+          }
+          break;
         }
       }
     });
   }
 
   // --- LOGIC MANUAL TYPE ---
-  Future<void> _onTypeChanged(String newType) async {
-    // 1. Capture current values of all existing attributes
-    Map<String, String> preservedValues = {};
-    for (var attr in _attributes) {
-      if (attr.valueController.text.isNotEmpty) {
-        preservedValues[attr.nameController.text.toLowerCase().trim()] =
-            attr.valueController.text;
-      }
-    }
-    preservedValues["type"] = newType;
-
-    // 2. Dispose old
+  Future<void> _onTypeChanged(String newType, {bool fetchSuggestions = true}) async {
     setState(() {
-      for (var attr in _attributes) attr.dispose();
-      _attributes.clear();
-
-      // 3. Rebuild list
-      Set<String> addedKeys = {};
-
-      // A. Load Common Attributes for Category from API
-      if (_selectedCategory != null && _attributeTemplates.containsKey(_selectedCategory)) {
-        for (String commonKey in _attributeTemplates[_selectedCategory]!) {
-          String cleanKey = commonKey.toLowerCase().trim();
-          String val = preservedValues[cleanKey] ?? "";
-          _attributes.add(AttributeItem(name: commonKey, value: val));
-          addedKeys.add(cleanKey);
-        }
+      Map<String, String> preserved = {};
+      for (var a in _attributes) {
+        if (a.valueController.text.isNotEmpty) preserved[a.nameController.text.toLowerCase().trim()] = a.valueController.text;
       }
-
-      // Ensure 'type' is added even if not in templates
-      if (!addedKeys.contains("type")) {
-        _attributes.add(AttributeItem(name: "type", value: newType));
-        addedKeys.add("type");
-      }
-
-      // B. Load Type-Specific Attributes from API (Fuzzy match)
-      String? matchedKey;
-      String cleanNewType = newType.toLowerCase().trim().replaceAll(' ', '');
-      for (String k in _apiTypeSpecificAttributes.keys) {
-        String cleanK = k.toLowerCase().trim().replaceAll(' ', '');
-        if (cleanK == cleanNewType || cleanK.contains(cleanNewType) || cleanNewType.contains(cleanK)) {
-          matchedKey = k;
-          break;
-        }
-      }
-
-      if (matchedKey != null) {
-        for (String key in _apiTypeSpecificAttributes[matchedKey]!) {
-          String cleanKey = key.toLowerCase().trim();
-          if (!addedKeys.contains(cleanKey)) {
-            String val = preservedValues[cleanKey] ?? "";
-            _attributes.add(AttributeItem(name: key, value: val));
-            addedKeys.add(cleanKey);
-          }
-        }
-      } else if (_typeSpecificAttributes.containsKey(newType)) {
-        for (String key in _typeSpecificAttributes[newType]!) {
-          String cleanKey = key.toLowerCase().trim();
-          if (!addedKeys.contains(cleanKey)) {
-            String val = preservedValues[cleanKey] ?? "";
-            _attributes.add(AttributeItem(name: key, value: val));
-            addedKeys.add(cleanKey);
-          }
-        }
-      }
-
-      _attributes.add(
-        AttributeItem(
-          name: "warranty",
-          value: preservedValues["warranty"] ?? "",
-        ),
-      );
+      preserved["type"] = newType;
+      _rebuildAttributeList(preservedValues: preserved, forcedType: newType);
     });
 
-    // 4. Sau khi build template xong, tự động gọi n8n để điền giá trị
-    await _fetchAttributesFromN8N(newType);
+    if (fetchSuggestions && _isAiModerationEnabled) {
+      await _fetchAttributesFromN8N(newType);
+    }
   }
 
   // Gọi n8n để điền giá trị attribute tự động sau khi chọn Type
@@ -657,55 +712,8 @@ class _AddProductState extends State<AddProduct> {
       if (aiAttrs.isEmpty) return;
 
       setState(() {
-        aiAttrs.forEach((key, value) {
-          String cleanKey = key.toString().toLowerCase().trim();
-          String cleanVal = value.toString().trim();
-
-          // Bỏ qua giá trị rỗng / không xác định
-          if (cleanVal.isEmpty ||
-              cleanVal.toUpperCase() == 'N/A' ||
-              cleanVal.toUpperCase() == 'UNKNOWN' ||
-              cleanVal.toUpperCase() == 'KHÔNG XÁC ĐỊNH') return;
-
-          // Xử lý riêng field brand
-          if (cleanKey == 'brand') {
-            bool isBrandEmptyOrNA = _brandController.text.trim().isEmpty ||
-                _brandController.text.trim().toUpperCase() == 'N/A' ||
-                _brandController.text.trim().toUpperCase() == 'UNKNOWN';
-            if (isBrandEmptyOrNA) {
-              _brandController.text = cleanVal;
-            }
-            return;
-          }
-
-          // Tìm attribute đã có trong danh sách và điền vào (chỉ khi đang trống)
-          String normalize(String s) => s.toLowerCase().trim().replaceAll(' ', '_');
-          
-          int idx = _attributes.indexWhere(
-                (a) => normalize(a.nameController.text) == normalize(cleanKey),
-          );
-
-          if (idx != -1) {
-            String currentVal = _attributes[idx].valueController.text.trim();
-            bool isEmptyOrNA = currentVal.isEmpty ||
-                currentVal.toUpperCase() == 'N/A' ||
-                currentVal.toUpperCase() == 'UNKNOWN';
-            if (isEmptyOrNA) {
-              _attributes[idx].valueController.text = cleanVal;
-            } else {
-              // Bổ sung: Nếu user bấm Lấy thông số mà ô đã có giá trị, thì ghi đè luôn để cập nhật thông số mới nhất
-              _attributes[idx].valueController.text = cleanVal;
-            }
-          } else {
-            // Attribute chưa có trong danh sách → thêm mới trước dòng cuối
-            int insertIdx =
-            _attributes.isNotEmpty ? _attributes.length - 1 : 0;
-            _attributes.insert(
-              insertIdx,
-              AttributeItem(name: _formatKey(cleanKey), value: cleanVal),
-            );
-          }
-        });
+        print("[AI-ATTR] Filling attributes with overwrite: false");
+        _fillAttributesFromMap(aiAttrs, overwrite: false); // Chỉ điền vào các ô còn trống
       });
 
       if (mounted) {
@@ -750,7 +758,7 @@ class _AddProductState extends State<AddProduct> {
       final result = await _productService.validateMedia(
         _selectedImages,
         _titleController.text,
-        remoteUrls: _draftImages,
+        remoteUrls: _selectedImages.isEmpty ? _draftImages : [], // Nếu có ảnh mới, chỉ kiểm duyệt ảnh mới để tăng tốc
       );
 
       print("AI Check Result: ${result.toString()}");
@@ -762,70 +770,52 @@ class _AddProductState extends State<AddProduct> {
         return false;
       }
 
-      // Trích xuất thông tin từ AI nếu có
+      // Extract Info
       String? detectedCategory = result['category'];
       String? detectedType;
       Map<String, dynamic> attrs = result['attributes'] ?? {};
+      attrs.forEach((k, v) {
+        if (k.toString().toLowerCase() == 'type') detectedType = v.toString().trim();
+      });
 
       setState(() {
-        if (result['condition'] != null)
-          _conditionController.text = result['condition'];
+        if (result['condition'] != null) _conditionController.text = result['condition'];
 
-        // A. Handle Category Auto-Selection
-        if (detectedCategory != null &&
-            _attributeTemplates.containsKey(detectedCategory.toLowerCase())) {
-          _onCategoryChanged(detectedCategory.toLowerCase());
+        // A. Update Category Selection (don't call _onCategoryChanged as it rebuilds prematurely)
+        if (detectedCategory != null && _attributeTemplates.containsKey(detectedCategory.toLowerCase())) {
+          _selectedCategory = detectedCategory.toLowerCase();
         }
 
-        // B. Handle Type Auto-Selection
-        attrs.forEach((k, v) {
-          if (k.toString().toLowerCase() == 'type')
-            detectedType = v.toString().trim();
-        });
-      }); // end setState
-
-      if (detectedType != null) {
-        await _onTypeChanged(detectedType!);
-      }
-
-      setState(() {
-        // C. Deep Fill Attributes (Brand, and others)
-        attrs.forEach((key, value) {
-          String cleanKey = key.toString().trim();
-          String cleanValue = value.toString().trim();
-
-          if (cleanKey.toLowerCase() == 'brand') {
-            _brandController.text = cleanValue;
-          } else {
-            int index = _attributes.indexWhere(
-              (attr) =>
-                  attr.nameController.text.toLowerCase() ==
-                  cleanKey.toLowerCase(),
-            );
-            if (index != -1) {
-              _attributes[index].valueController.text = cleanValue;
-            } else {
-              _attributes.add(
-                AttributeItem(name: _formatKey(cleanKey), value: cleanValue),
-              );
-            }
+        // B. Group all values (Current + AI detected)
+        Map<String, String> valuesToPreserve = {};
+        for (var attr in _attributes) {
+          if (attr.valueController.text.isNotEmpty) {
+            valuesToPreserve[attr.nameController.text.toLowerCase().trim()] = attr.valueController.text;
           }
+        }
+        // Overlay AI detected values
+        attrs.forEach((key, value) {
+          valuesToPreserve[key.toString().toLowerCase().trim()] = value.toString().trim();
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Đã trích xuất thông tin & thông số kỹ thuật!"),
-            backgroundColor: Colors.green,
-          ),
-        );
+        // C. Single Rebuild of the list based on templates
+        _rebuildAttributeList(preservedValues: valuesToPreserve, forcedType: detectedType);
 
-        // SAVE VISUAL MEMORY for Step 2
-        _visualDetails =
-            "Detected Info from Image:\n"
+        // D. Final fill (for root fields like Brand)
+        _fillAttributesFromMap(attrs, overwrite: true);
+
+        _visualDetails = "Detected Info from Image:\n"
             "Category: ${result['category'] ?? 'Unknown'}\n"
             "Condition: ${result['condition'] ?? 'Unknown'}\n"
             "Attributes: ${attrs.toString()}";
         _isAiValidated = true;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✨ AI đã trích xuất thông tin từ hình ảnh!"),
+            backgroundColor: Colors.green,
+          ),
+        );
       });
 
       return true;
@@ -898,144 +888,73 @@ class _AddProductState extends State<AddProduct> {
         }
       }
 
-      final result = await _productService.generateDetails(
-        productName: _titleController.text,
-        visualDetails: _visualDetails ?? "User uploaded verified images.",
-        style: _selectedStyle,
-        length: _selectedLength,
-        allowedAttributes: emptyKeys.toList(),
-        selectedCondition: _conditionController.text,
-      );
-
-      // 1. Check Moderation (Safety)
-      if (result['is_safe'] == false) {
-        _showErrorDialog(
-          "Community standard violation: ${result['violation_reason'] ?? 'Inappropriate content.'}",
+      if (_descController.text.trim().isEmpty) {
+        print("[AI-GEN] Description is empty, generating with HuggingFace...");
+        final result = await _productService.generateDetails(
+          productName: _titleController.text,
+          visualDetails: _visualDetails ?? "User uploaded verified images.",
+          style: _selectedStyle,
+          length: _selectedLength,
+          allowedAttributes: emptyKeys.toList(),
+          selectedCondition: _conditionController.text,
         );
-        return;
-      }
 
-      // 2. Check Consistency
-      if (result['is_consistent'] == false) {
-        bool continueAnyway =
-            await UIHelpers.confirmDialog(
-              context,
-              title: "Cảnh báo từ AI",
-              message:
-                  "AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?",
-              confirmText: "Tiếp tục",
-              cancelText: "Quay lại",
-              confirmColor: Colors.red,
-              icon: HeroiconsOutline.exclamationTriangle,
-            ) ??
-            false;
-
-        if (!continueAnyway) {
-          _prevStep(); // Go back to Step 1
+        // 1. Check Moderation (Safety)
+        if (result['is_safe'] == false) {
+          _showErrorDialog(
+            "Community standard violation: ${result['violation_reason'] ?? 'Inappropriate content.'}",
+          );
           return;
         }
+
+        // 2. Check Consistency
+        if (result['is_consistent'] == false) {
+          bool continueAnyway =
+              await UIHelpers.confirmDialog(
+                context,
+                title: "Cảnh báo từ AI",
+                message:
+                    "AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?",
+                confirmText: "Tiếp tục",
+                cancelText: "Quay lại",
+                confirmColor: Colors.red,
+                icon: HeroiconsOutline.exclamationTriangle,
+              ) ??
+              false;
+
+          if (!continueAnyway) {
+            _prevStep(); // Go back to Step 1
+            return;
+          }
+        }
+
+        setState(() {
+          // 3. Auto-fill Description
+          _descController.text = result['description'] ?? "";
+
+          // 4. Auto-select Category
+          String? predictedCategory = result['category'];
+          if (predictedCategory != null &&
+              _attributeTemplates.containsKey(predictedCategory.toLowerCase())) {
+            _onCategoryChanged(predictedCategory.toLowerCase());
+          }
+
+          // 5. Auto-fill Attributes from HF (if any)
+          Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
+          _fillAttributesFromMap(aiAttrs, overwrite: false);
+          
+          _isAiValidated = true;
+          _contentAlreadyValidated = true;
+        });
+      } else {
+        print("[AI-GEN] Description already exists, skipping HuggingFace generation.");
       }
 
-      setState(() {
-        // 3. Auto-fill Description
-        _descController.text = result['description'] ?? "";
 
-        // 4. Auto-select Category
-        String? predictedCategory = result['category'];
-        if (predictedCategory != null &&
-            _attributeTemplates.containsKey(predictedCategory.toLowerCase())) {
-          _onCategoryChanged(predictedCategory.toLowerCase());
-        }
-
-        // 5. Auto-fill Attributes (Dynamic Expansion & MERGE)
-        // We overwrite the entire attribute list with what AI deemed relevant,
-        // BUT we must preserve Visual Evidence (Step 1) if Text AI (Step 2) misses it.
-
-        // A. Capture current visual attributes
-        Map<String, String> visualAttributes = {};
-        for (var attr in _attributes) {
-          if (attr.valueController.text.trim().isNotEmpty &&
-              attr.valueController.text != "N/A") {
-            visualAttributes[attr.nameController.text.toLowerCase().trim()] =
-                attr.valueController.text.trim();
-          }
-        }
-
-        // 1. Get all expected keys for this Category and Type (Excluding Condition)
-        Set<String> expectedKeys = {};
-        if (_selectedCategory != null && _attributeTemplates.containsKey(_selectedCategory)) {
-          expectedKeys.addAll(
-            _attributeTemplates[_selectedCategory]!
-              .where((e) => e != "condition")
-              .map((e) => e.toLowerCase().trim())
-          );
-        }
-
-        // Get current Type value
-        String? currentType;
-        try {
-          var typeAttr = _attributes.firstWhere(
-            (a) => a.nameController.text.toLowerCase() == 'type',
-            orElse: () => AttributeItem(name: "", value: ""),
-          );
-          if (typeAttr.nameController.text.isNotEmpty) {
-            currentType = typeAttr.valueController.text;
-          }
-        } catch (e) {}
-
-        if (currentType != null) {
-          String? matchedKey;
-          String cleanType = currentType.toLowerCase().trim().replaceAll(' ', '');
-          for (String k in _apiTypeSpecificAttributes.keys) {
-            String cleanK = k.toLowerCase().trim().replaceAll(' ', '');
-            if (cleanK == cleanType || cleanK.contains(cleanType) || cleanType.contains(cleanK)) {
-              matchedKey = k;
-              break;
-            }
-          }
-
-          if (matchedKey != null) {
-            expectedKeys.addAll(_apiTypeSpecificAttributes[matchedKey]!.map((e) => e.toLowerCase().trim()));
-          } else if (_typeSpecificAttributes.containsKey(currentType)) {
-            expectedKeys.addAll(_typeSpecificAttributes[currentType]!.map((e) => e.toLowerCase().trim()));
-          }
-        }
-
-        // B. Update existing attributes with AI data (Merge Logic)
-        Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
-        
-        for (var attr in _attributes) {
-          String cleanKey = attr.nameController.text.toLowerCase().trim();
-          String currentValue = attr.valueController.text.trim();
-          
-          // Chỉ điền nếu ô hiện tại đang trống hoặc là N/A
-          if (currentValue.isEmpty || currentValue.toUpperCase() == "N/A" || currentValue.toUpperCase() == "UNKNOWN") {
-            // Tìm trong aiAttrs (thử cả key gốc và key đã format)
-            var aiValue = aiAttrs[cleanKey] ?? aiAttrs[attr.nameController.text.trim()];
-            if (aiValue != null && aiValue.toString().trim().isNotEmpty) {
-              attr.valueController.text = aiValue.toString().trim();
-            }
-          }
-        }
-
-        // C. Handle special AI fields (Brand, Origin, etc.) if root controllers are empty
-        String? aiBrand = result['brand'] ?? aiAttrs['brand'];
-        if (_brandController.text.trim().isEmpty && aiBrand != null && aiBrand.toString().isNotEmpty) {
-          _brandController.text = aiBrand.toString();
-        }
-
-        String? aiOrigin = result['origin'] ?? aiAttrs['origin'];
-        if (_originController.text.trim().isEmpty && aiOrigin != null && aiOrigin.toString().isNotEmpty) {
-          _originController.text = aiOrigin.toString();
-        }
-
-        String? aiCondition = result['condition'] ?? aiAttrs['condition'];
-        if (_conditionController.text.trim().isEmpty && aiCondition != null && aiCondition.toString().isNotEmpty) {
-          _conditionController.text = aiCondition.toString();
-        }
-        _isAiValidated = true;
-        _contentAlreadyValidated = true;
-      });
+      // After generating description, also fetch attributes automatically
+      if (currentType != null && currentType.isNotEmpty) {
+        await _fetchAttributesFromN8N(currentType);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1044,7 +963,16 @@ class _AddProductState extends State<AddProduct> {
         ),
       );
     } catch (e) {
-      _showErrorDialog("Content generation error: $e");
+      print("[AI-ERROR] $e");
+      setState(() => _isAiValidated = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("AI đang bận hoặc gặp sự cố. Bạn hãy tự điền thông tin và tin đăng sẽ được Admin duyệt thủ công nhé!"),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 5),
+        ),
+      );
     } finally {
       setState(() => _isAiLoading = false);
     }
@@ -1191,27 +1119,20 @@ class _AddProductState extends State<AddProduct> {
 
   // --- SUBMIT ---
   Future<void> _submitProduct() async {
-    // Show Loading: "AI is analyzing product..."
+    // Show Loading: Clean ModernLoader
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        content: Row(
-          children: [
-            const ModernLoader(),
-            const SizedBox(width: 20),
-            Expanded(
-              child: const Text(
-                "Đang tạo tin đăng...\nVui lòng chờ trong giây lát.",
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-          ],
+      builder: (_) => const Center(
+        child: ModernLoader(
+          showText: true,
+          color: AppColors.primary,
         ),
       ),
     );
 
     try {
+      final existingId = widget.draftProduct?.productId ?? _createdDraftId;
       Map<String, dynamic> attributesMap = {};
       for (var item in _attributes) {
         String keysnake = item.nameController.text
@@ -1233,12 +1154,12 @@ class _AddProductState extends State<AddProduct> {
         "detail": _addressDetailController.text.trim(),
       };
 
+      // Mặc định dùng toggle, nhưng nếu AI chưa được xác thực (lỗi) thì ép sang Admin duyệt
+      String finalStatus = _isAiModerationEnabled && _isAiValidated ? "active" : "pending";
+
       Map<String, String> fields = {
         "productName": _titleController.text,
-        "productPrice": _priceController.text.replaceAll(
-          '.',
-          '',
-        ), // Fix: Remove dots for backend
+        "productPrice": _priceController.text.replaceAll('.', ''),
         "productDescription": _descController.text,
         "categoryId": _selectedCategory ?? "other",
         "productCategory": _selectedCategory ?? "other",
@@ -1247,6 +1168,7 @@ class _AddProductState extends State<AddProduct> {
         "productBrand": _brandController.text,
         "productWP": _policyController.text,
         "userId": userId,
+        "status": finalStatus,
         "productAttribute": jsonEncode(attributesMap),
         "productAddress": jsonEncode(addressMap),
       };
@@ -1264,16 +1186,15 @@ class _AddProductState extends State<AddProduct> {
         // We continue without coordinates if GPS fails
       }
 
-      fields["status"] = "active";
       fields["lastCompletedStep"] = "3";
       fields["isAiValidated"] = "true";
       fields["existingMedia"] = jsonEncode([..._draftImages, ..._draftVideos]);
 
       List<XFile> newFiles = [..._selectedImages, ..._selectedVideos];
 
-      if (widget.draftProduct != null) {
+      if (existingId != null) {
         await _productService.updateProductWithMedia(
-          widget.draftProduct!.productId,
+          existingId,
           fields,
           newFiles,
         );
@@ -1509,20 +1430,43 @@ class _AddProductState extends State<AddProduct> {
                   ),
                 ),
                 const Text(
-                  "Cài đặt soạn thảo AI",
+                  "Cài đặt đăng tin",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  "Tùy chỉnh cách AI viết mô tả cho sản phẩm.",
+                  "Tùy chỉnh cách AI hỗ trợ đăng tin của bạn.",
                   style: TextStyle(color: Colors.grey, fontSize: 13),
                 ),
                 const SizedBox(height: 24),
 
                 _buildAISettingItem(
+                  icon: HeroiconsOutline.checkBadge,
+                  iconColor: Colors.blue,
+                  bgColor: Colors.blue.withOpacity(0.1),
+                  title: "Tính năng hỗ trợ AI",
+                  value: _isAiModerationEnabled ? "Bật các tính năng thông minh" : "Tắt toàn bộ tính năng AI",
+                  trailing: Switch(
+                    value: _isAiModerationEnabled,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) {
+                      setState(() => _isAiModerationEnabled = val);
+                      _saveAIConfig();
+                      setSheetState(() {});
+                    },
+                  ),
+                  onTap: () {
+                    setState(() => _isAiModerationEnabled = !_isAiModerationEnabled);
+                    _saveAIConfig();
+                    setSheetState(() {});
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                _buildAISettingItem(
                   icon: HeroiconsOutline.sparkles,
-                  iconColor: Colors.purple,
-                  bgColor: Colors.purple.withOpacity(0.1),
+                  iconColor: AppColors.primary,
+                  bgColor: AppColors.primary.withOpacity(0.1),
                   title: "Phong cách viết",
                   value: _selectedStyle,
                     onTap: () => _showSelectionSheet(
@@ -1531,6 +1475,7 @@ class _AddProductState extends State<AddProduct> {
                       _selectedStyle,
                       (val) {
                         setState(() => _selectedStyle = val);
+                        _saveAIConfig();
                         setSheetState(() {}); // Refresh sheet
                       },
                     ),
@@ -1538,8 +1483,8 @@ class _AddProductState extends State<AddProduct> {
                 const SizedBox(height: 12),
                 _buildAISettingItem(
                   icon: HeroiconsOutline.bars3BottomLeft,
-                  iconColor: Colors.blue,
-                  bgColor: Colors.blue.withOpacity(0.1),
+                  iconColor: Colors.amber,
+                  bgColor: Colors.amber.withOpacity(0.1),
                   title: "Độ dài nội dung",
                   value: _selectedLength,
                     onTap: () => _showSelectionSheet(
@@ -1548,34 +1493,22 @@ class _AddProductState extends State<AddProduct> {
                       _selectedLength,
                       (val) {
                         setState(() => _selectedLength = val);
+                        _saveAIConfig();
                         setSheetState(() {}); // Refresh sheet
                       },
                     ),
                 ),
                 const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 12),
-                _buildAISettingItem(
-                  icon: HeroiconsOutline.bookmark,
-                  iconColor: AppColors.primary,
-                  bgColor: AppColors.primary.withOpacity(0.1),
-                  title: "Lưu bản nháp",
-                  value: "Lưu lại để chỉnh sửa sau",
-                  onTap: () {
-                    Navigator.pop(context);
-                    _saveDraft();
-                  },
-                ),
                 if (_currentStep == 1) ...[
                   const SizedBox(height: 12),
                   const Divider(),
                   const SizedBox(height: 12),
                   _buildAISettingItem(
                     icon: HeroiconsOutline.bookmark,
-                    iconColor: Colors.orange,
-                    bgColor: Colors.orange.withOpacity(0.1),
+                    iconColor: AppColors.primary,
+                    bgColor: AppColors.primary.withOpacity(0.1),
                     title: "Lưu thành mẫu",
-                    value: "Lưu thông tin hiện tại cho lần sau",
+                    value: "", // Bỏ chữ phụ rườm rà
                     onTap: () {
                       Navigator.pop(context);
                       _showSavePresetDialog();
@@ -1584,16 +1517,30 @@ class _AddProductState extends State<AddProduct> {
                   const SizedBox(height: 12),
                   _buildAISettingItem(
                     icon: HeroiconsOutline.arrowPath,
-                    iconColor: Colors.teal,
-                    bgColor: Colors.teal.withOpacity(0.1),
+                    iconColor: AppColors.primary,
+                    bgColor: AppColors.primary.withOpacity(0.1),
                     title: "Sử dụng mẫu",
-                    value: "Áp dụng mẫu thông tin đã lưu",
+                    value: "", // Bỏ chữ phụ rườm rà
                     onTap: () {
                       Navigator.pop(context);
                       _showPresetsSheet();
                     },
                   ),
                 ],
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 12),
+                _buildAISettingItem(
+                  icon: HeroiconsOutline.bookmark,
+                  iconColor: Colors.redAccent,
+                  bgColor: Colors.redAccent.withOpacity(0.1),
+                  title: "Lưu bản nháp",
+                  value: "", // Bỏ chữ phụ rườm rà
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveDraft();
+                  },
+                ),
                 const SizedBox(height: 12),
               ],
             ),
@@ -1611,6 +1558,7 @@ class _AddProductState extends State<AddProduct> {
     required String title,
     required String value,
     required VoidCallback onTap,
+    Widget? trailing,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -1619,15 +1567,18 @@ class _AddProductState extends State<AddProduct> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(45),
-          border: Border.all(color: Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(30), // Tăng độ bo cong
+          border: Border.all(color: Colors.grey[100]!),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
-              child: Icon(icon, color: iconColor, size: 20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -1636,28 +1587,34 @@ class _AddProductState extends State<AddProduct> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.roboto(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1F2937),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
-                  Text(
-                    value,
-                    style: GoogleFonts.roboto(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
+                  if (value.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.grey,
-              size: 18,
-            ),
+            if (trailing != null)
+              trailing
+            else
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey,
+                size: 18,
+              ),
           ],
         ),
       ),
@@ -1771,6 +1728,10 @@ class _AddProductState extends State<AddProduct> {
         );
         return false;
       }
+      if (!_isAiModerationEnabled) {
+        _isAiValidated = false; // Đánh dấu là chưa qua AI duyệt
+        return true; // Cho qua luôn
+      }
       return await _handleValidateMedia();
     } else if (_currentStep == 1) {
       // Step 2: Info
@@ -1789,6 +1750,10 @@ class _AddProductState extends State<AddProduct> {
 
       // Final Check for content safety & consistency
       // This ensures Step 3 is clean.
+      if (!_isAiModerationEnabled) {
+        _contentAlreadyValidated = true; 
+        return true; 
+      }
       return await _handleValidateContent();
     } else if (_currentStep == 2) {
       // Step 3: Address Transaction
@@ -1867,14 +1832,18 @@ class _AddProductState extends State<AddProduct> {
         );
       }
 
-      if (widget.draftProduct != null) {
+      final existingId = widget.draftProduct?.productId ?? _createdDraftId;
+      if (existingId != null) {
+        // Đã có nháp rồi → cập nhật
         await _productService.updateProductWithMedia(
-          widget.draftProduct!.productId,
+          existingId,
           fields,
           newFiles,
         );
       } else {
-        await _productService.createProduct(fields: fields, files: newFiles);
+        // Lần đầu → tạo mới và lưu lại ID
+        final created = await _productService.createProduct(fields: fields, files: newFiles);
+        _createdDraftId = created.productId;
       }
 
       if (mounted) {
@@ -1898,6 +1867,27 @@ class _AddProductState extends State<AddProduct> {
   }
 
   void _nextStep() async {
+    // Logic riêng cho Bước 2 (Thông tin chi tiết) - Kiểm tra thuộc tính trống
+    if (_currentStep == 1) {
+      bool hasEmptyAttribute = _attributes.any((attr) => 
+        attr.nameController.text.isNotEmpty && attr.valueController.text.trim().isEmpty
+      );
+
+      if (hasEmptyAttribute) {
+        bool? proceed = await UIHelpers.confirmDialog(
+          context,
+          title: "Thiếu thuộc tính",
+          message: "Bạn nên nhập đầy đủ các thuộc tính để người mua dễ dàng tìm thấy sản phẩm của bạn hơn.",
+          confirmText: "Bỏ qua",
+          cancelText: "Nhập tiếp",
+          confirmColor: Colors.orange,
+          icon: HeroiconsOutline.informationCircle,
+        );
+
+        if (proceed != true) return; // Nếu chọn "Nhập tiếp" thì dừng lại
+      }
+    }
+
     bool valid = await _validateCurrentStep();
     if (valid) {
       if (_currentStep < 3) {
@@ -1983,7 +1973,10 @@ class _AddProductState extends State<AddProduct> {
           ),
 
           const SizedBox(height: 24),
-          _buildSectionTitle("Tên sản phẩm"),
+          _buildSectionTitle(
+            "Tên sản phẩm",
+            subtitle: "(tên sản phẩm càng chính xác thì thuộc tính điền càng chính xác)",
+          ),
           const SizedBox(height: 8),
           _buildTextField(
             controller: _titleController,
@@ -2084,44 +2077,46 @@ class _AddProductState extends State<AddProduct> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildSectionTitle("Mô tả sản phẩm"),
-              TextButton(
-                onPressed: _isAiLoading ? null : _handleGenerateDetails,
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.warning.withOpacity(0.1),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+              if (_isAiModerationEnabled)
+                ElevatedButton(
+                  onPressed: _isAiLoading ? null : _handleGenerateDetails,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.warning.withOpacity(0.15),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                ),
-                child: _isAiLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: ModernLoader(size: 16, color: AppColors.warning, showText: false),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(
-                            HeroiconsSolid.sparkles,
-                            size: 16,
-                            color: AppColors.warning,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            "Tạo nội dung",
-                            style: TextStyle(
+                  child: _isAiLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: ModernLoader(size: 16, color: AppColors.warning, showText: false),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              HeroiconsSolid.sparkles,
+                              size: 16,
                               color: AppColors.warning,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                        ],
-                      ),
-              ),
+                            SizedBox(width: 6),
+                            Text(
+                              "Tạo ND & Lấy thông số",
+                              style: TextStyle(
+                                color: AppColors.warning,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -2140,64 +2135,9 @@ class _AddProductState extends State<AddProduct> {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Thông số chi tiết",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                TextButton(
-                  onPressed: _isAiLoading 
-                      ? null 
-                      : () {
-                          // Find current type
-                          String currentType = "";
-                          try {
-                            var typeAttr = _attributes.firstWhere(
-                              (a) => a.nameController.text.toLowerCase() == 'type',
-                            );
-                            currentType = typeAttr.valueController.text;
-                          } catch (e) {}
-                          _fetchAttributesFromN8N(currentType);
-                        },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.green.withOpacity(0.1),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                  child: _isAiLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(
-                              HeroiconsSolid.sparkles,
-                              size: 16,
-                              color: Colors.green,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              "Lấy thông số",
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+            const Text(
+              "Thông số chi tiết",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 6),
             ListView.builder(
@@ -3341,13 +3281,30 @@ class _AddProductState extends State<AddProduct> {
   }
 
   // --- HELPERS (Reused) ---
-  Widget _buildSectionTitle(String title) => Text(
-    title,
-    style: TextStyle(
-      fontSize: 14,
-      color: Colors.grey[800],
-      fontWeight: FontWeight.bold,
-    ),
+  Widget _buildSectionTitle(String title, {String? subtitle}) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey[800],
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      if (subtitle != null) ...[
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.normal,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    ],
   );
 
   Widget _buildTextField({

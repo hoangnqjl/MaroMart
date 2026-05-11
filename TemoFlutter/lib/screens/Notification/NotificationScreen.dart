@@ -399,9 +399,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Text(
                     item.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 13, 
+                      color: Colors.black87,
+                      height: 1.4, // Thêm độ giãn dòng cho dễ đọc khi xuống hàng
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(

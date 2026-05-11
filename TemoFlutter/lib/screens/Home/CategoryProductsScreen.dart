@@ -110,6 +110,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const SizedBox(height: 10),
                     FloatingHeader(
                       title: "Tất cả sản phẩm",
                       hasBackground: false,
@@ -121,9 +122,9 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 20),
                     _buildCategoryFilter(),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 15),
                   ],
                 ),
               ),
@@ -216,7 +217,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     final double screenWidth = MediaQuery.of(context).size.width;
 
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 105, 16, 40),
+      padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 150, 16, 40),
       itemCount: _products.length,
       itemBuilder: (context, index) {
         return Padding(

@@ -189,8 +189,8 @@ export const productsAPI = {
         return response.data;
     },
 
-    rejectProduct: async (productId: string) => {
-        const response = await axiosInstance.patch(`/admin/products/${productId}/reject`);
+    rejectProduct: async (productId: string, reason?: string) => {
+        const response = await axiosInstance.patch(`/admin/products/${productId}/reject`, { reason });
         return response.data;
     },
 };

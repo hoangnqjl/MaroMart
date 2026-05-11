@@ -332,7 +332,14 @@ class HomeScreenState extends State<HomeScreen> {
           if (newProducts.isEmpty) {
             if (!isFiltering) _hasMore = false;
           } else {
-            _products.addAll(newProducts);
+            // Lọc bỏ những sản phẩm đã có trong danh sách để tránh trùng lặp
+            final existingIds = _products.map((p) => p.productId).toSet();
+            final uniqueNewProducts = newProducts.where((p) => !existingIds.contains(p.productId)).toList();
+            
+            if (uniqueNewProducts.isNotEmpty) {
+              _products.addAll(uniqueNewProducts);
+            }
+
             if (!isFiltering) {
               _currentPage++;
               if (newProducts.length < _limit) _hasMore = false;

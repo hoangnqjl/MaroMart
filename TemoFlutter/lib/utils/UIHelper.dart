@@ -131,7 +131,7 @@ class UIHelper {
                         try {
                           final XFile? media = isVideo 
                             ? await picker.pickVideo(source: ImageSource.camera)
-                            : await picker.pickImage(source: ImageSource.camera, maxWidth: 1920, maxHeight: 1080);
+                            : await picker.pickImage(source: ImageSource.camera, maxWidth: 800, maxHeight: 800, imageQuality: 50);
                           onPicked(media);
                         } catch (e) {
                           UIHelpers.showErrorDialog(context, title: "Lỗi Camera", message: e.toString());
@@ -166,7 +166,7 @@ class UIHelper {
                       try {
                         final XFile? media = isVideo 
                           ? await picker.pickVideo(source: ImageSource.gallery)
-                          : await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920, maxHeight: 1080);
+                          : await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 50);
                         onPicked(media);
                       } catch (e) {
                         UIHelpers.showErrorDialog(context, title: "Lỗi thư viện", message: e.toString());

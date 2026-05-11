@@ -52,7 +52,7 @@ class NotificationDetailScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // --- CONTENT SECTION ---
-                _buildSectionTitle("Message Content"),
+                _buildSectionTitle("Nội dung thông báo"),
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
@@ -76,7 +76,7 @@ class NotificationDetailScreen extends StatelessWidget {
                 // --- EXTRA DATA (Optional) ---
                 if (notification.relatedUrl != null && notification.relatedUrl!.isNotEmpty) ...[
                   const SizedBox(height: 24),
-                  _buildSectionTitle("Action Required"),
+                  _buildSectionTitle("Hành động yêu cầu"),
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: () {
@@ -118,8 +118,14 @@ class NotificationDetailScreen extends StatelessWidget {
           ),
           Positioned(
             top: 0, left: 0, right: 0,
-            child: FloatingHeader(
-              title: "Details",
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: FloatingHeader(
+                  title: "Chi tiết",
+                ),
+              ),
             ),
           ),
         ],
