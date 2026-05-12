@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:temo/Home.dart';
 import 'package:temo/screens/authencation/get_started_screen.dart';
 import 'package:temo/services/socket_service.dart';
@@ -13,9 +14,11 @@ import 'package:temo/screens/splash/video_splash_screen.dart';
 import 'package:flutter/services.dart';
 import 'app_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
   // Enable Edge-to-Edge mode for a premium, immersive look
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -160,6 +163,32 @@ class MyApp extends StatelessWidget {
             ),
             home: const VideoSplashScreen(),
             onGenerateRoute: onGenerateRoute,
+            builder: (context, child) {
+              if (kIsWeb) {
+                return Container(
+                  color: const Color(0xFFF3F4F6),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 500),
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 30,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: child,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return child!;
+            },
           );
         },
       ),

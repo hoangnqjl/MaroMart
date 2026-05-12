@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:intl/intl.dart';
 import 'package:temo/Colors/AppColors.dart';
@@ -592,14 +593,30 @@ class _MessageScreenState extends State<MessageScreen> {
     if (item.latestMessage != null) {
       final msgContent = item.latestMessage!.content;
       final msgMedia = item.latestMessage!.media;
-      if (msgContent != null && msgContent.isNotEmpty) lastMsg = msgContent;
-      else if (msgMedia.isNotEmpty) {
+      if (msgContent != null && msgContent.isNotEmpty) {
+        if (msgContent.startsWith("[[PRODUCT_CARD:")) {
+          try {
+            final jsonStr = msgContent.substring(15, msgContent.length - 2);
+            final productData = jsonDecode(jsonStr);
+            final pName = productData['productName'] ?? "Sản phẩm";
+            lastMsg = "📦 [Đã xem] $pName";
+          } catch (e) {
+            lastMsg = "📦 [Sản phẩm]";
+          }
+        } else {
+          lastMsg = msgContent;
+        }
+      } else if (msgMedia.isNotEmpty) {
         if (msgMedia[0].type == 'image') lastMsg = "Sent an image";
         else if (msgMedia[0].type == 'video') lastMsg = "Sent a video";
         else lastMsg = "Sent a file";
       }
       time = DateFormat('HH:mm').format(item.latestMessage!.createdAt.toLocal());
-      if (item.latestMessage!.sender != _currentUserId) isNew = true;
+      
+      // Tin nhắn mới chỉ khi: 1. Mình là người nhận AND 2. Nó chưa được đọc
+      if (item.latestMessage!.sender != _currentUserId && !item.latestMessage!.isRead) {
+        isNew = true;
+      }
     }
     final isSelected = _selectedConversations.contains(item.conId);
 
@@ -654,12 +671,14 @@ class _MessageScreenState extends State<MessageScreen> {
         width: 52, height: 52,
         decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle),
         child: fullUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: fullUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => const CircleSkeleton(size: 52),
-                errorWidget: (context, url, error) => _buildLetterAvatar(name),
-              )
+            ? fullUrl.startsWith('assets/')
+                ? Image.asset(fullUrl, fit: BoxFit.cover)
+                : CachedNetworkImage(
+                    imageUrl: fullUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => const CircleSkeleton(size: 52),
+                    errorWidget: (context, url, error) => _buildLetterAvatar(name),
+                  )
             : _buildLetterAvatar(name),
       ),
     );

@@ -149,34 +149,22 @@ class _RecommendedProductCardState extends State<RecommendedProductCard> {
               // Rating Badge (Top Right - Glassmorphism)
               Positioned(
                 top: 12, right: 12,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+                child: _buildGlassBadge(
+                  content: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _rating != null ? _rating!.toStringAsFixed(1) : "...",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Quicksand',
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _rating != null ? _rating!.toStringAsFixed(1) : "...",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontFamily: 'Quicksand',
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.star_rate_rounded, color: Color(0xFFFFB86A), size: 14),
-                        ],
-                      ),
-                    ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.star_rate_rounded, color: Color(0xFFFFB86A), size: 14),
+                    ],
                   ),
                 ),
               ),
@@ -315,6 +303,23 @@ class _RecommendedProductCardState extends State<RecommendedProductCard> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  Widget _buildGlassBadge({required Widget content}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+          ),
+          child: content,
         ),
       ),
     );

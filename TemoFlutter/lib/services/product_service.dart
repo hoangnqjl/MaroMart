@@ -266,12 +266,14 @@ class ProductService {
   }
   // ----------------------
 
-  Future<List<Product>> getProducts({int page = 1, int limit = 10}) async {
+  Future<Map<String, dynamic>> getProducts({int cursor = 0, int limit = 10, double? lat, double? lng}) async {
     try {
       final queryParams = {
-        'page': page.toString(),
+        'cursor': cursor.toString(),
         'limit': limit.toString(),
       };
+      if (lat != null) queryParams['lat'] = lat.toString();
+      if (lng != null) queryParams['lng'] = lng.toString();
 
       final dynamic response = await _apiService.get(
         endpoint: ApiConstants.productsBaseEndpoint,
@@ -279,12 +281,22 @@ class ProductService {
         needAuth: false,
       );
 
-      if (response is List) {
-        return response.map((json) => Product.fromJson(json)).toList();
-      } else if (response is Map && response['data'] is List) {
-        return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+      List<Product> products = [];
+      int? nextCursor;
+
+      if (response is Map) {
+         if (response['data'] is List) {
+           products = (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+         }
+         nextCursor = response['nextCursor'];
+      } else if (response is List) {
+         products = response.map((json) => Product.fromJson(json)).toList();
       }
-      return [];
+
+      return {
+        'items': products,
+        'nextCursor': nextCursor,
+      };
     } catch (e) {
       rethrow;
     }
@@ -556,9 +568,12 @@ class ProductService {
     }
   }
 
-  Future<List<Product>> getRecommendedProducts({int limit = 10, double? lat, double? lng}) async {
+  Future<Map<String, dynamic>> getRecommendedProducts({int cursor = 0, int limit = 10, double? lat, double? lng}) async {
     try {
-      final queryParams = {'limit': limit.toString()};
+      final queryParams = {
+        'cursor': cursor.toString(),
+        'limit': limit.toString()
+      };
       if (lat != null) queryParams['lat'] = lat.toString();
       if (lng != null) queryParams['lng'] = lng.toString();
 
@@ -568,12 +583,22 @@ class ProductService {
         needAuth: true,
       );
 
-      if (response is List) {
-        return response.map((json) => Product.fromJson(json)).toList();
-      } else if (response is Map && response['data'] is List) {
-        return (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+      List<Product> products = [];
+      int? nextCursor;
+
+      if (response is Map) {
+         if (response['data'] is List) {
+           products = (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+         }
+         nextCursor = response['nextCursor'];
+      } else if (response is List) {
+         products = response.map((json) => Product.fromJson(json)).toList();
       }
-      return [];
+
+      return {
+        'items': products,
+        'nextCursor': nextCursor,
+      };
     } catch (e) {
       throw Exception('Lỗi lấy sản phẩm đề xuất: $e');
     }
@@ -662,6 +687,28 @@ class ProductService {
     } catch (e) {
       debugPrint("Semantic Search error: $e");
       return [];
+    }
+  }
+
+  // --- TRACKING BEHAVIOR ---
+  Future<void> trackInteraction({
+    required String productId, 
+    required String action, 
+    int? dwellTime
+  }) async {
+    try {
+      await _apiService.post(
+        endpoint: '/interactions/track',
+        body: {
+          'productId': productId,
+          'action': action,
+          if (dwellTime != null) 'dwellTime': dwellTime,
+        },
+        needAuth: true,
+      );
+    } catch (e) {
+      // Fail silently to avoid breaking UX
+      debugPrint("Failed to track interaction: $e");
     }
   }
 }

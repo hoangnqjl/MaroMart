@@ -1,0 +1,22 @@
+// Quy trình đăng tải sản phẩm tích hợp AI 4 bước
+digraph ProductAIWorkflow {
+	rankdir=LR size="12,6"
+	node [fontname=Arial fontsize=11 margin=0.3 shape=rectangle style="rounded,filled"]
+	subgraph cluster_0 {
+		color=blue label="Giai đoạn 1: Phân tích dữ liệu đầu vào" style=dashed
+		1.1 [label="1.1: Phân tích & Gợi ý Danh mục
+(AI Gemma)" fillcolor="#E1F5FE"]
+		1.2 [label="1.2: Trích xuất Thuộc tính tự động
+(N8N Webhook)" fillcolor="#E1F5FE"]
+	}
+	subgraph cluster_1 {
+		color=orange label="Giai đoạn 2: Hoàn thiện & Kiểm duyệt" style=dashed
+		2.1 [label="2.1: Tối ưu Nội dung & Mô tả
+(AI Gemma Enrichment)" fillcolor="#FFF9C4"]
+		2.2 [label="2.2: Kiểm duyệt & Đăng tải
+(AI Moderation)" fillcolor="#C8E6C9"]
+	}
+	1.1 -> 1.2 [label="Dữ liệu thô"]
+	1.2 -> 2.1 [label="Cấu trúc thuộc tính"]
+	2.1 -> 2.2 [label="Sản phẩm hoàn chỉnh"]
+}

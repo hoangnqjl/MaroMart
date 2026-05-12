@@ -9,6 +9,7 @@ import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/utils/UIHelper.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../utils/storage.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final Map<String, dynamic> category;
@@ -33,6 +34,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   String _errorMessage = '';
   String _selectedCategoryId = '';
   bool _showRecommended = false;
+  String? _currentUserId;
 
   String get _currentTitle {
     if (_showRecommended) return "Gợi ý cho bạn";
@@ -51,6 +53,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   @override
   void initState() {
     super.initState();
+    _currentUserId = StorageHelper.getUserId();
     _showRecommended = widget.showRecommendedOnly;
     _selectedCategoryId = widget.category['categoryId']?.toString() ?? widget.category['id']?.toString() ?? 'all';
     _fetchCategories();
@@ -94,7 +97,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     try {
       List<Product> results;
       if (_showRecommended) {
-        results = await _productService.getRecommendedProducts(limit: 50);
+        final res = await _productService.getRecommendedProducts(limit: 50);
+        results = res['items'] ?? [];
       } else {
         results = await _productService.getProductsByCategory(
             categoryId: _selectedCategoryId == 'all' ? null : _selectedCategoryId
@@ -103,7 +107,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
       if (mounted) {
         setState(() {
-          _products = results;
+          // Lọc bỏ sản phẩm của chính mình
+          _products = results.where((p) => p.userId != _currentUserId).toList();
           _isLoading = false;
         });
       }

@@ -167,16 +167,44 @@ class _ProductGridItemState extends State<ProductGridItem> {
                         ),
                       ),
                       
-                      // GROWTH ICON (Top Left)
-                      if (product.pushExpiry != null)
-                        const Positioned(
+                      // HOT BADGE (Top Left)
+                      if (product.recommendationScore > 0.8)
+                        Positioned(
                           top: 8,
                           left: 8,
-                          child: Icon(
-                            HeroiconsSolid.arrowTrendingUp,
-                            color: Colors.white,
-                            size: 14,
-                            shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 1))],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  HeroiconsSolid.fire,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  "Hot",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Quicksand',
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
 

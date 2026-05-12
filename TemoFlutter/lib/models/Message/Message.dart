@@ -12,6 +12,7 @@ class Message {
   final String receiver;
   final String? content;
   final List<MessageMedia> media;
+  final bool isRead;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -25,6 +26,7 @@ class Message {
     required this.receiver,
     this.content,
     required this.media,
+    this.isRead = false,
     required this.createdAt,
     this.updatedAt,
     this.status = MessageStatus.sent,
@@ -42,6 +44,7 @@ class Message {
       media: (json['media'] as List<dynamic>?)
           ?.map((m) => MessageMedia.fromJson(m as Map<String, dynamic>))
           .toList() ?? [],
+      isRead: json['isRead'] == true || json['isRead'] == 1,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)

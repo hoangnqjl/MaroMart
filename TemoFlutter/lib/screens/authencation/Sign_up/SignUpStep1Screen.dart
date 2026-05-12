@@ -15,7 +15,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   String? _selectedGender;
-  final List<String> _genders = ['Male', 'Female', 'Other'];
+  final List<String> _genders = ['Nam', 'Nữ', 'Khác'];
 
   static const String kBg = 'assets/images/backgroundauthen.png';
 
@@ -83,7 +83,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                 const SizedBox(height: 32),
 
                 Text(
-                  "Let's get started",
+                  "Bắt đầu thôi!",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.roboto(
                     color: Colors.white,
@@ -107,9 +107,9 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                         children: [
                           _Field(
                             controller: _fullNameController,
-                            hint: 'Full name...',
+                            hint: 'Họ và tên...',
                             validator: (v) =>
-                            (v?.trim().isEmpty ?? true) ? 'Required' : null,
+                            (v?.trim().isEmpty ?? true) ? 'Bắt buộc' : null,
                           ),
                           const SizedBox(height: 20),
                           _Field(
@@ -117,12 +117,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             hint: 'Email...',
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) =>
-                            (v?.trim().isEmpty ?? true) ? 'Required' : null,
+                            (v?.trim().isEmpty ?? true) ? 'Bắt buộc' : null,
                           ),
                           const SizedBox(height: 20),
                           _Field(
                             controller: _phoneController,
-                            hint: 'Phone number...',
+                            hint: 'Số điện thoại...',
                             keyboardType: TextInputType.phone,
                           ),
                           const SizedBox(height: 20),
@@ -140,7 +140,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                 isExpanded: true,
                                 dropdownColor: Colors.white,
                                 hint: Text(
-                                  'Gender',
+                                  'Giới tính',
                                   style: GoogleFonts.roboto(
                                       color: Colors.black45, fontSize: 14, fontWeight: FontWeight.w600),
                                 ),
@@ -158,7 +158,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           ),
 
                           const SizedBox(height: 40),
-                          _NextBtn(label: 'Next', onTap: _next),
+                          _NextBtn(label: 'Tiếp theo', onTap: _next),
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -174,9 +174,9 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                       style: GoogleFonts.roboto(
                           color: Colors.white.withOpacity(0.65), fontSize: 14),
                       children: [
-                        const TextSpan(text: 'Have an account / '),
+                        const TextSpan(text: 'Đã có tài khoản? / '),
                         TextSpan(
-                          text: 'Login',
+                          text: 'Đăng nhập',
                           style: GoogleFonts.roboto(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,

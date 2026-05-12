@@ -31,6 +31,9 @@ class StringUtils {
   static String normalizeUrl(String? url) {
     if (url == null || url.isEmpty) return "";
 
+    // 0. Nếu là đường dẫn asset thì giữ nguyên
+    if (url.startsWith('assets/')) return url;
+
     // 1. Loại bỏ các tiền tố 'image:' hoặc 'video:' và khoảng trắng
     String cleanUrl = url.replaceFirst('image:', '').replaceFirst('video:', '').trim();
 

@@ -76,7 +76,7 @@ class _SignUpStep2PasswordScreenState
                 const SizedBox(height: 32),
 
                 Text(
-                  'Create password',
+                  'Tạo mật khẩu',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.roboto(
                     color: Colors.white,
@@ -101,7 +101,7 @@ class _SignUpStep2PasswordScreenState
                         children: [
                           _Field(
                             controller: _passwordController,
-                            hint: 'New password....',
+                            hint: 'Mật khẩu mới...',
                             obscure: !_showPw,
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -116,15 +116,15 @@ class _SignUpStep2PasswordScreenState
                             ),
                             validator: (v) {
                               if (v == null || v.isEmpty)
-                                return 'Password is required';
-                              if (v.length < 6) return 'Minimum 6 characters';
+                                return 'Vui lòng nhập mật khẩu';
+                              if (v.length < 6) return 'Tối thiểu 6 ký tự';
                               return null;
                             },
                           ),
                           const SizedBox(height: 20),
                           _Field(
                             controller: _confirmController,
-                            hint: 'Confirm password...',
+                            hint: 'Xác nhận mật khẩu...',
                             obscure: !_showCf,
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -139,15 +139,15 @@ class _SignUpStep2PasswordScreenState
                             ),
                             validator: (v) {
                               if (v == null || v.isEmpty)
-                                return 'Please confirm password';
+                                return 'Vui lòng xác nhận mật khẩu';
                               if (v != _passwordController.text)
-                                return 'Passwords do not match';
+                                return 'Mật khẩu không khớp';
                               return null;
                             },
                           ),
 
                           const SizedBox(height: 40),
-                          _NextBtn(label: 'Next', onTap: _next),
+                          _NextBtn(label: 'Tiếp theo', onTap: _next),
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -336,10 +336,10 @@ class _NextBtn extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Text('Next'),
-            SizedBox(width: 6),
-            Icon(Icons.arrow_forward_rounded, size: 16),
+          children: [
+            Text(label),
+            const SizedBox(width: 6),
+            const Icon(Icons.arrow_forward_rounded, size: 16),
           ],
         ),
       ),

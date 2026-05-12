@@ -149,6 +149,7 @@ class AuthService {
     required String email,
     int? phoneNumber,
     required String password,
+    String? address,
   }) async {
     try {
       final body = <String, dynamic>{
@@ -159,6 +160,10 @@ class AuthService {
 
       if (phoneNumber != null && phoneNumber != 0) {
         body['phoneNumber'] = phoneNumber;
+      }
+      
+      if (address != null && address.isNotEmpty) {
+        body['address'] = address;
       }
 
       final response = await _apiService.post(

@@ -181,6 +181,11 @@ class Product {
 
   final UserInfo? userInfo;
 
+  // New fields from Recommendation Engine
+  final bool isSponsored;
+  final double recommendationScore;
+  final int viewCount;
+
   Product({
     required this.id,
     required this.productId,
@@ -208,6 +213,9 @@ class Product {
     this.lastCompletedStep = 0,
     this.isAiValidated = false,
     this.userInfo,
+    this.isSponsored = false,
+    this.recommendationScore = 0.0,
+    this.viewCount = 0,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -264,6 +272,9 @@ class Product {
       userInfo: json['userInfo'] != null
           ? UserInfo.fromJson(json['userInfo'])
           : null,
+      isSponsored: json['_isSponsored'] == true || json['isSponsored'] == true,
+      recommendationScore: json['_recommendationScore'] is num ? (json['_recommendationScore'] as num).toDouble() : 0.0,
+      viewCount: json['viewCount'] is int ? json['viewCount'] : int.tryParse(json['viewCount'].toString()) ?? 0,
     );
   }
 
@@ -294,6 +305,8 @@ class Product {
       'lastCompletedStep': lastCompletedStep,
       'isAiValidated': isAiValidated,
       'userInfo': userInfo?.toJson(),
+      '_isSponsored': isSponsored,
+      '_recommendationScore': recommendationScore,
     };
   }
 

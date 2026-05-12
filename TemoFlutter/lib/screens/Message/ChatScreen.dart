@@ -74,12 +74,30 @@ class _ChatScreenState extends State<ChatScreen> {
     // THÊM SOCKET LISTENERS
     _initSocketListeners();
 
-    if (_currentConId.isNotEmpty) {
+    if (_currentConId == "ai_assistant") {
+      _loadAiFakeMessages();
+    } else if (_currentConId.isNotEmpty) {
       _fetchMessages();
     } else {
-      // Nếu không có conId, thử tìm xem đã có conversation với partner này chưa
       _findConversationWithPartner();
     }
+  }
+
+  void _loadAiFakeMessages() {
+    setState(() {
+      _messages = [
+        Message(
+          messageId: "ai_1",
+          sender: "ai_assistant",
+          receiver: _currentUserId ?? "me",
+          content: "Chào bạn! Tôi là trợ lý ảo MaroMart. Tôi có thể giúp gì cho bạn?",
+          media: [],
+          createdAt: DateTime.now().subtract(const Duration(minutes: 2)),
+          conId: "ai_assistant",
+        ),
+      ];
+      _isLoading = false;
+    });
   }
 
   void _showFullScreenMedia(List<dynamic> media, int initialIndex) {
@@ -747,6 +765,42 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _messageController.text.trim();
     if ((text.isEmpty && _selectedImages.isEmpty && _selectedVideos.isEmpty && _selectedAudios.isEmpty) || _isSending) return;
 
+    if (_currentConId == "ai_assistant") {
+      final userMsg = Message(
+        messageId: "user_${DateTime.now().millisecondsSinceEpoch}",
+        sender: _currentUserId ?? "me",
+        receiver: "ai_assistant",
+        content: text,
+        media: [],
+        createdAt: DateTime.now(),
+        conId: "ai_assistant",
+      );
+      
+      _messageController.clear();
+      setState(() {
+        _messages.add(userMsg);
+      });
+      _scrollToBottom();
+
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
+        final aiMsg = Message(
+          messageId: "ai_${DateTime.now().millisecondsSinceEpoch}",
+          sender: "ai_assistant",
+          receiver: _currentUserId ?? "me",
+          content: "Cảm ơn bạn đã nhắn tin. Hiện tại tôi đang được phát triển để hỗ trợ khách hàng tốt hơn. Bạn có thể cho tôi biết thêm chi tiết về yêu cầu của bạn được không?",
+          media: [],
+          createdAt: DateTime.now(),
+          conId: "ai_assistant",
+        );
+        setState(() {
+          _messages.add(aiMsg);
+        });
+        _scrollToBottom();
+      });
+      return;
+    }
+
     setState(() => _isSending = true);
 
     final imagesToSend = List<XFile>.from(_selectedImages);
@@ -903,12 +957,14 @@ class _ChatScreenState extends State<ChatScreen> {
                           color: Colors.grey[100],
                           child: Center(
                             child: (widget.partnerUser.avatarUrl != null && widget.partnerUser.avatarUrl!.isNotEmpty)
-                                ? CachedNetworkImage(
-                                    imageUrl: StringUtils.normalizeUrl(widget.partnerUser.avatarUrl),
-                                    fit: BoxFit.cover,
-                                    width: 32, height: 32,
-                                    errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.grey, size: 16),
-                                  )
+                                ? widget.partnerUser.avatarUrl!.startsWith('assets/')
+                                    ? Image.asset(widget.partnerUser.avatarUrl!, fit: BoxFit.cover, width: 32, height: 32)
+                                    : CachedNetworkImage(
+                                        imageUrl: StringUtils.normalizeUrl(widget.partnerUser.avatarUrl),
+                                        fit: BoxFit.cover,
+                                        width: 32, height: 32,
+                                        errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.grey, size: 16),
+                                      )
                                 : const Icon(Icons.person, color: Colors.grey, size: 16),
                           ),
                         ),
@@ -1035,11 +1091,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 28, height: 28,
                     color: Colors.grey[100],
                     child: (widget.partnerUser.avatarUrl != null && widget.partnerUser.avatarUrl!.isNotEmpty)
-                        ? CachedNetworkImage(
-                            imageUrl: StringUtils.normalizeUrl(widget.partnerUser.avatarUrl),
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => const Icon(Icons.person, size: 16, color: Colors.grey),
-                          )
+                        ? widget.partnerUser.avatarUrl!.startsWith('assets/')
+                            ? Image.asset(widget.partnerUser.avatarUrl!, fit: BoxFit.cover)
+                            : CachedNetworkImage(
+                                imageUrl: StringUtils.normalizeUrl(widget.partnerUser.avatarUrl),
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => const Icon(Icons.person, size: 16, color: Colors.grey),
+                              )
                         : const Icon(Icons.person, size: 16, color: Colors.grey),
                   ),
                 ),

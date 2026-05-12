@@ -3,14 +3,18 @@ import 'api_service.dart';
 class OrderService {
   final ApiService _apiService = ApiService();
 
-  Future<Map<String, dynamic>> createPurchaseRequest(String productId, String sellerId) async {
+  Future<Map<String, dynamic>> createPurchaseRequest(String productId, String sellerId, {double? bargainPrice}) async {
     try {
+      final Map<String, dynamic> body = {
+        'productId': productId,
+        'sellerId': sellerId,
+      };
+      if (bargainPrice != null) {
+        body['bargainPrice'] = bargainPrice;
+      }
       final response = await _apiService.post(
         endpoint: '/orders/request',
-        body: {
-          'productId': productId,
-          'sellerId': sellerId,
-        },
+        body: body,
         needAuth: true,
       );
       return response;

@@ -161,7 +161,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
-                        'Your shopping\njourney starts here.',
+                        'Hành trình mua sắm\ncủa bạn bắt đầu tại đây.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
@@ -207,8 +207,8 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                           ),
                           label: Text(
                             _isGoogleLoading
-                                ? 'Signing in...'
-                                : 'Login with Google',
+                                ? 'Đang đăng nhập...'
+                                : 'Đăng nhập với Google',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -234,7 +234,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                             shape: const StadiumBorder(),
                           ),
                           child: const Text(
-                            'Register new',
+                            'Đăng ký mới',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -274,7 +274,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                             shape: const StadiumBorder(),
                           ),
                           child: const Text(
-                            'Login',
+                            'Đăng nhập',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

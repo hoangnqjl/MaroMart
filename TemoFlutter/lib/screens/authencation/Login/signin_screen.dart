@@ -40,7 +40,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showError('Please fill in all fields');
+      _showError('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
@@ -49,7 +49,7 @@ class _SignInScreenState extends State<SignInScreen> {
       final loginResponse = await _authService.login(email: email, password: password);
       if (!mounted) return;
       SocketService().connect();
-      _showSuccess('Login successful!');
+      _showSuccess('Đăng nhập thành công!');
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
       
@@ -74,7 +74,7 @@ class _SignInScreenState extends State<SignInScreen> {
       await _authService.signInWithGoogle();
       if (!mounted) return;
       SocketService().connect();
-      _showSuccess('Login successful!');
+      _showSuccess('Đăng nhập thành công!');
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
@@ -104,11 +104,11 @@ class _SignInScreenState extends State<SignInScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Forgot Password', style: GoogleFonts.roboto(fontWeight: FontWeight.bold)),
+        title: Text('Quên mật khẩu', style: GoogleFonts.roboto(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Enter your email to receive a temporary password.', style: GoogleFonts.roboto(fontSize: 14)),
+            Text('Nhập email của bạn để nhận mật khẩu tạm thời.', style: GoogleFonts.roboto(fontSize: 14)),
             const SizedBox(height: 16),
             TextField(
               controller: emailController,
@@ -122,7 +122,7 @@ class _SignInScreenState extends State<SignInScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: Colors.grey))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Hủy', style: TextStyle(color: Colors.grey))),
           ElevatedButton(
             onPressed: () async {
               final email = emailController.text.trim();
@@ -136,7 +136,7 @@ class _SignInScreenState extends State<SignInScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text('Send'),
+            child: Text('Gửi'),
           ),
         ],
       ),
@@ -190,7 +190,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Login now!',
+                              'Đăng nhập ngay!',
                               style: GoogleFonts.roboto(
                                 color: Colors.white,
                                 fontSize: 28,
@@ -208,9 +208,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500),
                                   children: [
-                                    const TextSpan(text: "Don't have an account / "),
+                                    const TextSpan(text: "Chưa có tài khoản? / "),
                                     TextSpan(
-                                      text: 'Register',
+                                      text: 'Đăng ký',
                                       style: GoogleFonts.roboto(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,
@@ -270,7 +270,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     // ── Password field ────────────────────────────────────
                     _Field(
                       controller: _passwordController,
-                      hint: 'Password...',
+                      hint: 'Mật khẩu...',
                       obscure: !_showPassword,
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -293,7 +293,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       child: GestureDetector(
                         onTap: _showForgotPasswordDialog,
                         child: Text(
-                          'Forgot password?',
+                          'Quên mật khẩu?',
                           style: GoogleFonts.roboto(
                             color: Colors.white.withOpacity(0.80),
                             fontSize: 13,
@@ -330,7 +330,7 @@ class _SignInScreenState extends State<SignInScreen> {
                               strokeWidth: 2.5,
                               color: Color(0xFF3F3F46)),
                         )
-                            : const Text('Login'),
+                            : const Text('Đăng nhập'),
                       ),
                     ),
 

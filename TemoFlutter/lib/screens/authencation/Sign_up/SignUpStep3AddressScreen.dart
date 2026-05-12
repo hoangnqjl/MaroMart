@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/services/auth_service.dart';
+import 'package:temo/services/location_service.dart';
+import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/utils/ui_helpers.dart';
 
 class SignUpStep3AddressScreen extends StatefulWidget {
@@ -15,46 +17,100 @@ class SignUpStep3AddressScreen extends StatefulWidget {
 
 class _SignUpStep3AddressScreenState
     extends State<SignUpStep3AddressScreen> {
-  final _countryController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _wardController = TextEditingController();
+  final LocationService _locationService = LocationService();
+
+  List<Map<String, dynamic>> _provinces = [];
+  List<Map<String, dynamic>> _wards = [];
+
+  Map<String, dynamic>? _selectedProvince;
+  Map<String, dynamic>? _selectedWard;
+  
   final _streetController = TextEditingController();
-  bool _isLoading = false;
+  bool _isLoadingData = true;
+  bool _isLoadingFinish = false;
 
   static const String kBg = 'assets/images/backgroundauthen.png';
 
   @override
+  void initState() {
+    super.initState();
+    _loadProvinces();
+  }
+
+  Future<void> _loadProvinces() async {
+    setState(() => _isLoadingData = true);
+    final data = await _locationService.getProvinces();
+    if (mounted) {
+      setState(() {
+        _provinces = data;
+        _isLoadingData = false;
+      });
+    }
+  }
+
+  Future<void> _onProvinceChanged(Map<String, dynamic>? province) async {
+    if (province == null) return;
+    setState(() {
+      _selectedProvince = province;
+      _selectedWard = null;
+      _wards = [];
+      _isLoadingData = true;
+    });
+    final data = await _locationService.getWards(province['province_code'].toString());
+    if (mounted) {
+      setState(() {
+        _wards = data;
+        _isLoadingData = false;
+      });
+    }
+  }
+
+  @override
   void dispose() {
-    _countryController.dispose();
-    _cityController.dispose();
-    _wardController.dispose();
     _streetController.dispose();
     super.dispose();
   }
 
   Future<void> _finish() async {
-    setState(() => _isLoading = true);
+    if (_selectedProvince == null || _selectedWard == null || _streetController.text.isEmpty) {
+      UIHelpers.showErrorSnackBar(context, 'Vui lòng điền đầy đủ thông tin địa chỉ');
+      return;
+    }
+
+    setState(() => _isLoadingFinish = true);
     final args = ModalRoute.of(context)?.settings.arguments as Map? ?? {};
     final phoneStr = args['phoneNumber']?.toString().trim() ?? '';
     final phoneInt = phoneStr.isNotEmpty ? int.tryParse(phoneStr) : null;
 
+    final fullAddress = "${_streetController.text}, ${_selectedWard!['ward_name']}, ${_selectedProvince!['name']}, Việt Nam";
+
     try {
+      final fullName = args['fullName'] ?? '';
+      final email = args['email'] ?? '';
+      final password = args['password'] ?? '';
+
       await AuthService().register(
-        fullName: args['fullName'] ?? '',
-        email: args['email'] ?? '',
-        password: args['password'] ?? '',
+        fullName: fullName,
+        email: email,
+        password: password,
         phoneNumber: phoneInt,
+        address: fullAddress,
       );
+      
+      // Auto Login
+      await AuthService().login(email: email, password: password);
+
       if (!mounted) return;
-      UIHelpers.showSuccessSnackBar(context, 'Account created successfully!');
+      UIHelpers.showSuccessSnackBar(context, 'Đăng ký thành công! Đang vào trang chủ...');
       await Future.delayed(const Duration(milliseconds: 600));
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/signin');
+      
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } catch (e) {
       if (!mounted) return;
       UIHelpers.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoadingFinish = false);
     }
   }
 
@@ -67,7 +123,6 @@ class _SignUpStep3AddressScreenState
         children: [
           Image.asset(kBg, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(color: Colors.grey[800])),
-          // Premium Dark Blur Overlay
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Container(
@@ -86,7 +141,6 @@ class _SignUpStep3AddressScreenState
           SafeArea(
             child: Column(
               children: [
-                // ── Nút back ─────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Align(
@@ -94,11 +148,9 @@ class _SignUpStep3AddressScreenState
                     child: _BackBtn(onTap: () => Navigator.maybePop(context)),
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
                 Text(
-                  "Let's add your address",
+                  "Thêm địa chỉ của bạn",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.roboto(
                     color: Colors.white,
@@ -106,48 +158,52 @@ class _SignUpStep3AddressScreenState
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 const _StepBar(current: 3),
-
                 const SizedBox(height: 32),
-
-                // ── Form ─────────────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       children: [
-                        _Field(
-                          controller: _countryController,
-                          hint: 'Country...',
+                        // Province Dropdown
+                        _DropdownField(
+                          value: _selectedProvince,
+                          hint: 'Tỉnh / Thành phố',
+                          items: _provinces,
+                          labelKey: 'name',
+                          onChanged: _onProvinceChanged,
                         ),
                         const SizedBox(height: 20),
-                        _Field(
-                          controller: _cityController,
-                          hint: 'Province/City',
+
+                        // Ward Dropdown (Combined)
+                        _DropdownField(
+                          value: _selectedWard,
+                          hint: 'Phường / Xã',
+                          items: _wards,
+                          labelKey: 'ward_name',
+                          onChanged: (v) => setState(() => _selectedWard = v),
                         ),
                         const SizedBox(height: 20),
-                        _Field(
-                          controller: _wardController,
-                          hint: 'Ward',
-                        ),
-                        const SizedBox(height: 20),
+
+                        // Street Address (Text field)
                         _Field(
                           controller: _streetController,
-                          hint: 'Street address',
+                          hint: 'Số nhà, kiệt, hẻm, tên đường...',
                         ),
 
+                        if (_isLoadingData) ...[
+                          const SizedBox(height: 20),
+                          ModernLoader(size: 24, color: Colors.white),
+                        ],
+
                         const SizedBox(height: 40),
-                        _FinishBtn(isLoading: _isLoading, onTap: _finish),
+                        _FinishBtn(isLoading: _isLoadingFinish, onTap: _finish),
                         const SizedBox(height: 20),
                       ],
                     ),
                   ),
                 ),
-
-
               ],
             ),
           ),
@@ -157,7 +213,7 @@ class _SignUpStep3AddressScreenState
   }
 }
 
-// ── Shared Widgets (copy từ step 1) ──────────────────────────────────────────
+// ── Shared Widgets ──────────────────────────────────────────
 
 class _StepBar extends StatelessWidget {
   final int current;
@@ -284,6 +340,53 @@ class _Field extends StatelessWidget {
   }
 }
 
+class _DropdownField extends StatelessWidget {
+  final Map<String, dynamic>? value;
+  final String hint;
+  final List<Map<String, dynamic>> items;
+  final String labelKey;
+  final ValueChanged<Map<String, dynamic>?> onChanged;
+
+  const _DropdownField({
+    required this.value,
+    required this.hint,
+    required this.items,
+    required this.labelKey,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F5F5).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: Colors.white,
+          hint: Text(
+            hint,
+            style: GoogleFonts.roboto(
+                color: Colors.black38, fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          icon: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.black45),
+          items: items
+              .map((item) => DropdownMenuItem<Map<String, dynamic>>(
+              value: item, child: Text(item[labelKey] ?? '', style: GoogleFonts.roboto(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600))))
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
 class _FinishBtn extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onTap;
@@ -312,7 +415,7 @@ class _FinishBtn extends StatelessWidget {
           child: CircularProgressIndicator(
               strokeWidth: 2.5, color: Color(0xFF3F3F46)),
         )
-            : const Text('Finish'),
+            : const Text('Hoàn tất'),
       ),
     );
   }

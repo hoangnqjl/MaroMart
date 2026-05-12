@@ -88,6 +88,8 @@ flutter:
   generate: true
   assets: 
     - assets/images/
+    - assets/images/ai_nv.png
+    - assets/images/logo.png
     - assets/images/version_otter.png
     - assets/images/success_otter.png
     - assets/videos/

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
@@ -192,6 +193,8 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.3),
+      useSafeArea: true,
       builder: (ctx) {
         int selectedOption = 0;
         final List<Map<String, dynamic>> pushOptions = [
@@ -208,90 +211,163 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
              final cost = pushOptions[selectedOption]['coins'];
              final canAfford = currentCoins >= cost;
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.6,
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const Text("Đẩy tin / Ưu tiên hiển thị", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                  const SizedBox(height: 8),
-                  Text("Sản phẩm của bạn sẽ được ưu tiên hiển thị ở đầu danh sách tìm kiếm.", style: TextStyle(color: Colors.grey[600], fontSize: 14, fontFamily: 'Quicksand')),
-                  
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Số dư hiện tại:", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Quicksand')),
-                      Text("$currentCoins Xu", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 16, fontFamily: 'Quicksand')),
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: SafeArea(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(45),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: pushOptions.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final opt = pushOptions[index];
-                        final isSelected = selectedOption == index;
-                        return GestureDetector(
-                          onTap: () => setSheetState(() => selectedOption = index),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
-                              border: Border.all(color: isSelected ? Colors.green : Colors.grey.shade300, width: isSelected ? 2 : 1),
-                              borderRadius: BorderRadius.circular(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 45, height: 5,
+                          margin: const EdgeInsets.only(bottom: 25),
+                          decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      Text(
+                        "Đẩy tin / Ưu tiên", 
+                        style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF111827))
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Sản phẩm của bạn sẽ được ưu tiên hiển thị ở đầu danh sách tìm kiếm và gợi ý.", 
+                        style: GoogleFonts.inter(color: const Color(0xFF6B7280), fontSize: 14, height: 1.5)
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF3F4F6)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Số dư ví Maro:", 
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF374151))
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Row(
                               children: [
-                                Text(opt['label'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
-                                Text("${opt['coins']} Xu", style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.green : Colors.black, fontFamily: 'Quicksand')),
+                                const Icon(HeroiconsSolid.currencyDollar, color: Colors.amber, size: 20),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "$currentCoins Xu", 
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: Colors.amber.shade700, fontSize: 18)
+                                ),
                               ],
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      Flexible(
+                        child: ListView.separated(
+                          itemCount: pushOptions.length,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final opt = pushOptions[index];
+                            final isSelected = selectedOption == index;
+                            return GestureDetector(
+                              onTap: () => setSheetState(() => selectedOption = index),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), 
+                                    width: isSelected ? 2 : 1
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 18, height: 18,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFD1D5DB), width: 2),
+                                            color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
+                                          ),
+                                          child: isSelected ? const Icon(Icons.check, size: 10, color: Colors.white) : null,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          opt['label'], 
+                                          style: GoogleFonts.inter(
+                                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600, 
+                                            fontSize: 14,
+                                            color: isSelected ? const Color(0xFF1E40AF) : const Color(0xFF374151)
+                                          )
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      "${opt['coins']} Xu", 
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w800, 
+                                        fontSize: 14,
+                                        color: isSelected ? const Color(0xFF1E40AF) : const Color(0xFF111827)
+                                      )
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: canAfford ? () async {
+                            Navigator.pop(ctx);
+                            _handlePushProduct(product.productId, pushOptions[selectedOption]['days']);
+                          } : () {
+                            Navigator.pop(ctx);
+                             Navigator.pushNamed(context, '/coin_manager'); 
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: canAfford ? const Color(0xFF111827) : Colors.orange.shade700,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
-                        );
-                      },
-                    ),
+                          child: Text(
+                            canAfford ? "Thanh toán & Đẩy tin ($cost Xu)" : "Nạp thêm Xu",
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 15),
+                          ),
+                        ),
+                      )
+                    ],
                   ),
-                  
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: canAfford ? () async {
-                        Navigator.pop(ctx);
-                        _handlePushProduct(product.productId, pushOptions[selectedOption]['days']);
-                      } : () {
-                        Navigator.pop(ctx);
-                         // Navigate to Coin Manager
-                         Navigator.pushNamed(context, '/coin_manager'); 
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: canAfford ? const Color(0xFF3F4045) : Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: Text(
-                        canAfford ? "Thanh toán & Đẩy tin ngay ($cost Xu)" : "Nạp thêm Xu",
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Quicksand'),
-                      ),
-                    ),
-                  )
-                ],
+                ),
               ),
             );
           }
@@ -324,58 +400,73 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.3),
+      isScrollControlled: true,
+      useSafeArea: true,
       builder: (BuildContext ctx) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-                ),
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: SafeArea(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(45),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
               ),
-              _buildOptionButton(
-                icon: HeroiconsOutline.arrowTrendingUp,
-                label: 'Đẩy tin / Ưu tiên',
-                iconColor: Colors.orange,
-                bgColor: const Color(0xFFFFF4E5),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showPushSheet(context, product);
-                },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 45, height: 5,
+                      margin: const EdgeInsets.only(bottom: 30),
+                      decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  _buildOptionButton(
+                    icon: HeroiconsOutline.arrowTrendingUp,
+                    label: 'Đẩy tin / Ưu tiên hiển thị',
+                    iconColor: Colors.orange.shade700,
+                    bgColor: const Color(0xFFFFF7ED),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showPushSheet(context, product);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _buildOptionButton(
+                    icon: HeroiconsOutline.pencilSquare,
+                    label: 'Chỉnh sửa tin đăng',
+                    iconColor: const Color(0xFF2563EB),
+                    bgColor: const Color(0xFFEFF6FF),
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final result = await smoothPush(context, UpdateProduct(product: product));
+                      if (result == true) _fetchUserProducts();
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _buildOptionButton(
+                    icon: HeroiconsOutline.trash,
+                    label: 'Xóa tin đăng này',
+                    iconColor: const Color(0xFFDC2626),
+                    bgColor: const Color(0xFFFEF2F2),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _confirmDelete(product);
+                    },
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildOptionButton(
-                icon: HeroiconsOutline.pencilSquare,
-                label: 'Chỉnh sửa tin',
-                iconColor: AppColors.primary,
-                bgColor: AppColors.primary.withOpacity(0.1),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final result = await smoothPush(context, UpdateProduct(product: product));
-                  if (result == true) _fetchUserProducts();
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildOptionButton(
-                icon: HeroiconsOutline.trash,
-                label: 'Xóa tin này',
-                iconColor: Colors.red,
-                bgColor: const Color(0xFFFCEEEB),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _confirmDelete(product);
-                },
-              ),
-              const SizedBox(height: 10),
-            ],
+            ),
           ),
         );
       },
@@ -772,7 +863,7 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      _buildStatTag(icon: HeroiconsOutline.eye, text: '0', bgColor: const Color(0xFFF5F5F5), textColor: Colors.grey),
+                      _buildStatTag(icon: HeroiconsOutline.eye, text: '${product.viewCount}', bgColor: const Color(0xFFF5F5F5), textColor: Colors.grey),
                       _buildStatTag(icon: HeroiconsOutline.banknotes, text: _formatCurrency(product.productPrice), bgColor: const Color(0xFFE8F5E9), textColor: const Color(0xFF2E7D32)),
                     ],
                   ),

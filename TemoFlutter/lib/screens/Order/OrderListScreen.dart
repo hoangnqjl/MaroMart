@@ -6,6 +6,7 @@ import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/services/order_service.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'RatingScreen.dart';
 
 class OrderListScreen extends StatefulWidget {
@@ -185,6 +186,24 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 15),
                           maxLines: 1, overflow: TextOverflow.ellipsis,
                         ),
+                        if (order['bargainPrice'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.sell_outlined, size: 12, color: Colors.orange),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "Giá trả: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(order['bargainPrice'])}",
+                                  style: GoogleFonts.quicksand(
+                                    fontSize: 12, 
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange[700]
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         if (!isBuy)
                           Text(
                             "Được yêu cầu bởi: ${order['buyer']?['fullName'] ?? 'Người dùng'}",
@@ -213,9 +232,9 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
                         ),
-                        child: Text("Từ chối", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
+                        child: Text("Từ chối", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -227,9 +246,9 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
                         ),
-                        child: Text("Chấp nhận", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
+                        child: Text("Chấp nhận", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ],
@@ -254,9 +273,9 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
                     ),
-                    child: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
+                    child: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ),
             ],

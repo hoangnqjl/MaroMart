@@ -19,6 +19,8 @@ class ApiService {
       final token = StorageHelper.getToken();
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
+      } else {
+        print("DEBUG: ApiService - Token is NULL in StorageHelper!");
       }
     }
 

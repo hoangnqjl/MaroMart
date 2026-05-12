@@ -281,4 +281,37 @@ class UIHelpers {
       ),
     );
   }
+
+  static void showLoadingDialog(BuildContext context, {String message = "Đang xử lý..."}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 3,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.roboto(
+                  fontSize: 15, 
+                  fontWeight: FontWeight.w500, 
+                  color: const Color(0xFF3F3F46)
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -18,6 +18,7 @@ import '../../services/review_service.dart';
 import '../Message/ChatScreen.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/Skeletons/ProductDetailSkeleton.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -71,10 +72,13 @@ class ProductDetailState extends State<ProductDetail> {
   double? _marketPriceMin;
   double? _marketPriceMax;
   bool _isLoadingMarketPrice = false;
+  
+  DateTime? _startTime;
 
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
     _pageController = PageController();
     _currentUserId = StorageHelper.getUserId();
     _scrollController.addListener(_onScroll);
@@ -163,13 +167,6 @@ class ProductDetailState extends State<ProductDetail> {
     return [];
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   Future<void> _fetchProductDetail() async {
     try {
       final product = await _productService.getProductById(widget.productId);
@@ -188,6 +185,12 @@ class ProductDetailState extends State<ProductDetail> {
         _calculateDistance(product);
         _fetchRelatedProducts(product.categoryId);
         _fetchMarketPrice();
+
+        // Track 'view' interaction
+        _productService.trackInteraction(
+          productId: widget.productId,
+          action: 'view',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -247,6 +250,28 @@ class ProductDetailState extends State<ProductDetail> {
         return MediaItem(type: MediaType.image, url: url);
       }
     }).toList();
+  }
+
+  void _trackDwellTime() {
+    if (_startTime != null && widget.productId.isNotEmpty) {
+      final int dwellTime = DateTime.now().difference(_startTime!).inSeconds;
+      if (dwellTime > 0) {
+        _productService.trackInteraction(
+          productId: widget.productId,
+          action: 'VIEW',
+          dwellTime: dwellTime,
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _pageController.dispose();
+    _trackDwellTime();
+    super.dispose();
   }
 
   @override
@@ -486,7 +511,7 @@ class ProductDetailState extends State<ProductDetail> {
                       color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     product.productName,
                     style: GoogleFonts.inter(
@@ -614,6 +639,15 @@ class ProductDetailState extends State<ProductDetail> {
 
   Widget _buildTagButtons(Product product) {
     final List<Map<String, dynamic>> tags = [];
+    
+    // View Count Tag (Always show)
+    tags.add({
+      'label': '${product.viewCount} lượt xem',
+      'icon': HeroiconsOutline.eye,
+      'color': const Color(0xFF6B7280),
+      'bg': const Color(0xFFF3F4F6),
+    });
+
     if (product.productCondition.isNotEmpty) {
       tags.add({
         'label': _translateCondition(product.productCondition),
@@ -996,7 +1030,7 @@ class ProductDetailState extends State<ProductDetail> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                   userAgentPackageName: 'com.temo.app',
                 ),
                 MarkerLayer(
@@ -1155,7 +1189,7 @@ class ProductDetailState extends State<ProductDetail> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                         userAgentPackageName: 'com.temo.app',
                       ),
                       if (routePoints.isNotEmpty)
@@ -1477,17 +1511,162 @@ class ProductDetailState extends State<ProductDetail> {
   Future<void> _requestPurchase() async {
     if (_product == null) return;
 
-    // 1. Kiểm tra nếu là chính chủ (Self-purchase check)
     if (_currentUserId == _product!.userId) {
       UIHelpers.showErrorSnackBar(context, "Bạn không thể tự mua sản phẩm của chính mình.");
       return;
     }
+
+    final TextEditingController bargainController = TextEditingController();
+    final double originalPrice = _product!.productPrice.toDouble();
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(40), // Đổi sang 40px
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            )
+          ],
+        ),
+        padding: EdgeInsets.only(
+          left: 24, right: 24, top: 12,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Yêu cầu mua hàng", 
+                  style: GoogleFonts.quicksand(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 18, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Sản phẩm: ${_product!.productName}",
+              style: GoogleFonts.quicksand(color: Colors.grey[500], fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              "Trả giá (Tùy chọn)", 
+              style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF374151))
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bargainController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              inputFormatters: [
+                CurrencyInputFormatter(),
+              ],
+              style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.primary),
+              decoration: InputDecoration(
+                hintText: "Ví dụ: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(originalPrice * 0.9)}",
+                hintStyle: GoogleFonts.quicksand(color: Colors.grey[400], fontSize: 16, fontWeight: FontWeight.w500),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                prefixIcon: const Icon(Icons.sell_outlined, size: 22, color: AppColors.primary),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none), // Cong cực mạnh
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(100), 
+                  borderSide: const BorderSide(color: AppColors.primary, width: 2)
+                ),
+                helperText: "Giá gốc: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(originalPrice)}",
+                helperStyle: GoogleFonts.quicksand(fontWeight: FontWeight.bold, color: Colors.grey[500]),
+              ),
+            ),
+            const SizedBox(height: 36),
+            Container(
+              width: double.infinity,
+              height: 64,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(100), // Cong cực mạnh
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  final val = bargainController.text.replaceAll('.', '').trim();
+                  if (val.isEmpty) {
+                    Navigator.pop(context, {'action': 'confirm', 'price': null});
+                  } else {
+                    final price = double.tryParse(val);
+                    if (price == null) {
+                      UIHelpers.showErrorSnackBar(context, "Giá không hợp lệ");
+                    } else {
+                      Navigator.pop(context, {'action': 'confirm', 'price': price});
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                ),
+                child: Text(
+                  "Xác nhận gửi", 
+                  style: GoogleFonts.quicksand(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == null || result['action'] == 'cancel') return;
+    final double? finalBargainPrice = result['price'];
+
+    // Use a local loading state to avoid skeleton flickering
+    UIHelpers.showLoadingDialog(context, message: "Đang gửi yêu cầu...");
     
-    setState(() => _isLoading = true);
     try {
-      final response = await _orderService.createPurchaseRequest(_product!.productId, _product!.userId);
+      final response = await _orderService.createPurchaseRequest(
+        _product!.productId, 
+        _product!.userId,
+        bargainPrice: finalBargainPrice,
+      );
       
-      // Sau khi tạo order thành công, gửi tin nhắn vào chat
+      Navigator.pop(context); // Close loading dialog
+
       if (response['orderId'] != null) {
         final orderId = response['orderId'];
         final chatService = ChatService();
@@ -1497,10 +1676,15 @@ class ProductDetailState extends State<ProductDetail> {
           "productId": _product!.productId,
           "productName": _product!.productName,
           "price": _product!.productPrice,
+          "bargainPrice": finalBargainPrice,
         };
         
         final buyerName = currentUser?.fullName ?? "Người dùng";
-        final content = "Người dùng $buyerName đã gửi yêu cầu mua sản phẩm: ${_product!.productName}\n[[ORDER_REQUEST:${jsonEncode(orderData)}]]";
+        String content = "Người dùng $buyerName đã gửi yêu cầu mua sản phẩm: ${_product!.productName}";
+        if (finalBargainPrice != null) {
+          content += "\n👉 Giá đề xuất: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(finalBargainPrice)}";
+        }
+        content += "\n[[ORDER_REQUEST:${jsonEncode(orderData)}]]";
         
         await chatService.sendMessage(
           receiverId: _product!.userId,
@@ -1508,35 +1692,32 @@ class ProductDetailState extends State<ProductDetail> {
         );
         
         if (mounted) {
-          setState(() => _isLoading = false); // Tắt loader trước khi hiện thông báo
           UIHelpers.showSuccessDialog(
             context,
-            title: "Đã gửi yêu cầu!",
-            message: "Bạn đã yêu cầu mua sản phẩm \"${_product!.productName}\". Yêu cầu đã được gửi trực tiếp đến người bán.",
+            title: "Đã gửi thành công!",
+            message: finalBargainPrice != null 
+              ? "Yêu cầu trả giá của bạn đã được gửi đến người bán."
+              : "Yêu cầu mua hàng đã được gửi trực tiếp đến người bán.",
           );
         }
       } else {
-        // Fallback nếu server trả về thành công nhưng không có orderId cụ thể trong JSON
         if (mounted) {
-          setState(() => _isLoading = false);
           UIHelpers.showSuccessDialog(
             context,
-            title: "Đã gửi yêu cầu!",
-            message: "Bạn đã yêu cầu mua sản phẩm \"${_product!.productName}\". Yêu cầu đã được gửi thành công.",
+            title: "Đã gửi!",
+            message: "Yêu cầu của bạn đã được gửi thành công.",
           );
         }
       }
     } catch (e) {
+      Navigator.pop(context); // Close loading dialog
       if (mounted) {
         String errorMsg = e.toString().replaceAll("Exception: ", "");
-        // Xử lý lỗi trùng lặp (UX writer)
         if (errorMsg.contains("already exists") || errorMsg.contains("trùng") || errorMsg.contains("409") || errorMsg.contains("tồn tại")) {
           errorMsg = "Bạn đã gửi yêu cầu mua sản phẩm này rồi.";
         }
         UIHelpers.showErrorSnackBar(context, errorMsg);
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -2139,6 +2320,26 @@ class _BookmarkButtonState extends State<_BookmarkButton> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String text = newValue.text.replaceAll('.', '');
+    final number = int.tryParse(text);
+    if (number == null) return oldValue;
+
+    final formatted = NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0).format(number).trim();
+    
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

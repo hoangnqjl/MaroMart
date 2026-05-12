@@ -1,9 +1,9 @@
 class ApiConstants {
   // static const String baseUrl = 'https://temo-server.onrender.com';
 
-  // static const String baseUrl = 'https://andrew.zapto.org/temo';
+  static const String baseUrl = 'https://andrew.zapto.org/temo';
 
-  static const String baseUrl = 'http://192.168.16.7:5100';
+  // static const String baseUrl = 'http://192.168.16.7:5100';
 
   // auth
   static const String loginEndpoint = '/auth/v1/login';
