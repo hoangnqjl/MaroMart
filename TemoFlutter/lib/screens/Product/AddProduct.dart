@@ -610,26 +610,38 @@ class _AddProductState extends State<AddProduct> {
       String valStr = value.toString().trim();
       if (valStr.isEmpty || valStr.toUpperCase() == "N/A" || valStr.toUpperCase() == "UNKNOWN") return;
 
-      // Handle root fields
+      // Handle root fields (Database structure)
       if (cleanKey == "brand" || cleanKey == "productbrand") {
         if (overwrite || _brandController.text.isEmpty) _brandController.text = valStr;
-        return;
+        // Don't return, let it also fill the dynamic list below
       }
       if (cleanKey == "origin" || cleanKey == "productorigin") {
         if (overwrite || _originController.text.isEmpty) _originController.text = valStr;
-        return;
+        // Don't return
       }
       if (cleanKey == "condition" || cleanKey == "productcondition") {
         if (overwrite || _conditionController.text.isEmpty) _conditionController.text = valStr;
-        return;
       }
 
-      // Handle template attributes
+      // Handle template attributes (UI Display)
       String normalize(String s) => s.toLowerCase().trim().replaceAll(' ', '_').replaceAll('-', '_');
       String normKey = normalize(cleanKey);
 
       for (var attr in _attributes) {
-        if (normalize(attr.nameController.text) == normKey) {
+        String attrName = attr.nameController.text.toLowerCase().trim();
+        String normAttrName = normalize(attrName);
+        
+        bool isMatch = (normAttrName == normKey);
+        
+        // Smart Mapping for common Vietnamese labels
+        if (!isMatch) {
+          if ((normKey == "brand" || normKey == "productbrand") && 
+              (attrName == "thương hiệu" || attrName == "hãng" || attrName == "nhãn hiệu")) isMatch = true;
+          if ((normKey == "origin" || normKey == "productorigin") && 
+              (attrName == "xuất xứ" || attrName == "nơi sản xuất")) isMatch = true;
+        }
+
+        if (isMatch) {
           if (overwrite || attr.valueController.text.isEmpty || attr.valueController.text.toUpperCase() == "N/A") {
             attr.valueController.text = valStr;
           }
@@ -888,77 +900,31 @@ class _AddProductState extends State<AddProduct> {
         }
       }
 
+      // Parallelize Description Generation and N8N Attribute Fetching
+      List<Future> parallelTasks = [];
+
+      // 1. Task: Generate Details (Description, Category, initial attrs)
       if (_descController.text.trim().isEmpty) {
-        print("[AI-GEN] Description is empty, generating with HuggingFace...");
-        final result = await _productService.generateDetails(
-          productName: _titleController.text,
-          visualDetails: _visualDetails ?? "User uploaded verified images.",
-          style: _selectedStyle,
-          length: _selectedLength,
-          allowedAttributes: emptyKeys.toList(),
-          selectedCondition: _conditionController.text,
-        );
-
-        // 1. Check Moderation (Safety)
-        if (result['is_safe'] == false) {
-          _showErrorDialog(
-            "Community standard violation: ${result['violation_reason'] ?? 'Inappropriate content.'}",
-          );
-          return;
-        }
-
-        // 2. Check Consistency
-        if (result['is_consistent'] == false) {
-          bool continueAnyway =
-              await UIHelpers.confirmDialog(
-                context,
-                title: "Cảnh báo từ AI",
-                message:
-                    "AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?",
-                confirmText: "Tiếp tục",
-                cancelText: "Quay lại",
-                confirmColor: Colors.red,
-                icon: HeroiconsOutline.exclamationTriangle,
-              ) ??
-              false;
-
-          if (!continueAnyway) {
-            _prevStep(); // Go back to Step 1
-            return;
-          }
-        }
-
-        setState(() {
-          // 3. Auto-fill Description
-          _descController.text = result['description'] ?? "";
-
-          // 4. Auto-select Category
-          String? predictedCategory = result['category'];
-          if (predictedCategory != null &&
-              _attributeTemplates.containsKey(predictedCategory.toLowerCase())) {
-            _onCategoryChanged(predictedCategory.toLowerCase());
-          }
-
-          // 5. Auto-fill Attributes from HF (if any)
-          Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
-          _fillAttributesFromMap(aiAttrs, overwrite: false);
-          
-          _isAiValidated = true;
-          _contentAlreadyValidated = true;
-        });
+        print("[AI-GEN] Description is empty, preparing generation task...");
+        parallelTasks.add(_generateDescriptionTask(emptyKeys));
       } else {
-        print("[AI-GEN] Description already exists, skipping HuggingFace generation.");
+        print("[AI-GEN] Description already exists, skipping generation task.");
       }
 
-
-      // After generating description, also fetch attributes automatically
+      // 2. Task: Fetch Attributes from N8N
       if (currentType != null && currentType.isNotEmpty) {
-        await _fetchAttributesFromN8N(currentType);
+        print("[AI-GEN] Fetching attributes from N8N in parallel...");
+        parallelTasks.add(_fetchAttributesFromN8N(currentType));
+      }
+
+      // Execute all tasks in parallel
+      if (parallelTasks.isNotEmpty) {
+        await Future.wait(parallelTasks);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Đã tự động điền tất cả thông tin!"),
+          content: Text("✨ AI đã hoàn tất việc chuẩn bị thông tin!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -975,6 +941,58 @@ class _AddProductState extends State<AddProduct> {
       );
     } finally {
       setState(() => _isAiLoading = false);
+    }
+  }
+
+  // Helper task for parallel execution
+  Future<void> _generateDescriptionTask(Set<String> emptyKeys) async {
+    final result = await _productService.generateDetails(
+      productName: _titleController.text,
+      visualDetails: _visualDetails ?? "User uploaded verified images.",
+      style: _selectedStyle,
+      length: _selectedLength,
+      allowedAttributes: emptyKeys.toList(),
+      selectedCondition: _conditionController.text,
+    );
+
+    // 1. Check Moderation (Safety)
+    if (result['is_safe'] == false) {
+      _showErrorDialog(
+        "Community standard violation: ${result['violation_reason'] ?? 'Inappropriate content.'}",
+      );
+      return;
+    }
+
+    // 2. Check Consistency
+    if (result['is_consistent'] == false) {
+      bool continueAnyway = await UIHelpers.confirmDialog(
+        context,
+        title: "Cảnh báo từ AI",
+        message: "AI phát hiện thông tin không đồng nhất: ${result['inconsistency_reason']}\nBạn có muốn quay lại để chỉnh sửa Tên/Ảnh không?",
+        confirmText: "Tiếp tục",
+        cancelText: "Quay lại",
+        confirmColor: Colors.red,
+        icon: HeroiconsOutline.exclamationTriangle,
+      ) ?? false;
+
+      if (!continueAnyway) {
+        _prevStep();
+        return;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _descController.text = result['description'] ?? "";
+        String? predictedCategory = result['category'];
+        if (predictedCategory != null && _attributeTemplates.containsKey(predictedCategory.toLowerCase())) {
+          _onCategoryChanged(predictedCategory.toLowerCase());
+        }
+        Map<String, dynamic> aiAttrs = result['attributes'] ?? {};
+        _fillAttributesFromMap(aiAttrs, overwrite: false);
+        _isAiValidated = true;
+        _contentAlreadyValidated = true;
+      });
     }
   }
 
@@ -2683,7 +2701,7 @@ class _AddProductState extends State<AddProduct> {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Container(
-              height: 220,
+              height: 300,
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.shade300),
                 borderRadius: BorderRadius.circular(16),
@@ -2790,7 +2808,7 @@ class _AddProductState extends State<AddProduct> {
           const SizedBox(height: 8),
           _buildTextField(
             controller: _addressDetailController,
-            hint: "Số nhà, tên đường...",
+            hint: "Số nhà, kiệt, hẻm, tên đường...",
           ),
         ],
       ),
@@ -3054,7 +3072,7 @@ class _AddProductState extends State<AddProduct> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        "${_addressDetailController.text}, ${_selectedWardName ?? ''}, ${_selectedProvinceName ?? ''}",
+                        "${_addressDetailController.text.trim()}, ${_selectedWardName ?? ''}, ${_selectedProvinceName ?? ''}".trim(),
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey.shade600,
@@ -3077,18 +3095,22 @@ class _AddProductState extends State<AddProduct> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start, // Giúp các thuộc tính dài không bị lệch
         children: [
           Text(
             label,
             style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
+          const SizedBox(width: 16), // Thêm khoảng cách giữa label và value
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
           ),
         ],

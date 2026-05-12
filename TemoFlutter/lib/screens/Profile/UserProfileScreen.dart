@@ -1,3 +1,5 @@
+import 'package:temo/utils/ui_helpers.dart';
+import 'package:temo/utils/string_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/ProductGridItem.dart';
@@ -18,6 +20,7 @@ import '../../services/review_service.dart';
 import 'package:temo/screens/Common/BugReportScreen.dart';
 import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/utils/UIHelper.dart';
+import 'package:temo/screens/Order/RatingScreen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -46,6 +49,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   bool _isLoading = true;
   String? _errorMessage;
   bool _canReview = false;
+  List<dynamic> _buyOrders = [];
+  
+  String _selectedRatingFilter = 'Tất cả';
+  String _selectedSort = 'Mới nhất';
 
   late TabController _tabController;
 
@@ -88,10 +95,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
       // Check if user has bought from this person
       final ordersResponse = responses[5] as Map<String, dynamic>;
-      if (ordersResponse['success'] == true && ordersResponse['orders'] != null) {
-        final List orders = ordersResponse['orders'];
-        _canReview = orders.any((o) => o['sellerId'] == widget.userId && o['status'] == 'COMPLETED');
-      }
+      // Backend returns { buyOrders: [], sellOrders: [] }
+      _buyOrders = ordersResponse['buyOrders'] ?? [];
+      
+      _canReview = _buyOrders.any((o) {
+        // Kiểm tra cả sellerId và selerId (phòng trường hợp DB bị sai chính tả)
+        final sId = (o['sellerId'] ?? o['selerId'])?.toString();
+        final status = o['status']?.toString().toLowerCase();
+        return sId == widget.userId.toString() && (status == 'completed' || status == 'accepted');
+      });
 
       setState(() {
         _isLoading = false;
@@ -106,23 +118,42 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   void _handleReview() {
     if (_canReview) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Tính năng gửi đánh giá đang được mở...")),
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          title: Text("Thông báo", style: GoogleFonts.roboto(fontWeight: FontWeight.bold)),
-          content: Text("Bạn chưa mua hàng từ người dùng này nên chưa thể đánh giá.", style: GoogleFonts.roboto()),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Đóng"),
+      // Find an order that hasn't been reviewed yet
+      try {
+        final orderToReview = _buyOrders.firstWhere((o) {
+          final sId = (o['sellerId'] ?? o['selerId'])?.toString();
+          final status = o['status']?.toString().toLowerCase();
+          final isAccepted = sId == widget.userId.toString() && (status == 'completed' || status == 'accepted');
+          
+          if (!isAccepted) return false;
+          
+          // Check if this specific order has already been reviewed
+          final alreadyReviewed = _reviews.any((r) => r['orderId'] == o['id']);
+          return !alreadyReviewed;
+        });
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RatingScreen(
+              orderId: orderToReview['id'],
+              revieweeId: widget.userId,
             ),
-          ],
-        ),
+          ),
+        ).then((_) => _fetchData());
+      } catch (e) {
+        // All accepted orders have been reviewed
+        UIHelpers.showWarningDialog(
+          context,
+          title: "Đã đánh giá",
+          message: "Bạn đã thực hiện đánh giá cho tất cả các giao dịch thành công với người dùng này.",
+        );
+      }
+    } else {
+      UIHelpers.showWarningDialog(
+        context,
+        title: "Chưa thể đánh giá",
+        message: "Bạn chưa mua hàng từ người dùng này hoặc yêu cầu mua hàng chưa được chấp nhận nên chưa thể thực hiện đánh giá.",
       );
     }
   }
@@ -138,13 +169,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     });
   }
 
-  String _getFullUrl(String path) {
-    if (path.startsWith('http')) return path;
-    const baseUrl = ApiConstants.baseUrl;
-    final cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-    final cleanPath = path.startsWith('/') ? path : '/$path';
-    return '$cleanBaseUrl$cleanPath';
-  }
+  // Using centralized StringUtils.normalizeUrl
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +254,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                                   ],
                                   image: DecorationImage(
                                     image: (_user?.avatarUrl != null && _user!.avatarUrl!.isNotEmpty)
-                                        ? CachedNetworkImageProvider(_getFullUrl(_user!.avatarUrl!))
+                                        ? CachedNetworkImageProvider(StringUtils.normalizeUrl(_user!.avatarUrl!))
                                         : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                                     fit: BoxFit.cover,
                                   ),
@@ -437,13 +462,97 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   Widget _buildReviewsTab() {
+    // Apply filters and sorting to _reviews
+    List<dynamic> displayedReviews = List.from(_reviews);
+
+    // Filter by rating
+    if (_selectedRatingFilter != 'Tất cả') {
+      int rating = int.parse(_selectedRatingFilter.split(' ')[0]);
+      displayedReviews = displayedReviews.where((r) => r['rating'] == rating).toList();
+    }
+
+    // Sort
+    if (_selectedSort == 'Mới nhất') {
+      displayedReviews.sort((a, b) => DateTime.parse(b['createdAt']).compareTo(DateTime.parse(a['createdAt'])));
+    } else if (_selectedSort == 'Cũ nhất') {
+      displayedReviews.sort((a, b) => DateTime.parse(a['createdAt']).compareTo(DateTime.parse(b['createdAt'])));
+    }
+
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
         _buildRatingSummaryCard(),
         const SizedBox(height: 24),
-        if (_reviews.isEmpty) const Center(child: Text("Chưa có đánh giá nào.")) else ..._reviews.map((review) => _buildReviewCard(review)),
+        // Review Header & Filters
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Tất cả các đánh giá",
+              style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF111827)),
+            ),
+            _buildReviewFilterMenu(),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (displayedReviews.isEmpty) 
+          Center(child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Text("Chưa có đánh giá nào phù hợp.", style: GoogleFonts.roboto(color: Colors.grey[500])),
+          )) 
+        else 
+          ...displayedReviews.map((review) => _buildReviewCard(review)),
       ],
+    );
+  }
+
+  Widget _buildReviewFilterMenu() {
+    return PopupMenuButton<String>(
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(HeroiconsOutline.adjustmentsHorizontal, size: 20, color: Color(0xFF4B5563)),
+      ),
+      offset: const Offset(0, 45),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      onSelected: (value) {
+        setState(() {
+          if (value.contains('sao') || value == 'Tất cả') {
+            _selectedRatingFilter = value;
+          } else {
+            _selectedSort = value;
+          }
+        });
+      },
+      itemBuilder: (context) => [
+        _buildPopupItem('Mới nhất', HeroiconsOutline.clock),
+        _buildPopupItem('Cũ nhất', HeroiconsOutline.arrowPath),
+        const PopupMenuDivider(height: 1),
+        _buildPopupItem('Tất cả', HeroiconsOutline.squares2x2),
+        _buildPopupItem('5 sao', Icons.star_rounded, color: Colors.amber),
+        _buildPopupItem('4 sao', Icons.star_rounded, color: Colors.amber),
+        _buildPopupItem('3 sao', Icons.star_rounded, color: Colors.amber),
+        _buildPopupItem('2 sao', Icons.star_rounded, color: Colors.amber),
+        _buildPopupItem('1 sao', Icons.star_rounded, color: Colors.amber),
+      ],
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupItem(String value, IconData icon, {Color? color}) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color ?? Colors.grey[600]),
+          const SizedBox(width: 12),
+          Text(value, style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF374151))),
+        ],
+      ),
     );
   }
 
@@ -498,43 +607,87 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     final comment = review['comment'] ?? "";
     final date = DateFormat('dd/MM/yyyy').format(DateTime.parse(review['createdAt']));
 
+    final product = review['order']?['product'];
+    final productName = product?['productName'] ?? "Sản phẩm";
+    final productMedia = product?['productMedia'] as List?;
+    final productImage = (productMedia != null && productMedia.isNotEmpty) ? productMedia[0] : null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))
         ],
+        border: Border.all(color: const Color(0xFFF3F4F6)),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 22, backgroundColor: Colors.grey[100],
-            backgroundImage: (reviewerAvatar != null) ? CachedNetworkImageProvider(_getFullUrl(reviewerAvatar)) : null,
-            child: (reviewerAvatar == null) ? const Icon(Icons.person, size: 22, color: Colors.grey) : null,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 24, backgroundColor: Colors.grey[100],
+                backgroundImage: (reviewerAvatar != null) ? CachedNetworkImageProvider(StringUtils.normalizeUrl(reviewerAvatar)) : null,
+                child: (reviewerAvatar == null) ? const Icon(Icons.person, size: 24, color: Colors.grey) : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(reviewerName, style: GoogleFonts.roboto(fontWeight: FontWeight.w800, fontSize: 14)),
-                    Text(date, style: GoogleFonts.roboto(color: Colors.grey[400], fontSize: 12)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(reviewerName, style: GoogleFonts.roboto(fontWeight: FontWeight.w900, fontSize: 15, color: const Color(0xFF111827))),
+                        Text(date, style: GoogleFonts.roboto(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(children: List.generate(5, (index) => Icon(Icons.star_rounded, color: index < rating ? Colors.amber : Colors.grey[200], size: 18))),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Row(children: List.generate(5, (index) => Icon(Icons.star_rounded, color: index < rating ? Colors.amber : Colors.grey[200], size: 16))),
-                const SizedBox(height: 10),
-                Text(comment, style: GoogleFonts.roboto(fontSize: 14, color: const Color(0xFF4B5563), height: 1.6)),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+          Text(comment, style: GoogleFonts.roboto(fontSize: 14, color: const Color(0xFF4B5563), height: 1.6, fontWeight: FontWeight.w500)),
+          
+          if (product != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFF3F4F6)),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: productImage != null 
+                      ? CachedNetworkImage(imageUrl: StringUtils.normalizeUrl(productImage), width: 45, height: 45, fit: BoxFit.cover)
+                      : Container(width: 45, height: 45, color: Colors.grey[200], child: const Icon(Icons.image, size: 20, color: Colors.grey)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Đánh giá cho:", style: GoogleFonts.roboto(fontSize: 10, color: Colors.grey[500], fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text(productName, style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

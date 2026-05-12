@@ -207,6 +207,39 @@ class ProductService {
     }
   }
 
+  Future<Map<String, dynamic>> generateFullStep2({
+    required String productName,
+    required String visualDetails,
+    String? style,
+    String? length,
+    List<String>? allowedAttributes,
+    String? selectedCondition,
+    String? category,
+    String? productType,
+    String? userRequest,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        endpoint: '/ai/generate-step2-full',
+        body: {
+          "productName": productName,
+          "visualDetails": visualDetails,
+          "style": style ?? "Professional",
+          "length": length ?? "Medium",
+          "allowedAttributes": allowedAttributes ?? [],
+          "selectedCondition": selectedCondition ?? "",
+          "category": category ?? "",
+          "productType": productType ?? "",
+          "userRequest": userRequest ?? ""
+        },
+        needAuth: true,
+      );
+      return response['data'] ?? {};
+    } catch (e) {
+      throw Exception('Lỗi tạo nội dung song song: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> validateContent({
     required String productName,
     required String productDescription,

@@ -511,9 +511,6 @@ class ProductDetailState extends State<ProductDetail> {
   Widget _buildSellerInfo(Product product) {
     // Tiền xử lý URL ảnh đại diện
     String avatarUrl = product.userInfo?.avatarUrl ?? '';
-    if (avatarUrl.isNotEmpty && !avatarUrl.startsWith('http')) {
-      avatarUrl = '${ApiConstants.baseUrl}$avatarUrl';
-    }
 
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, '/user_profile', arguments: product.userId),
@@ -536,10 +533,11 @@ class ProductDetailState extends State<ProductDetail> {
               ),
               child: ClipOval(
                 child: avatarUrl.isNotEmpty
-                    ? Image.network(
-                        avatarUrl,
+                    ? CachedNetworkImage(
+                        imageUrl: StringUtils.normalizeUrl(avatarUrl),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 24),
+                        placeholder: (_, __) => const Icon(Icons.person, color: Colors.white, size: 24),
+                        errorWidget: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 24),
                       )
                     : const Icon(Icons.person, color: Colors.white, size: 24),
               ),
@@ -920,22 +918,31 @@ class ProductDetailState extends State<ProductDetail> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _getVietnameseLabel(entry.key),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: const Color(0xFF6B7280),
-                        fontWeight: FontWeight.w500,
+                    SizedBox(
+                      width: 140, // Đảm bảo phần nhãn không lấn át phần giá trị
+                      child: Text(
+                        _getVietnameseLabel(entry.key),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFF6B7280),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    Text(
-                      _translateSpecValue(entry.key, entry.value),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: const Color(0xFF111827),
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _translateSpecValue(entry.key, entry.value),
+                        textAlign: TextAlign.end,
+                        softWrap: true, // Ép buộc xuống dòng
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFF111827),
+                          fontWeight: FontWeight.w600,
+                          height: 1.4, // Tăng khoảng cách dòng để dễ đọc khi xuống dòng
+                        ),
                       ),
                     ),
                   ],
@@ -989,9 +996,8 @@ class ProductDetailState extends State<ProductDetail> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.temo.app',
-                  retinaMode: true,
                 ),
                 MarkerLayer(
                   markers: [
@@ -1149,9 +1155,8 @@ class ProductDetailState extends State<ProductDetail> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.temo.app',
-                        retinaMode: true,
                       ),
                       if (routePoints.isNotEmpty)
                         PolylineLayer(
@@ -1471,6 +1476,12 @@ class ProductDetailState extends State<ProductDetail> {
 
   Future<void> _requestPurchase() async {
     if (_product == null) return;
+
+    // 1. Kiểm tra nếu là chính chủ (Self-purchase check)
+    if (_currentUserId == _product!.userId) {
+      UIHelpers.showErrorSnackBar(context, "Bạn không thể tự mua sản phẩm của chính mình.");
+      return;
+    }
     
     setState(() => _isLoading = true);
     try {
@@ -1488,7 +1499,8 @@ class ProductDetailState extends State<ProductDetail> {
           "price": _product!.productPrice,
         };
         
-        final content = "[[ORDER_REQUEST:${jsonEncode(orderData)}]]";
+        final buyerName = currentUser?.fullName ?? "Người dùng";
+        final content = "Người dùng $buyerName đã gửi yêu cầu mua sản phẩm: ${_product!.productName}\n[[ORDER_REQUEST:${jsonEncode(orderData)}]]";
         
         await chatService.sendMessage(
           receiverId: _product!.userId,
@@ -1496,16 +1508,32 @@ class ProductDetailState extends State<ProductDetail> {
         );
         
         if (mounted) {
+          setState(() => _isLoading = false); // Tắt loader trước khi hiện thông báo
           UIHelpers.showSuccessDialog(
             context,
             title: "Đã gửi yêu cầu!",
-            message: "Yêu cầu mua hàng của bạn đã được gửi trực tiếp trong tin nhắn đến người bán.",
+            message: "Bạn đã yêu cầu mua sản phẩm \"${_product!.productName}\". Yêu cầu đã được gửi trực tiếp đến người bán.",
+          );
+        }
+      } else {
+        // Fallback nếu server trả về thành công nhưng không có orderId cụ thể trong JSON
+        if (mounted) {
+          setState(() => _isLoading = false);
+          UIHelpers.showSuccessDialog(
+            context,
+            title: "Đã gửi yêu cầu!",
+            message: "Bạn đã yêu cầu mua sản phẩm \"${_product!.productName}\". Yêu cầu đã được gửi thành công.",
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        UIHelpers.showErrorSnackBar(context, e.toString());
+        String errorMsg = e.toString().replaceAll("Exception: ", "");
+        // Xử lý lỗi trùng lặp (UX writer)
+        if (errorMsg.contains("already exists") || errorMsg.contains("trùng") || errorMsg.contains("409") || errorMsg.contains("tồn tại")) {
+          errorMsg = "Bạn đã gửi yêu cầu mua sản phẩm này rồi.";
+        }
+        UIHelpers.showErrorSnackBar(context, errorMsg);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

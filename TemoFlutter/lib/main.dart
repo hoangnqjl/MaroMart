@@ -12,6 +12,7 @@ import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/screens/splash/video_splash_screen.dart';
 import 'package:flutter/services.dart';
 import 'app_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +87,31 @@ class MyApp extends StatelessWidget {
                 thickness: MaterialStateProperty.all(4),
                 radius: const Radius.circular(4),
               ),
+              dialogTheme: DialogThemeData(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                titleTextStyle: GoogleFonts.quicksand(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1F2937),
+                ),
+                contentTextStyle: GoogleFonts.quicksand(
+                  fontSize: 14,
+                  color: const Color(0xFF4B5563),
+                  height: 1.5,
+                ),
+              ),
+              popupMenuTheme: PopupMenuThemeData(
+                color: Colors.white,
+                surfaceTintColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 8,
+              ),
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
@@ -102,6 +128,31 @@ class MyApp extends StatelessWidget {
                   TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
                   TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
                 },
+              ),
+              dialogTheme: DialogThemeData(
+                backgroundColor: const Color(0xFF1E1E1E),
+                surfaceTintColor: const Color(0xFF1E1E1E),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                titleTextStyle: GoogleFonts.quicksand(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                contentTextStyle: GoogleFonts.quicksand(
+                  fontSize: 14,
+                  color: Colors.white70,
+                  height: 1.5,
+                ),
+              ),
+              popupMenuTheme: PopupMenuThemeData(
+                color: const Color(0xFF1E1E1E),
+                surfaceTintColor: const Color(0xFF1E1E1E),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 8,
               ),
             ),
             scrollBehavior: const MaterialScrollBehavior().copyWith(

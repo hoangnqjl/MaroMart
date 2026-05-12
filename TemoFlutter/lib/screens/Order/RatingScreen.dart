@@ -51,7 +51,6 @@ class _RatingScreenState extends State<RatingScreen> {
             context,
             title: "Nhận xét bị từ chối",
             message: "Nội dung không phù hợp: ${moderation['reason']}",
-            buttonText: "Chỉnh sửa",
           );
         } else {
           UIHelpers.showSuccessSnackBar(context, "Cảm ơn bạn đã phản hồi!");
@@ -68,98 +67,107 @@ class _RatingScreenState extends State<RatingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(HeroiconsOutline.chevronLeft, color: Colors.black, size: 20),
+            ),
+          ),
+        ),
+        title: Text(
+          "Đánh giá người bán",
+          style: GoogleFonts.roboto(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w900),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
         child: Column(
           children: [
+            const SizedBox(height: 20),
+            // Stars Rating Box
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(vertical: 40),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))],
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(35),
+                border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
-              child: Column(
-                children: [
-                  Text("Trải nghiệm của bạn như thế nào?", 
-                    style: GoogleFonts.quicksand(fontSize: 18, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text("Phản hồi của bạn giúp cộng đồng phát triển mạnh mẽ hơn.", 
-                    style: GoogleFonts.quicksand(fontSize: 14, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) {
-                      final isActive = index < _rating;
-                      return GestureDetector(
-                        onTap: () => setState(() => _rating = index + 1),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Icon(
-                            isActive ? Icons.star_rate_rounded : Icons.star_outline_rounded,
-                            color: isActive ? Colors.amber : Colors.grey[300],
-                            size: 52,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final isActive = index < _rating;
+                  return GestureDetector(
+                    onTap: () => setState(() => _rating = index + 1),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        isActive ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: isActive ? Colors.amber : Colors.grey[300],
+                        size: 52,
+                      ),
+                    ),
+                  );
+                }),
               ),
             ),
             const SizedBox(height: 24),
+            // Comment Box
             Container(
-              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15)],
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(35),
+                border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
               child: TextField(
                 controller: _commentController,
                 maxLines: 6,
                 decoration: InputDecoration(
                   hintText: "Hãy chia sẻ thêm chi tiết về giao dịch của bạn...",
-                  hintStyle: GoogleFonts.quicksand(color: Colors.grey[400]),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                  fillColor: Colors.white,
-                  filled: true,
-                  contentPadding: const EdgeInsets.all(20),
+                  hintStyle: GoogleFonts.roboto(color: Colors.grey[400], fontSize: 14),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(24),
                 ),
-                style: GoogleFonts.quicksand(fontSize: 15),
+                style: GoogleFonts.roboto(fontSize: 15, color: const Color(0xFF1F2937)),
               ),
             ),
-            const SizedBox(height: 48),
-            SizedBox(
+            const SizedBox(height: 40),
+            // Submit Button
+            Container(
               width: double.infinity,
               height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(35),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _submitReview,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(35)),
                 ),
                 child: _isSubmitting 
-                  ? ModernLoader(color: Colors.white, size: 24)
-                  : Text("Gửi đánh giá", style: GoogleFonts.quicksand(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? const ModernLoader(color: Colors.white, size: 24)
+                  : Text("Gửi đánh giá", style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w900)),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

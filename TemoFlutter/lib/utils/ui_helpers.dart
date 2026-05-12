@@ -11,7 +11,7 @@ class UIHelpers {
       message: message,
       icon: HeroiconsOutline.checkCircle,
       iconColor: AppColors.success,
-      buttonText: "Tuyệt vời",
+      buttonText: "Xác nhận",
       onConfirm: onConfirm,
     );
   }
@@ -106,10 +106,14 @@ class UIHelpers {
                 style: GoogleFonts.roboto(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF3F3F46)),
               ),
               const SizedBox(height: 12),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.roboto(fontSize: 14, color: Colors.grey[600], height: 1.5),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(fontSize: 14, color: Colors.grey[600], height: 1.5),
+                  ),
+                ),
               ),
               if (content != null) ...[
                 const SizedBox(height: 24),

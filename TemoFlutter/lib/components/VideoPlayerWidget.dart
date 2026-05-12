@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:temo/utils/string_utils.dart';
 import 'dart:ui';
 import 'package:video_player/video_player.dart';
 import 'package:temo/components/ModernLoader.dart';
@@ -31,7 +32,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   Future<void> _initializeVideo() async {
     try {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+      _controller = VideoPlayerController.networkUrl(Uri.parse(StringUtils.normalizeUrl(widget.videoUrl)));
 
       await _controller.initialize();
       setState(() {

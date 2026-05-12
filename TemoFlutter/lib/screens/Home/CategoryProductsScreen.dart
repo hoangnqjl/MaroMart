@@ -12,8 +12,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
   final Map<String, dynamic> category;
+  final bool showRecommendedOnly;
 
-  const CategoryProductsScreen({Key? key, required this.category}) : super(key: key);
+  const CategoryProductsScreen({
+    Key? key, 
+    required this.category,
+    this.showRecommendedOnly = false,
+  }) : super(key: key);
 
   @override
   State<CategoryProductsScreen> createState() => _CategoryProductsScreenState();
@@ -27,10 +32,26 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   bool _isCategoriesLoading = true;
   String _errorMessage = '';
   String _selectedCategoryId = '';
+  bool _showRecommended = false;
+
+  String get _currentTitle {
+    if (_showRecommended) return "Gợi ý cho bạn";
+    if (_selectedCategoryId == 'all') return "Tất cả sản phẩm";
+    try {
+      final cat = _categories.firstWhere(
+        (c) => (c['categoryId'] ?? c['id']).toString() == _selectedCategoryId,
+        orElse: () => null,
+      );
+      return cat != null ? (cat['categoryName'] ?? cat['name']).toString() : "Sản phẩm";
+    } catch (e) {
+      return "Sản phẩm";
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _showRecommended = widget.showRecommendedOnly;
     _selectedCategoryId = widget.category['categoryId']?.toString() ?? widget.category['id']?.toString() ?? 'all';
     _fetchCategories();
     _fetchProducts();
@@ -71,9 +92,14 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     });
 
     try {
-      final results = await _productService.getProductsByCategory(
-          categoryId: _selectedCategoryId == 'all' ? null : _selectedCategoryId
-      );
+      List<Product> results;
+      if (_showRecommended) {
+        results = await _productService.getRecommendedProducts(limit: 50);
+      } else {
+        results = await _productService.getProductsByCategory(
+            categoryId: _selectedCategoryId == 'all' ? null : _selectedCategoryId
+        );
+      }
 
       if (mounted) {
         setState(() {
@@ -112,13 +138,13 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   children: [
                     const SizedBox(height: 10),
                     FloatingHeader(
-                      title: "Tất cả sản phẩm",
+                      title: _currentTitle,
                       hasBackground: false,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                       actions: [
                         FloatingHeader.buildActionBubble(
                           icon: HeroiconsSolid.ellipsisVertical,
-                          onTap: () => UIHelper.showOptionsMenu(context, screenName: "Tất cả sản phẩm"),
+                          onTap: () => UIHelper.showOptionsMenu(context, screenName: _currentTitle),
                         ),
                       ],
                     ),
@@ -146,13 +172,13 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         children: _categories.map((cat) {
           final String id = (cat['categoryId'] ?? cat['id'] ?? '').toString();
           final String label = (cat['categoryName'] ?? cat['name'] ?? '').toString();
-          bool isSelected = _selectedCategoryId == id;
+          bool isSelected = !_showRecommended && _selectedCategoryId == id;
 
           return GestureDetector(
             onTap: () {
-              if (isSelected) return;
               setState(() {
                 _selectedCategoryId = id;
+                _showRecommended = false;
               });
               _fetchProducts();
             },

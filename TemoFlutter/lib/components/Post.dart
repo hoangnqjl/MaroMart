@@ -18,6 +18,7 @@ import 'package:temo/utils/string_utils.dart';
 import 'package:temo/services/product_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:temo/services/review_service.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -40,6 +41,12 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   late Animation<double> _flipAnimation;
   bool _isFlipped = false;
 
+  // Rating state
+  static final Map<String, double> _ratingCache = {};
+  final ReviewService _reviewService = ReviewService();
+  double? _rating;
+  bool _isFetchingRating = false;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +63,32 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
 
     _productService.fetchSavedProductsIfNeeded();
     _calculateDistance();
+    _loadRating();
+  }
+
+  Future<void> _loadRating() async {
+    final userId = widget.product.userId;
+    if (userId.isEmpty) return;
+
+    if (_ratingCache.containsKey(userId)) {
+      if (mounted) setState(() => _rating = _ratingCache[userId]);
+      return;
+    }
+
+    if (mounted) setState(() => _isFetchingRating = true);
+    try {
+      final summary = await _reviewService.getRatingSummary(userId);
+      final avg = (summary['averageRating'] as num).toDouble();
+      _ratingCache[userId] = avg;
+      if (mounted) {
+        setState(() {
+          _rating = avg;
+          _isFetchingRating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isFetchingRating = false);
+    }
   }
 
   Future<void> _calculateDistance() async {
@@ -203,6 +236,41 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               top: 15, right: 15,
               child: _buildBlurTag('${_currentMediaIndex + 1}/${_mediaItems.length}'),
             ),
+
+          // Rating Badge (Top Left - Glassmorphism)
+          Positioned(
+            top: 15, left: 15,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _rating != null ? _rating!.toStringAsFixed(1) : "...",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Quicksand',
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.star_rate_rounded, color: Color(0xFFFFB86A), size: 14),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
 
 
           // --- Progressive Blur: Overlapping strips, each adds sigma 5 ---

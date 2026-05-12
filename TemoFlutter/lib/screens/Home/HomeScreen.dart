@@ -30,6 +30,7 @@ import 'package:temo/components/Skeleton.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/services/notification_service.dart';
 import 'package:temo/screens/Product/SavedProductsScreen.dart';
+import 'package:temo/components/RecommendedProductCard.dart';
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -57,7 +58,7 @@ class HomeScreenState extends State<HomeScreen> {
   int _currentBannerIndex = 0;
 
   final List<String> _searchHints = [
-    "Search...",
+    "Tìm kiếm sản phẩm...",
   ];
   int _currentHintIndex = 0;
   Timer? _hintTimer;
@@ -69,6 +70,7 @@ class HomeScreenState extends State<HomeScreen> {
   String? _filterCategoryId;
   String? _filterProvince;
   String? _filterWard;
+  String _currentFilter = 'Tất cả';
 
   List<dynamic> _categories = [];
   bool _isCategoriesLoading = true;
@@ -220,7 +222,8 @@ class HomeScreenState extends State<HomeScreen> {
       if (iconName.startsWith('http')) {
         iconUrl = iconName;
       } else {
-        iconUrl = '${ApiConstants.baseUrl}/storage/system/category/$iconName';
+        // Use relative path and let normalizeUrl handle the host
+        iconUrl = '/storage/system/category/$iconName';
       }
     }
 
@@ -662,7 +665,7 @@ class HomeScreenState extends State<HomeScreen> {
                       child: Row(
                         children: [
                           const Text(
-                            "Recommended",
+                            "Gợi ý cho bạn",
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -700,7 +703,8 @@ class HomeScreenState extends State<HomeScreen> {
                                 smoothPush(
                                   context,
                                   CategoryProductsScreen(
-                                    category: {'categoryId': 'all', 'categoryName': 'Tất cả'},
+                                    category: {'categoryId': 'recommended', 'categoryName': 'Gợi ý cho bạn'},
+                                    showRecommendedOnly: true,
                                   ),
                                 );
                               },
@@ -987,7 +991,7 @@ class HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            "Explore more",
+                            "Khám phá thêm",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -995,18 +999,36 @@ class HomeScreenState extends State<HomeScreen> {
                               fontFamily: 'Quicksand',
                             ),
                           ),
-                          Row(
-                            children: [
-                              Text(
-                                "For you",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Quicksand',
+                          PopupMenuButton<String>(
+                            position: PopupMenuPosition.under,
+                            onSelected: (String value) {
+                              setState(() {
+                                _currentFilter = value;
+                                if (value == 'Cũ nhất') {
+                                  _products.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+                                } else {
+                                  _products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                                }
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Text(
+                                  _currentFilter,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Quicksand',
+                                  ),
                                 ),
-                              ),
-                              Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey[600]),
+                                Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey[600]),
+                              ],
+                            ),
+                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              const PopupMenuItem<String>(value: 'Tất cả', child: Text('Tất cả')),
+                              const PopupMenuItem<String>(value: 'Mới nhất', child: Text('Mới nhất')),
+                              const PopupMenuItem<String>(value: 'Cũ nhất', child: Text('Cũ nhất')),
                             ],
                           ),
                         ],

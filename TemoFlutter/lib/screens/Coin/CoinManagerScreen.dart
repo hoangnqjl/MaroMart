@@ -378,7 +378,7 @@ class _CoinManagerScreenState extends State<CoinManagerScreen> {
                   ),
                 ),
                 hasBackground: false,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 actions: [
                   FloatingHeader.buildActionBubble(
                     icon: HeroiconsSolid.ellipsisVertical,

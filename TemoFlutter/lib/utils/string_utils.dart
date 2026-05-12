@@ -31,39 +31,51 @@ class StringUtils {
   static String normalizeUrl(String? url) {
     if (url == null || url.isEmpty) return "";
 
-    // Handle cases where the URL might be prefixed with 'image:' or 'video:' (common in some backend responses)
-    if (url.contains('http')) {
-      final startIndex = url.indexOf('http');
-      url = url.substring(startIndex);
-    }
-    
-    // If it's a full URL
-    if (url.startsWith('http')) {
+    // 1. Loại bỏ các tiền tố 'image:' hoặc 'video:' và khoảng trắng
+    String cleanUrl = url.replaceFirst('image:', '').replaceFirst('video:', '').trim();
+
+    // 2. Nếu chứa một URL hoàn chỉnh (có http)
+    if (cleanUrl.contains('://')) {
       try {
-        Uri uri = Uri.parse(url);
-        String host = uri.host;
-        
-        // Only normalize if the host is an IP address (v4) or localhost
-        bool isLocalHost = host == 'localhost' || host == '127.0.0.1';
-        bool isIp = RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$').hasMatch(host);
-        
-        if ((isIp || isLocalHost) && !url.startsWith(ApiConstants.baseUrl)) {
-           // This is likely an old local server IP, so we normalize it to current baseUrl
-           String path = uri.path;
-           if (!path.startsWith('/')) path = '/$path';
-           return "${ApiConstants.baseUrl}$path${uri.query.isNotEmpty ? '?${uri.query}' : ''}";
+        // Trích xuất lấy phần URL thực sự (phòng trường hợp dính ký tự lạ)
+        final uriMatch = RegExp(r'https?://[^\s/$.?#].[^\s]*').firstMatch(cleanUrl);
+        if (uriMatch != null) {
+          String fullUrl = uriMatch.group(0)!;
+          Uri uri = Uri.parse(fullUrl);
+          
+          // Lấy phần path và query sau domain
+          String pathAndQuery = uri.path;
+          if (uri.query.isNotEmpty) pathAndQuery += '?${uri.query}';
+          
+          return _buildFinalUrl(pathAndQuery);
         }
-        
-        // If it's an external URL (Cloudinary, Unsplash, etc.), keep it exactly as is
-        return url;
       } catch (e) {
-        return url;
+        // Nếu lỗi parse, giữ nguyên cleanUrl để xử lý tiếp ở bước 3
       }
     }
     
-    // If it's a relative path
-    String path = url;
-    if (!path.startsWith('/')) path = '/$path';
-    return "${ApiConstants.baseUrl}$path";
+    // 3. Nếu là đường dẫn tương đối hoặc fallback từ bước 2
+    return _buildFinalUrl(cleanUrl);
+  }
+
+  static String _buildFinalUrl(String path) {
+    String baseUrl = ApiConstants.baseUrl;
+    // Đảm bảo baseUrl không kết thúc bằng /
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+    }
+    
+    // Đảm bảo path bắt đầu bằng /
+    String cleanPath = path;
+    if (!cleanPath.startsWith('/')) {
+      cleanPath = '/$cleanPath';
+    }
+    
+    // Loại bỏ tiền tố '/temo' cũ nếu bị dính từ database
+    if (cleanPath.startsWith('/temo/')) {
+      cleanPath = cleanPath.replaceFirst('/temo/', '/');
+    }
+    
+    return "$baseUrl$cleanPath";
   }
 }

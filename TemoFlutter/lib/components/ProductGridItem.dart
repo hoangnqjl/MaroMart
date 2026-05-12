@@ -60,22 +60,23 @@ class _ProductGridItemState extends State<ProductGridItem> {
     final userId = widget.product.userId;
     if (userId.isEmpty) return;
 
-    // Check cache first
+    // Show cached value instantly if available to prevent UI flickering
     if (_ratingCache.containsKey(userId)) {
       if (mounted) {
         setState(() {
           _rating = _ratingCache[userId];
         });
       }
-      return;
+    } else {
+      if (mounted) setState(() => _isFetchingRating = true);
     }
 
-    // Fetch from service
-    if (mounted) setState(() => _isFetchingRating = true);
+    // Always fetch fresh data in the background to update the cache
     try {
       final summary = await _reviewService.getRatingSummary(userId);
       final avg = (summary['averageRating'] as num).toDouble();
       _ratingCache[userId] = avg;
+      
       if (mounted) {
         setState(() {
           _rating = avg;
@@ -121,7 +122,11 @@ class _ProductGridItemState extends State<ProductGridItem> {
 
     String displayTitle = product.productName;
     if (product.productCondition.isNotEmpty) {
-      displayTitle += " (${product.productCondition.toLowerCase()})";
+      String condition = product.productCondition.toLowerCase();
+      // Tránh lặp lại nếu trong tên đã có sẵn condition hoặc tránh lặp ngoặc quá nhiều
+      if (!displayTitle.toLowerCase().contains(condition)) {
+        displayTitle += " • $condition";
+      }
     }
 
     return GestureDetector(
@@ -282,22 +287,27 @@ class _ProductGridItemState extends State<ProductGridItem> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEAEAEA),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _formatPrice(product.productPrice),
-                        style: const TextStyle(
-                          fontFamily: 'Quicksand',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Color(0xCC3F3F46),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAEAEA),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _formatPrice(product.productPrice),
+                          style: const TextStyle(
+                            fontFamily: 'Quicksand',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Color(0xCC3F3F46),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     ValueListenableBuilder<Set<String>>(
                       valueListenable: ProductService.savedProductIdsNotifier,
                       builder: (context, savedIds, _) {

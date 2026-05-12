@@ -864,7 +864,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? Center(child: Text("No messages yet", style: TextStyle(color: Colors.grey[400])))
                       : ListView.builder(
                           controller: _scrollController,
-                          padding: EdgeInsets.fromLTRB(16, 120 + (widget.product != null ? 80 : 0), 16, 100),
+                          padding: const EdgeInsets.fromLTRB(16, 120, 16, 100),
                           itemCount: _messages.length,
                           itemBuilder: (context, index) {
                             final msg = _messages[index];
@@ -872,9 +872,6 @@ class _ChatScreenState extends State<ChatScreen> {
                             return _buildMessageBubble(msg, isMe);
                           },
                         ),
-                      
-                      if (widget.product != null)
-                        _buildProductContextBar(),
                     ],
                   ),
               ),
@@ -1502,15 +1499,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ],
                   ),
-                ),
-                TextButton(
-                  onPressed: () => _sendProductCardMessage(),
-                  style: TextButton.styleFrom(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  child: Text("Gửi link", style: GoogleFonts.quicksand(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ],
             ),

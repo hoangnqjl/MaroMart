@@ -34,7 +34,7 @@ class SideMenu extends StatelessWidget {
       backgroundColor: Colors.transparent, // Removed solid white for a more integrated feel
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.only(left: 24, top: 40),
+          padding: const EdgeInsets.only(left: 24, top: 40, right: 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -45,41 +45,25 @@ class SideMenu extends StatelessWidget {
               // Menu Items
               _buildMenuItem(
                 icon: HeroiconsOutline.user, 
-                label: "Chỉnh sửa cá nhân", 
+                label: "Cá nhân", 
                 onTap: () => onNavigate(const ChangeInformationScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
                 icon: HeroiconsOutline.bookmark, 
-                label: "Danh sách đã lưu", 
+                label: "Sản phẩm đã lưu", 
                 onTap: () => onNavigate(const SavedProductsScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
-                icon: HeroiconsOutline.currencyDollar, 
-                label: "Coins", 
+                icon: HeroiconsOutline.wallet, 
+                label: "Ví Temo", 
                 onTap: () => onNavigate(const CoinManagerScreen()),
               ),
               const SizedBox(height: 20),
               _buildMenuItem(
-                icon: HeroiconsOutline.language, 
-                label: "Ngôn ngữ", 
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text("Tính năng ngôn ngữ đang phát triển", style: TextStyle(fontFamily: 'QuickSand')),
-                      backgroundColor: Colors.grey[800],
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-              _buildMenuItem(
-                icon: HeroiconsOutline.chatBubbleLeftRight, 
-                label: "Feedback", 
+                icon: HeroiconsOutline.rocketLaunch, 
+                label: "Tham gia cải tiến", 
                 onTap: () => onNavigate(const FeedbackScreen()),
               ),
               const SizedBox(height: 20),
@@ -161,12 +145,16 @@ class SideMenu extends StatelessWidget {
             child: Icon(icon, color: const Color(0xFF1F2937), size: 22),
           ),
           const SizedBox(width: 16),
-          Text(
-            label,
-            style: GoogleFonts.quicksand(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF374151),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.quicksand(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF374151),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
