@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 
 class UserAvatar extends StatelessWidget {
   final String avatarUrl;
@@ -35,13 +36,18 @@ class UserAvatar extends StatelessWidget {
       return _buildLetterAvatar();
     }
 
-    return CachedNetworkImage(
+    return PremiumImage(
       imageUrl: StringUtils.normalizeUrl(avatarUrl),
       fit: BoxFit.cover,
-      placeholder: (context, url) => Center(
+      width: size,
+      height: size,
+      // OPTIMIZATION: Avatars are small, don't need high res in memory
+      memCacheWidth: 200,
+      memCacheHeight: 200,
+      placeholder: Center(
         child: ModernLoader(size: size * 0.4),
       ),
-      errorWidget: (context, url, error) => _buildLetterAvatar(),
+      errorWidget: _buildLetterAvatar(),
     );
   }
 

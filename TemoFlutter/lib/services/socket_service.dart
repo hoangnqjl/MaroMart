@@ -30,10 +30,12 @@ class SocketService {
       return;
     }
 
+    // Use base domain and explicit path to avoid library stripping the /temo prefix
     _socket = IO.io(
-      ApiConstants.baseUrl,
+      'https://andrew.zapto.org',
       IO.OptionBuilder()
           .setTransports(['websocket'])
+          .setPath('/temo/socket.io/')
           .disableAutoConnect()
           .setExtraHeaders({'authorization': 'Bearer $token'})
           .build(),

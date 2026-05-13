@@ -23,6 +23,7 @@ import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/services/order_service.dart';
 import 'package:temo/services/chat_service.dart';
 import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:temo/components/VideoPlayerWidget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:temo/models/Product/Product.dart';
@@ -1133,13 +1134,12 @@ class _ChatScreenState extends State<ChatScreen> {
                               borderRadius: BorderRadius.circular(16),
                               child: Hero(
                                 tag: m.url,
-                                child: CachedNetworkImage(
+                                child: PremiumImage(
                                   imageUrl: StringUtils.normalizeUrl(m.url),
                                   width: mWidth,
                                   height: mHeight,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(color: Colors.grey[100], child: const Center(child: ModernLoader(size: 20))),
-                                  errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
+                                  borderRadius: 16,
                                 ),
                               ),
                             ),

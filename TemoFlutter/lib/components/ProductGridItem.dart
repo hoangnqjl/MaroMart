@@ -14,6 +14,7 @@ import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/services/api_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:temo/services/product_service.dart';
+import 'package:temo/components/PremiumImage.dart';
 
 class ProductGridItem extends StatefulWidget {
   final Product product;
@@ -153,18 +154,14 @@ class _ProductGridItemState extends State<ProductGridItem> {
                   borderRadius: BorderRadius.circular(20),
                   child: Stack(
                     children: [
-                      CachedNetworkImage(
+                      PremiumImage(
                         imageUrl: StringUtils.normalizeUrl(imageUrl),
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
-                        maxWidthDiskCache: 1080,
-                        maxHeightDiskCache: 1080,
-                        placeholder: (context, url) => Container(color: const Color(0xFFF3F4F6)),
-                        errorWidget: (_, __, ___) => Container(
-                          color: const Color(0xFFF3F4F6),
-                          child: const Icon(Icons.image, color: Colors.grey),
-                        ),
+                        borderRadius: 20,
+                        memCacheWidth: 600,
+                        memCacheHeight: 600,
                       ),
                       
                       // HOT BADGE (Top Left)
@@ -226,19 +223,14 @@ class _ProductGridItemState extends State<ProductGridItem> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  ClipOval(
-                                    child: CachedNetworkImage(
-                                      imageUrl: StringUtils.normalizeUrl(product.userInfo?.avatarUrl ?? ''),
-                                      width: 20,
-                                      height: 20,
-                                      fit: BoxFit.cover,
-                                      maxWidthDiskCache: 1080,
-                                      maxHeightDiskCache: 1080,
-                                      errorWidget: (_, __, ___) => Container(
-                                        color: const Color(0xFFFFB86A),
-                                        child: const Icon(Icons.person, size: 12, color: Colors.white),
-                                      ),
-                                    ),
+                                  PremiumImage(
+                                    imageUrl: StringUtils.normalizeUrl(product.userInfo?.avatarUrl ?? ''),
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                    borderRadius: 25,
+                                    memCacheWidth: 100,
+                                    memCacheHeight: 100,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(

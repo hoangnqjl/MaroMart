@@ -26,6 +26,7 @@ import 'package:temo/components/Skeletons/RecommendedProductSkeleton.dart';
 import 'package:temo/app_router.dart';
 import 'package:flutter/services.dart';
 import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:temo/components/Skeleton.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:temo/services/notification_service.dart';
@@ -274,21 +275,12 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 : iconUrl != null
-                ? CachedNetworkImage(
+                ? PremiumImage(
                     imageUrl: StringUtils.normalizeUrl(iconUrl),
                     width: 54,
                     height: 54,
                     fit: BoxFit.contain,
-                    placeholder: (_, __) => const CircleSkeleton(size: 54),
-                    errorWidget: (_, __, ___) => Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.category, color: Colors.orange),
-                    ),
+                    borderRadius: 27,
                   )
                 : Container(
                     width: 54,
@@ -975,26 +967,10 @@ class HomeScreenState extends State<HomeScreen> {
                                         child: Stack(
                                           fit: StackFit.expand,
                                           children: [
-                                            CachedNetworkImage(
-                                              imageUrl:
-                                                  StringUtils.normalizeUrl(
-                                                    imageUrl,
-                                                  ),
+                                            PremiumImage(
+                                              imageUrl: StringUtils.normalizeUrl(imageUrl),
                                               fit: BoxFit.cover,
-                                              maxWidthDiskCache: 1080,
-                                              maxHeightDiskCache: 1080,
-                                              placeholder: (context, url) =>
-                                                  Container(
-                                                    color: AppColors.background,
-                                                  ),
-                                              errorWidget:
-                                                  (context, url, error) =>
-                                                      Container(
-                                                        color: Colors.grey[200],
-                                                        child: const Icon(
-                                                          Icons.image,
-                                                        ),
-                                                      ),
+                                              borderRadius: 30,
                                             ),
                                             // (Growth icon moved to section title)
                                             // Complex Gradient Overlay for top/bottom readability

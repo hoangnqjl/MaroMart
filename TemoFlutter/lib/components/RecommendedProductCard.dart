@@ -5,6 +5,7 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:temo/models/Product/Product.dart';
 import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:temo/services/review_service.dart';
 import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/models/User/ChatPartner.dart';
@@ -119,16 +120,10 @@ class _RecommendedProductCardState extends State<RecommendedProductCard> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CachedNetworkImage(
+              PremiumImage(
                 imageUrl: StringUtils.normalizeUrl(imageUrl),
                 fit: BoxFit.cover,
-                maxWidthDiskCache: 1080,
-                maxHeightDiskCache: 1080,
-                placeholder: (context, url) => Container(color: AppColors.background),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.image),
-                ),
+                borderRadius: 30,
               ),
               Container(
                 decoration: BoxDecoration(

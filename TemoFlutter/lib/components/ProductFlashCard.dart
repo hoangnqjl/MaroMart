@@ -8,6 +8,7 @@ import 'package:temo/services/product_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:temo/utils/string_utils.dart';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/components/PremiumImage.dart';
 
 class ProductFlashCard extends StatefulWidget {
   final Product product;
@@ -74,11 +75,9 @@ class _ProductFlashCardState extends State<ProductFlashCard> {
             children: [
               // 1. Background Image
               product.productMedia.isNotEmpty
-                  ? CachedNetworkImage(
+                  ? PremiumImage(
                       imageUrl: StringUtils.normalizeUrl(product.productMedia.first),
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(color: Colors.grey[200]),
-                      errorWidget: (context, url, error) => const Icon(Icons.error),
                     )
                   : Container(color: Colors.grey[300]),
 

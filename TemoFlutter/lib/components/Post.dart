@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,7 @@ import 'package:temo/services/product_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:temo/services/review_service.dart';
+import 'package:temo/components/PremiumImage.dart';
 
 class Post extends StatefulWidget {
   final Product product;
@@ -499,12 +501,9 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
         children: [
           // Blurred background image
            if (bgUrl.isNotEmpty)
-             CachedNetworkImage(
+             PremiumImage(
                 imageUrl: bgUrl,
                 fit: BoxFit.cover,
-                maxWidthDiskCache: 1920,
-                maxHeightDiskCache: 1080,
-                errorWidget: (context, url, err) => Container(color: Colors.grey[800]),
              ),
            // Glassmorphism overlay
            BackdropFilter(
@@ -528,7 +527,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
                          radius: 20,
                          backgroundColor: Colors.white24,
                          backgroundImage: (seller?.avatarUrl != null && seller!.avatarUrl.isNotEmpty)
-                             ? CachedNetworkImageProvider(StringUtils.normalizeUrl(seller.avatarUrl))
+                             ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(seller.avatarUrl)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(seller.avatarUrl)) as ImageProvider)
                              : null,
                          child: (seller?.avatarUrl == null || seller!.avatarUrl.isEmpty) 
                             ? const Icon(Icons.person, color: Colors.white) : null,
@@ -589,7 +588,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildMediaContent(MediaItem item) {
-    if (item.type == MediaType.image) return CachedNetworkImage(imageUrl: item.url, fit: BoxFit.cover, width: double.infinity, maxWidthDiskCache: 1920, maxHeightDiskCache: 1080, placeholder: (context, url) => Container(color: Colors.grey[200]));
+    if (item.type == MediaType.image) return PremiumImage(imageUrl: item.url, fit: BoxFit.cover, width: double.infinity);
     return VideoPlayerWidget(videoUrl: item.url);
   }
 
@@ -607,7 +606,9 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               child: CircleAvatar(
                 radius: 22,
                 backgroundColor: Colors.white24,
-                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? CachedNetworkImageProvider(StringUtils.normalizeUrl(avatarUrl)) : null,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
+                    ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(avatarUrl)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(avatarUrl)) as ImageProvider)
+                    : null,
                 child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(icon, color: Colors.white, size: 24) : null,
               ),
             )

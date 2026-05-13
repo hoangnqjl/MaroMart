@@ -1,24 +1,27 @@
-import 'package:temo/utils/ui_helpers.dart';
-import 'package:temo/utils/string_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:temo/Colors/AppColors.dart';
 import 'package:temo/components/ModernLoader.dart';
 import 'package:temo/components/ProductGridItem.dart';
+import 'package:temo/components/PremiumImage.dart';
+import 'package:temo/components/FloatingHeader.dart';
 import 'package:temo/models/Product/Product.dart';
 import 'package:temo/models/User/User.dart';
 import 'package:temo/services/product_service.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:temo/services/order_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart';
+import 'package:temo/services/review_service.dart';
+import 'package:temo/utils/ui_helpers.dart';
+import 'package:temo/utils/string_utils.dart';
 import 'package:temo/utils/constants.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:heroicons_flutter/heroicons_flutter.dart';
-import 'package:temo/Colors/AppColors.dart';
-
-import '../../services/review_service.dart';
+import 'package:temo/utils/UIHelper.dart';
 import 'package:temo/screens/Common/BugReportScreen.dart';
-import 'package:temo/components/FloatingHeader.dart';
+import 'package:temo/screens/Order/RatingScreen.dart';
 import 'package:temo/utils/UIHelper.dart';
 import 'package:temo/screens/Order/RatingScreen.dart';
 
@@ -230,7 +233,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                               bottomLeft: Radius.circular(60),
                               bottomRight: Radius.circular(60),
                             ),
-                            child: CachedNetworkImage(
+                            child: PremiumImage(
                               imageUrl: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=100&w=2000&auto=format&fit=crop",
                               fit: BoxFit.cover,
                             ),
@@ -254,7 +257,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                                   ],
                                   image: DecorationImage(
                                     image: (_user?.avatarUrl != null && _user!.avatarUrl!.isNotEmpty)
-                                        ? CachedNetworkImageProvider(StringUtils.normalizeUrl(_user!.avatarUrl!))
+                                        ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(_user!.avatarUrl!)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(_user!.avatarUrl!)) as ImageProvider)
                                         : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
                                     fit: BoxFit.cover,
                                   ),
@@ -631,7 +634,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             children: [
               CircleAvatar(
                 radius: 24, backgroundColor: Colors.grey[100],
-                backgroundImage: (reviewerAvatar != null) ? CachedNetworkImageProvider(StringUtils.normalizeUrl(reviewerAvatar)) : null,
+                backgroundImage: (reviewerAvatar != null) ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(reviewerAvatar)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(reviewerAvatar)) as ImageProvider) : null,
                 child: (reviewerAvatar == null) ? const Icon(Icons.person, size: 24, color: Colors.grey) : null,
               ),
               const SizedBox(width: 14),
@@ -670,7 +673,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: productImage != null 
-                      ? CachedNetworkImage(imageUrl: StringUtils.normalizeUrl(productImage), width: 45, height: 45, fit: BoxFit.cover)
+                      ? PremiumImage(imageUrl: StringUtils.normalizeUrl(productImage), width: 45, height: 45, fit: BoxFit.cover)
                       : Container(width: 45, height: 45, color: Colors.grey[200], child: const Icon(Icons.image, size: 20, color: Colors.grey)),
                   ),
                   const SizedBox(width: 12),

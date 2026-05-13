@@ -21,8 +21,8 @@ import 'package:temo/components/Skeletons/ProductDetailSkeleton.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:temo/services/order_service.dart';
@@ -558,11 +558,11 @@ class ProductDetailState extends State<ProductDetail> {
               ),
               child: ClipOval(
                 child: avatarUrl.isNotEmpty
-                    ? CachedNetworkImage(
+                    ? PremiumImage(
                         imageUrl: StringUtils.normalizeUrl(avatarUrl),
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => const Icon(Icons.person, color: Colors.white, size: 24),
-                        errorWidget: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 24),
+                        borderRadius: 20,
+                        errorWidget: const Icon(Icons.person, color: Colors.white, size: 24),
                       )
                     : const Icon(Icons.person, color: Colors.white, size: 24),
               ),
@@ -1071,11 +1071,11 @@ class ProductDetailState extends State<ProductDetail> {
                               ),
                               child: ClipOval(
                                 child: avatarUrl != null && avatarUrl.isNotEmpty
-                                    ? CachedNetworkImage(
+                                    ? PremiumImage(
                                         imageUrl: StringUtils.normalizeUrl(avatarUrl),
                                         fit: BoxFit.cover,
-                                        placeholder: (context, url) => Container(color: Colors.grey[300]),
-                                        errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
+                                        borderRadius: 25,
+                                        errorWidget: Image.asset('assets/images/logo.png'),
                                       )
                                     : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
                               ),
@@ -1242,10 +1242,11 @@ class ProductDetailState extends State<ProductDetail> {
                                     ),
                                     child: ClipOval(
                                       child: avatarUrl != null && avatarUrl.isNotEmpty
-                                          ? CachedNetworkImage(
+                                          ? PremiumImage(
                                               imageUrl: StringUtils.normalizeUrl(avatarUrl),
                                               fit: BoxFit.cover,
-                                              errorWidget: (context, url, e) => Image.asset('assets/images/logo.png'),
+                                              borderRadius: 25,
+                                              errorWidget: Image.asset('assets/images/logo.png'),
                                             )
                                           : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
                                     ),
@@ -1421,13 +1422,11 @@ class ProductDetailState extends State<ProductDetail> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CachedNetworkImage(
+              PremiumImage(
                 imageUrl: StringUtils.normalizeUrl(imageUrl),
                 fit: BoxFit.cover,
-                maxWidthDiskCache: 1080,
-                maxHeightDiskCache: 1080,
-                placeholder: (context, url) => Container(color: Colors.grey[100]),
-                errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image)),
+                width: double.infinity,
+                height: double.infinity,
               ),
               Container(color: Colors.black.withOpacity(0.3)),
               Padding(
@@ -2137,18 +2136,11 @@ class ProductDetailState extends State<ProductDetail> {
 
   Widget _buildMediaItem(MediaItem item) {
     if (item.type == MediaType.image) {
-      return CachedNetworkImage(
+      return PremiumImage(
         imageUrl: StringUtils.normalizeUrl(item.url),
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        maxWidthDiskCache: 1920,
-        maxHeightDiskCache: 1080,
-        placeholder: (context, url) => const Center(child: ModernLoader(size: 30)),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.grey[300],
-          child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 60)),
-        ),
       );
     } else {
       return VideoPlayerWidget(
@@ -2186,11 +2178,9 @@ class ProductDetailState extends State<ProductDetail> {
                           minScale: 1.0,
                           maxScale: 5.0,
                           child: Center(
-                            child: CachedNetworkImage(
+                            child: PremiumImage(
                               imageUrl: StringUtils.normalizeUrl(item.url),
                               fit: BoxFit.contain,
-                              placeholder: (context, url) => const ModernLoader(size: 30),
-                              errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
                             ),
                           ),
                         );

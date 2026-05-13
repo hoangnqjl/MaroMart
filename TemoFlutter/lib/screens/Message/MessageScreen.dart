@@ -13,7 +13,7 @@ import 'package:temo/services/user_service.dart';
 import 'package:temo/services/socket_service.dart';
 import 'package:temo/utils/storage.dart';
 import 'package:temo/utils/constants.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/components/Skeletons/ListTileSkeleton.dart';
 import 'package:temo/components/Skeleton.dart';
@@ -443,10 +443,10 @@ class _MessageScreenState extends State<MessageScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: avatarUrl != null && avatarUrl.isNotEmpty
-            ? CachedNetworkImage(
+            ? PremiumImage(
                 imageUrl: StringUtils.normalizeUrl(avatarUrl),
                 fit: BoxFit.cover,
-                errorWidget: (context, url, error) => _buildLetterAvatar(fullName, size: 40),
+                errorWidget: _buildLetterAvatar(fullName, size: 40),
               )
             : _buildLetterAvatar(fullName, size: 40),
       ),
@@ -673,11 +673,10 @@ class _MessageScreenState extends State<MessageScreen> {
         child: fullUrl.isNotEmpty
             ? fullUrl.startsWith('assets/')
                 ? Image.asset(fullUrl, fit: BoxFit.cover)
-                : CachedNetworkImage(
+                : PremiumImage(
                     imageUrl: fullUrl,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => const CircleSkeleton(size: 52),
-                    errorWidget: (context, url, error) => _buildLetterAvatar(name),
+                    errorWidget: _buildLetterAvatar(name),
                   )
             : _buildLetterAvatar(name),
       ),
