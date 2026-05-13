@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/Colors/AppColors.dart';
@@ -404,7 +405,10 @@ class HomeScreenState extends State<HomeScreen> {
               top: -150,
               right: -100,
               child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                imageFilter: ImageFilter.blur(
+                  sigmaX: kIsWeb ? 40 : 80,
+                  sigmaY: kIsWeb ? 40 : 80,
+                ),
                 child: Container(
                   width: 450,
                   height: 450,
@@ -424,7 +428,10 @@ class HomeScreenState extends State<HomeScreen> {
               top: 150,
               left: -150,
               child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                imageFilter: ImageFilter.blur(
+                  sigmaX: kIsWeb ? 50 : 100,
+                  sigmaY: kIsWeb ? 50 : 100,
+                ),
                 child: Container(
                   width: 550,
                   height: 550,
@@ -444,7 +451,10 @@ class HomeScreenState extends State<HomeScreen> {
               bottom: 50,
               right: -150,
               child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                imageFilter: ImageFilter.blur(
+                  sigmaX: kIsWeb ? 40 : 80,
+                  sigmaY: kIsWeb ? 40 : 80,
+                ),
                 child: Container(
                   width: 450,
                   height: 450,

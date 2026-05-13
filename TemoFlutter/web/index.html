@@ -34,6 +34,17 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    window._flutter = {
+      config: {
+        renderer: (function() {
+          // Force HTML renderer for Safari to avoid CanvasKit/WebGL issues
+          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+          return isSafari ? "html" : "auto";
+        })(),
+      },
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -15,3 +15,5 @@
 **/*.aab
 **/*.so
 **/*.bin
+.vercel
+.env*.local
