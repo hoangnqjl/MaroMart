@@ -8,6 +8,9 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'RatingScreen.dart';
+import 'package:temo/screens/Message/ChatScreen.dart';
+import 'package:temo/models/User/ChatPartner.dart';
+import 'package:temo/models/Product/Product.dart';
 
 class OrderListScreen extends StatefulWidget {
   final int initialTab;
@@ -204,16 +207,42 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                               ],
                             ),
                           ),
-                        if (!isBuy)
-                          Text(
-                            "Được yêu cầu bởi: ${order['buyer']?['fullName'] ?? 'Người dùng'}",
-                            style: GoogleFonts.quicksand(fontSize: 12, color: Colors.grey[600]),
-                          )
-                        else
-                          Text(
-                            "Người bán: ${order['seller']?['fullName'] ?? 'MaroMart'}",
-                            style: GoogleFonts.quicksand(fontSize: 12, color: Colors.grey[600]),
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              isBuy 
+                                ? "Người bán: ${order['seller']?['fullName'] ?? 'MaroMart'}"
+                                : "Được yêu cầu bởi: ${order['buyer']?['fullName'] ?? 'Người dùng'}",
+                              style: GoogleFonts.quicksand(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                final partnerJson = isBuy ? order['seller'] : order['buyer'];
+                                if (partnerJson != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatScreen(
+                                        conversationId: "", // Sẽ tự tạo nếu chưa có
+                                        partnerUser: ChatPartner.fromProductUserInfo(partnerJson),
+                                        product: order['product'] != null ? Product.fromJson(order['product']) : null,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(HeroiconsSolid.chatBubbleLeftRight, size: 14, color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -232,9 +261,9 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: Text("Từ chối", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: Text("Từ chối", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -246,9 +275,9 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: Text("Chấp nhận", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: Text("Chấp nhận", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
                       ),
                     ),
                   ],
@@ -273,9 +302,9 @@ class _OrderListScreenState extends State<OrderListScreen> with SingleTickerProv
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 16)),
+                    child: Text("Đánh giá người bán", style: GoogleFonts.quicksand(fontWeight: FontWeight.bold, fontSize: 14)),
                   ),
                 ),
             ],

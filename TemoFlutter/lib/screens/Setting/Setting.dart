@@ -72,8 +72,9 @@ class _Setting extends State<Setting> {
   }
 
   Future<void> _handleAvatarChange() async {
-    UIHelper.showImageSourceSheet(context, onPicked: (image) async {
-      if (image == null) return;
+    UIHelper.showImageSourceSheet(context, onPicked: (images) async {
+      if (images == null || images.isEmpty) return;
+      final image = images.first;
 
       setState(() {
         _isUploading = true;

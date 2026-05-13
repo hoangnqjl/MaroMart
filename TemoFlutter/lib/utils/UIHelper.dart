@@ -8,6 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:temo/utils/ui_helpers.dart';
 
 class UIHelper {
+  static final ImagePicker _picker = ImagePicker();
+
   static void showOptionsMenu(BuildContext context, {String? screenName}) {
     showModalBottomSheet(
       context: context,
@@ -71,12 +73,13 @@ class UIHelper {
     );
   }
 
+  /// Centralized media picker sheet.
+  /// [onPicked] returns a list of files. For single picks, it contains 1 item.
   static void showImageSourceSheet(BuildContext context, {
-    required Function(XFile?) onPicked, 
-    bool isVideo = false
+    required Function(List<XFile>?) onPicked, 
+    bool isVideo = false,
+    bool allowMultiple = false,
   }) {
-    final ImagePicker picker = ImagePicker();
-    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -114,7 +117,7 @@ class UIHelper {
                     ),
                   ),
                   Text(
-                    isVideo ? "Thêm Video" : "Thêm Ảnh",
+                    isVideo ? "Thêm Video" : (allowMultiple ? "Thêm Ảnh (Nhiều)" : "Thêm Ảnh"),
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 24),
@@ -129,28 +132,23 @@ class UIHelper {
                       final status = await Permission.camera.request();
                       if (status.isGranted) {
                         try {
-                          final XFile? media = isVideo 
-                            ? await picker.pickVideo(source: ImageSource.camera)
-                            : await picker.pickImage(source: ImageSource.camera, maxWidth: 800, maxHeight: 800, imageQuality: 50);
-                          onPicked(media);
+                          if (isVideo) {
+                            final XFile? media = await _picker.pickVideo(source: ImageSource.camera);
+                            onPicked(media != null ? [media] : null);
+                          } else {
+                            final XFile? media = await _picker.pickImage(
+                              source: ImageSource.camera, 
+                              maxWidth: 1200, // Increased for better AI analysis
+                              maxHeight: 1200, 
+                              imageQuality: 85
+                            );
+                            onPicked(media != null ? [media] : null);
+                          }
                         } catch (e) {
-                          UIHelpers.showErrorDialog(context, title: "Lỗi Camera", message: e.toString());
+                          _handlePickerError(context, e);
                         }
                       } else {
-                        UIHelpers.showModernDialog(
-                          context,
-                          icon: HeroiconsOutline.lockClosed,
-                          iconColor: AppColors.primary,
-                          bgColor: AppColors.primary.withOpacity(0.1),
-                          title: "Yêu cầu quyền truy cập",
-                          description: "Vui lòng cấp quyền truy cập máy ảnh trong Cài đặt để sử dụng tính năng này.",
-                          primaryButtonText: "Mở Cài đặt",
-                          onPrimaryPressed: () {
-                            Navigator.pop(context);
-                            openAppSettings();
-                          },
-                          secondaryButtonText: "Hủy",
-                        );
+                        _showPermissionDialog(context);
                       }
                     },
                   ),
@@ -164,12 +162,29 @@ class UIHelper {
                     onTap: () async {
                       Navigator.pop(ctx);
                       try {
-                        final XFile? media = isVideo 
-                          ? await picker.pickVideo(source: ImageSource.gallery)
-                          : await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 50);
-                        onPicked(media);
+                        if (isVideo) {
+                          final XFile? media = await _picker.pickVideo(source: ImageSource.gallery);
+                          onPicked(media != null ? [media] : null);
+                        } else {
+                          if (allowMultiple) {
+                            final List<XFile> media = await _picker.pickMultiImage(
+                              maxWidth: 1200, 
+                              maxHeight: 1200, 
+                              imageQuality: 85
+                            );
+                            onPicked(media.isNotEmpty ? media : null);
+                          } else {
+                            final XFile? media = await _picker.pickImage(
+                              source: ImageSource.gallery, 
+                              maxWidth: 1200, 
+                              maxHeight: 1200, 
+                              imageQuality: 85
+                            );
+                            onPicked(media != null ? [media] : null);
+                          }
+                        }
                       } catch (e) {
-                        UIHelpers.showErrorDialog(context, title: "Lỗi thư viện", message: e.toString());
+                        _handlePickerError(context, e);
                       }
                     },
                   ),
@@ -179,6 +194,31 @@ class UIHelper {
           ),
         );
       },
+    );
+  }
+
+  static void _handlePickerError(BuildContext context, dynamic e) {
+    String message = e.toString();
+    if (message.contains("channel-error") || message.contains("Unable to establish connection")) {
+      message = "Lỗi kết nối thư viện ảnh trên thiết bị này. Vui lòng thử khởi động lại ứng dụng hoặc cấp lại quyền.";
+    }
+    UIHelpers.showErrorDialog(context, title: "Lỗi thư viện", message: message);
+  }
+
+  static void _showPermissionDialog(BuildContext context) {
+    UIHelpers.showModernDialog(
+      context,
+      icon: HeroiconsOutline.lockClosed,
+      iconColor: AppColors.primary,
+      bgColor: AppColors.primary.withOpacity(0.1),
+      title: "Yêu cầu quyền truy cập",
+      description: "Vui lòng cấp quyền truy cập trong Cài đặt để sử dụng tính năng này.",
+      primaryButtonText: "Mở Cài đặt",
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        openAppSettings();
+      },
+      secondaryButtonText: "Hủy",
     );
   }
 
@@ -217,7 +257,7 @@ class UIHelper {
               ),
             ),
             const Spacer(),
-            Icon(HeroiconsOutline.chevronRight, color: Colors.black, size: 16),
+            const Icon(HeroiconsOutline.chevronRight, color: Colors.black, size: 16),
           ],
         ),
       ),

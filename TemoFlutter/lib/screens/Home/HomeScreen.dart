@@ -668,43 +668,8 @@ class HomeScreenState extends State<HomeScreen> {
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 padding: EdgeInsets.zero,
-                                itemCount:
-                                    _suggestions.length +
-                                    1, // +1 cho tùy chọn AI
+                                itemCount: _suggestions.length,
                                 itemBuilder: (context, index) {
-                                  if (index == _suggestions.length) {
-                                    // Dòng cuối cùng: Tìm kiếm bằng AI
-                                    return ListTile(
-                                      dense: true,
-                                      leading: const Icon(
-                                        Icons.auto_awesome,
-                                        size: 18,
-                                        color: Color(0xFFFFB86A),
-                                      ),
-                                      title: Text(
-                                        "Tìm '${_searchController.text}' bằng AI... ->",
-                                        style: const TextStyle(
-                                          fontFamily: 'Quicksand',
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w800,
-                                          color: Color(0xFFFFB86A),
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        final query = _searchController.text;
-                                        setState(() => _suggestions = []);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                SearchResultScreen(
-                                                  keyword: query,
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  }
                                   return ListTile(
                                     dense: true,
                                     leading: const Icon(
@@ -740,23 +705,37 @@ class HomeScreenState extends State<HomeScreen> {
                           ),
                         const SizedBox(height: 10),
 
-                        // Categories List
+                        // Categories List (2 rows horizontal)
                         Container(
-                          height: 110,
+                          height: 200,
                           child: _isCategoriesLoading
-                              ? ListView.builder(
+                              ? GridView.builder(
                                   scrollDirection: Axis.horizontal,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                   ),
-                                  itemCount: 5,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 0,
+                                    crossAxisSpacing: 0,
+                                    childAspectRatio: 1.15,
+                                  ),
+                                  itemCount: 10,
                                   itemBuilder: (context, index) =>
                                       const CategorySkeleton(),
                                 )
-                              : ListView.builder(
+                              : GridView.builder(
                                   scrollDirection: Axis.horizontal,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
+                                  ),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 0,
+                                    crossAxisSpacing: 0,
+                                    childAspectRatio: 1.15,
                                   ),
                                   itemCount: _categories.length + 1,
                                   itemBuilder: (context, index) {
@@ -778,11 +757,36 @@ class HomeScreenState extends State<HomeScreen> {
 
                   if (_recommendedProducts.isNotEmpty || _isRecommendedLoading)
                     SliverToBoxAdapter(
-                      child: Container(
-                        height: 380,
-                        margin: const EdgeInsets.only(bottom: 20, top: 10),
-                        child: _isRecommendedLoading
-                            ? ListView.separated(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(20, 15, 20, 0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  "Gợi ý cho bạn",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF333333),
+                                    fontFamily: 'Quicksand',
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(
+                                  HeroiconsSolid.arrowTrendingUp,
+                                  color: Color(0xFFFFB86B),
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            height: 380,
+                            margin: const EdgeInsets.only(bottom: 20, top: 10),
+                            child: _isRecommendedLoading
+                                ? ListView.separated(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                 ),
@@ -1181,7 +1185,11 @@ class HomeScreenState extends State<HomeScreen> {
                                                                           if (dist <
                                                                               10000)
                                                                             return "Gần bạn";
-                                                                          return "~${NumberFormat('#,###.#').format(dist / 1000)} km";
+                                                                           double km = dist / 1000;
+                                                                           if (km >= 1000) {
+                                                                             return "~${(km / 1000).toStringAsFixed(1)}k km";
+                                                                           }
+                                                                           return "~${NumberFormat('#,###.#').format(km)} km";
                                                                         }
                                                                         return StringUtils.simplifyAddress(
                                                                           product.productAddress?.province ??
@@ -1247,42 +1255,40 @@ class HomeScreenState extends State<HomeScreen> {
                                                             );
                                                           }
                                                         },
-                                                        child: ClipOval(
-                                                          child: BackdropFilter(
-                                                            filter:
-                                                                ImageFilter.blur(
-                                                                  sigmaX: 10,
-                                                                  sigmaY: 10,
-                                                                ),
-                                                            child: Container(
-                                                              width: 44,
-                                                              height: 44,
-                                                              decoration: BoxDecoration(
-                                                                color: Colors
-                                                                    .white
-                                                                    .withOpacity(
-                                                                      0.2,
-                                                                    ),
-                                                                shape: BoxShape
-                                                                    .circle,
-                                                                border: Border.all(
-                                                                  color: Colors
-                                                                      .white
-                                                                      .withOpacity(
-                                                                        0.2,
-                                                                      ),
-                                                                  width: 0.5,
-                                                                ),
+                                                        child: Container(
+                                                          decoration: BoxDecoration(
+                                                            shape: BoxShape.circle,
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Colors.black.withOpacity(0.15),
+                                                                blurRadius: 8,
+                                                                offset: const Offset(0, 4),
                                                               ),
-                                                              alignment:
-                                                                  Alignment
-                                                                      .center,
-                                                              child: const Icon(
-                                                                HeroiconsOutline
-                                                                    .chatBubbleOvalLeft,
-                                                                color: Colors
-                                                                    .white,
-                                                                size: 22,
+                                                            ],
+                                                          ),
+                                                          child: ClipOval(
+                                                            child: BackdropFilter(
+                                                              filter: ImageFilter.blur(
+                                                                sigmaX: 10,
+                                                                sigmaY: 10,
+                                                              ),
+                                                              child: Container(
+                                                                width: 44,
+                                                                height: 44,
+                                                                decoration: BoxDecoration(
+                                                                  color: Colors.white.withOpacity(0.2),
+                                                                  shape: BoxShape.circle,
+                                                                  border: Border.all(
+                                                                    color: Colors.white.withOpacity(0.2),
+                                                                    width: 0.5,
+                                                                  ),
+                                                                ),
+                                                                alignment: Alignment.center,
+                                                                child: const Icon(
+                                                                  HeroiconsSolid.chatBubbleOvalLeft,
+                                                                  color: Colors.white,
+                                                                  size: 22,
+                                                                ),
                                                               ),
                                                             ),
                                                           ),
@@ -1300,6 +1306,8 @@ class HomeScreenState extends State<HomeScreen> {
                                   );
                                 },
                               ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -1421,7 +1429,7 @@ class HomeScreenState extends State<HomeScreen> {
                               crossAxisCount: 2,
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 12,
-                              mainAxisExtent: 305,
+                              mainAxisExtent: 315,
                             ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => const ProductCardSkeleton(),

@@ -462,8 +462,9 @@ class _AddProductState extends State<AddProduct> {
     UIHelper.showImageSourceSheet(
       context,
       isVideo: false,
-      onPicked: (image) {
-        if (image != null) setState(() => _selectedImages.add(image));
+      allowMultiple: true,
+      onPicked: (images) {
+        if (images != null) setState(() => _selectedImages.addAll(images));
       },
     );
   }
@@ -472,8 +473,10 @@ class _AddProductState extends State<AddProduct> {
     UIHelper.showImageSourceSheet(
       context,
       isVideo: true,
-      onPicked: (video) {
-        if (video != null) setState(() => _selectedVideos.add(video));
+      onPicked: (videos) {
+        if (videos != null && videos.isNotEmpty) {
+          setState(() => _selectedVideos.add(videos.first));
+        }
       },
     );
   }
@@ -3130,14 +3133,14 @@ class _AddProductState extends State<AddProduct> {
           Column(
             children: [
               const SizedBox(
-                height: 110,
-              ), // Tăng lại từ 90 lên 110 để thoáng hơn
+                height: 95,
+              ), // Giảm từ 110 xuống 95 để gọn hơn
               // CUSTOM STEPPER
               Container(
                 padding: const EdgeInsets.symmetric(
-                  vertical: 18,
+                  vertical: 10,
                   horizontal: 16,
-                ), // Tăng từ 10 lên 18
+                ), // Giảm từ 18 xuống 10
                 color: Colors.white,
                 child: Row(
                   children: [
@@ -3153,8 +3156,8 @@ class _AddProductState extends State<AddProduct> {
               ),
               Divider(height: 1, color: Colors.grey.shade100),
               const SizedBox(
-                height: 8,
-              ), // Thêm khoảng nghỉ trước khi vào nội dung chính
+                height: 4,
+              ), // Giảm từ 8 xuống 4
 
               Expanded(
                 child: PageView(
