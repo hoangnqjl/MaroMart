@@ -11,25 +11,28 @@ class ModernLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool effectiveShowText = showText && size >= 35;
+
     return Material(
       color: Colors.transparent,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             LoadingAnimationWidget.fourRotatingDots(
               color: color ?? AppColors.primary,
               size: size,
             ),
-            if (showText) ...[
-              const SizedBox(height: 16),
+            if (effectiveShowText) ...[
+              const SizedBox(height: 12),
               Flexible(
                 child: Text(
-                  "Vui lòng chờ chút nhé...",
+                  "Vui lòng chờ...",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'QuickSand',
-                    fontSize: 13,
+                    fontSize: size * 0.3,
                     fontWeight: FontWeight.w700,
                     color: color ?? const Color(0xFF3F3F46),
                   ),
