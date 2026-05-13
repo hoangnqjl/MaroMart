@@ -19,6 +19,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:temo/components/ModernLoader.dart'; // Import
 import 'package:temo/components/UserAvatar.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/components/CommonAppBar.dart';
 
@@ -842,7 +843,15 @@ class ProductManagerState extends State<ProductManager> with SingleTickerProvide
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, width: 85, height: 85, fit: BoxFit.cover)
+                  ? PremiumImage(
+                      imageUrl: imageUrl,
+                      width: 85,
+                      height: 85,
+                      fit: BoxFit.cover,
+                      borderRadius: 16,
+                      memCacheWidth: 250,
+                      memCacheHeight: 250,
+                    )
                   : Container(width: 85, height: 85, color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey)),
             ),
             const SizedBox(width: 14),
