@@ -40,12 +40,18 @@ class PremiumImage extends StatelessWidget {
     if (kIsWeb) {
       // Use the image proxy for web to reduce bandwidth and lag
       final String optimizedUrl = 'https://wsrv.nl/?url=${Uri.encodeComponent(imageUrl)}&w=720&q=80&output=webp';
-      final String viewID = 'img-${optimizedUrl.hashCode.abs()}-${DateTime.now().millisecondsSinceEpoch}';
       
-      // Register the view factory using the registry (which is a stub on mobile)
-      WebImageRegistry.registerView(viewID, imageUrl, fit);
-
-      image = WebImageRegistry.buildWebView(viewID, imageUrl, width, height);
+      image = Image.network(
+        optimizedUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => errorWidget ?? _buildError(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return placeholder ?? _buildPlaceholder();
+        },
+      );
     } else {
       // On Mobile, use CachedNetworkImage with cache constraints to "bóp" size to HD
       image = CachedNetworkImage(
