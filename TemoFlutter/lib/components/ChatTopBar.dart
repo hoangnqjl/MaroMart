@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/PremiumImage.dart';
+import 'package:temo/utils/string_utils.dart';
 
 class ChatTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String name;
@@ -118,39 +120,35 @@ class ChatTopBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _buildSafeAvatar(String url, String name) {
-    if (url.isEmpty) {
+    final normalizedUrl = StringUtils.normalizeUrl(url);
+    if (normalizedUrl.isEmpty || normalizedUrl.contains("default_avatar")) {
       return _buildLetterAvatar(name);
     }
-    return Image.network(
-      url,
+    return PremiumImage(
+      imageUrl: normalizedUrl,
+      width: 40,
+      height: 40,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return _buildLetterAvatar(name);
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return const Center(
-          child: ModernLoader(size: 15),
-        );
-      },
+      borderRadius: 20,
+      errorWidget: _buildLetterAvatar(name),
     );
   }
 
   Widget _buildLetterAvatar(String name) {
-    String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    final initials = StringUtils.getInitials(name);
 
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.blueAccent,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFB86A).withOpacity(0.1),
       ),
       alignment: Alignment.center,
       child: Text(
-        firstLetter,
+        initials,
         style: const TextStyle(
-          color: Colors.white,
-          fontSize: 18,
+          color: Color(0xFFFFB86A),
+          fontSize: 16,
           fontWeight: FontWeight.bold,
           fontFamily: 'QuickSand',
         ),

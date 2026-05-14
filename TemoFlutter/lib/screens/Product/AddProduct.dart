@@ -24,6 +24,8 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:temo/utils/ui_helpers.dart';
 import 'package:temo/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 import 'package:temo/Colors/AppColors.dart';
 
 // --- HELPER CLASS CHO ATTRIBUTE ---
@@ -2909,12 +2911,12 @@ class _AddProductState extends State<AddProduct> {
 
                     mediaWidget = Stack(
                       children: [
-                        Image.network(
-                          url,
+                        PremiumImage(
+                          imageUrl: StringUtils.normalizeUrl(url),
                           width: 160,
                           height: 220,
                           fit: BoxFit.cover,
-                          errorBuilder: (c, e, s) => Container(
+                          errorWidget: Container(
                             width: 160,
                             color: Colors.grey[200],
                             child: const Icon(Icons.broken_image, color: Colors.grey),
@@ -3572,7 +3574,9 @@ class _AddProductState extends State<AddProduct> {
                   color: Colors.grey[200],
                   image: isImage
                       ? DecorationImage(
-                          image: FileImage(File(file.path)),
+                          image: kIsWeb 
+                              ? NetworkImage(file.path) 
+                              : FileImage(File(file.path)) as ImageProvider,
                           fit: BoxFit.cover,
                         )
                       : null,

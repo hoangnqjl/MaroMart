@@ -376,7 +376,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildAction(HeroiconsSolid.user, "Hồ sơ", isAvatar: true, avatarUrl: seller?.avatarUrl, onTap: () {
+                            _buildAction(HeroiconsSolid.user, "Hồ sơ", isAvatar: true, avatarUrl: seller?.avatarUrl, userName: seller?.fullName, onTap: () {
                               smoothPush(context, UserProfileScreen(userId: widget.product.userId));
                             }),
                             const SizedBox(height: 16),
@@ -527,10 +527,10 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
                          radius: 20,
                          backgroundColor: Colors.white24,
                          backgroundImage: (seller?.avatarUrl != null && seller!.avatarUrl.isNotEmpty)
-                             ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(seller.avatarUrl)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(seller.avatarUrl)) as ImageProvider)
+                             ? (kIsWeb ? NetworkImage(StringUtils.proxify(StringUtils.normalizeUrl(seller.avatarUrl), width: 100)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(seller.avatarUrl)) as ImageProvider)
                              : null,
                          child: (seller?.avatarUrl == null || seller!.avatarUrl.isEmpty) 
-                            ? const Icon(Icons.person, color: Colors.white) : null,
+                            ? Text(StringUtils.getInitials(seller?.fullName ?? "U"), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) : null,
                        ),
                        const SizedBox(width: 12),
                        Expanded(
@@ -592,7 +592,7 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
     return VideoPlayerWidget(videoUrl: item.url);
   }
 
-  Widget _buildAction(IconData icon, String label, {VoidCallback? onTap, bool isAvatar = false, String? avatarUrl}) {
+  Widget _buildAction(IconData icon, String label, {VoidCallback? onTap, bool isAvatar = false, String? avatarUrl, String? userName}) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -605,11 +605,13 @@ class _PostState extends State<Post> with SingleTickerProviderStateMixin {
               ),
               child: CircleAvatar(
                 radius: 22,
-                backgroundColor: Colors.white24,
+                backgroundColor: AppColors.primary.withOpacity(0.1),
                 backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) 
-                    ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(avatarUrl)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(avatarUrl)) as ImageProvider)
+                    ? (kIsWeb ? NetworkImage(StringUtils.proxify(StringUtils.normalizeUrl(avatarUrl), width: 100)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(avatarUrl)) as ImageProvider)
                     : null,
-                child: (avatarUrl == null || avatarUrl.isEmpty) ? Icon(icon, color: Colors.white, size: 24) : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty) 
+                    ? Text(StringUtils.getInitials(userName ?? "U"), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)) 
+                    : null,
               ),
             )
           else

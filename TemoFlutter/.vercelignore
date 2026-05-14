@@ -1,0 +1,13 @@
+# .vercelignore
+# Exclude heavy folders that are not needed for Web deployment
+android/
+ios/
+windows/
+linux/
+macos/
+.dart_tool/
+build/
+test/
+.idea/
+.git/
+*.iml

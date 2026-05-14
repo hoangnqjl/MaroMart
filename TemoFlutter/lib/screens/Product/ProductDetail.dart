@@ -549,24 +549,7 @@ class ProductDetailState extends State<ProductDetail> {
         child: Row(
           children: [
             // Avatar với Placeholder chuyên nghiệp hơn
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE5E7EB),
-                shape: BoxShape.circle,
-              ),
-              child: ClipOval(
-                child: avatarUrl.isNotEmpty
-                    ? PremiumImage(
-                        imageUrl: StringUtils.normalizeUrl(avatarUrl),
-                        fit: BoxFit.cover,
-                        borderRadius: 20,
-                        errorWidget: const Icon(Icons.person, color: Colors.white, size: 24),
-                      )
-                    : const Icon(Icons.person, color: Colors.white, size: 24),
-              ),
-            ),
+              _buildUserAvatar(avatarUrl, product.userInfo?.fullName ?? "Người bán", size: 40),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -2244,6 +2227,45 @@ class ProductDetailState extends State<ProductDetail> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildUserAvatar(String? url, String name, {double size = 32}) {
+    final String normalizedUrl = StringUtils.normalizeUrl(url);
+    if (normalizedUrl.isEmpty || normalizedUrl.contains("default_avatar")) {
+      return _buildInitialsAvatar(name, size: size);
+    }
+    return PremiumImage(
+      imageUrl: normalizedUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      borderRadius: size / 2,
+      errorWidget: _buildInitialsAvatar(name, size: size),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String name, {double size = 32}) {
+    final initials = StringUtils.getInitials(name);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: GoogleFonts.quicksand(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.45,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -28,7 +28,6 @@ class Setting extends StatefulWidget {
 
 class _Setting extends State<Setting> {
   final UserService _userService = UserService();
-  final ImagePicker _picker = ImagePicker();
   late ScrollController _scrollController;
 
   String _fullName = '';

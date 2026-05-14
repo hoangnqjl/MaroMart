@@ -223,15 +223,7 @@ class _ProductGridItemState extends State<ProductGridItem> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  PremiumImage(
-                                    imageUrl: StringUtils.normalizeUrl(product.userInfo?.avatarUrl ?? ''),
-                                    width: 20,
-                                    height: 20,
-                                    fit: BoxFit.cover,
-                                    borderRadius: 25,
-                                    memCacheWidth: 100,
-                                    memCacheHeight: 100,
-                                  ),
+                                  _buildUserAvatar(product.userInfo?.avatarUrl, product.userInfo?.fullName ?? "U"),
                                   const SizedBox(width: 6),
                                   Text(
                                     _rating != null ? _rating!.toStringAsFixed(1) : "...",
@@ -348,6 +340,37 @@ class _ProductGridItemState extends State<ProductGridItem> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar(String? url, String name) {
+    final String normalizedUrl = StringUtils.normalizeUrl(url);
+    if (normalizedUrl.isEmpty || normalizedUrl.contains("default_avatar")) {
+      return _buildInitialsAvatar(name);
+    }
+    return PremiumImage(
+      imageUrl: normalizedUrl,
+      width: 20,
+      height: 20,
+      fit: BoxFit.cover,
+      borderRadius: 25,
+      memCacheWidth: 100,
+      memCacheHeight: 100,
+      errorWidget: _buildInitialsAvatar(name),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String name) {
+    final initials = StringUtils.getInitials(name);
+    return Container(
+      width: 20,
+      height: 20,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+      child: Text(
+        initials,
+        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
       ),
     );
   }

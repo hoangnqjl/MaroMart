@@ -6,6 +6,8 @@ import 'package:temo/services/auth_service.dart';
 import 'package:temo/services/user_service.dart';
 import 'package:temo/services/location_service.dart';
 import 'package:temo/Colors/AppColors.dart';
+import 'package:temo/utils/string_utils.dart';
+import 'package:temo/components/PremiumImage.dart';
 
 class TopBar extends StatefulWidget implements PreferredSizeWidget {
   final User? user;
@@ -200,26 +202,34 @@ class _TopBarState extends State<TopBar> {
   }
 
   Widget _buildSafeAvatar(String url, String name) {
-    if (url.isEmpty) {
-      final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-      return Container(
-        alignment: Alignment.center,
-        color: AppColors.primary,
-        child: Text(
-          firstLetter,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
+    final normalizedUrl = StringUtils.normalizeUrl(url);
+    if (normalizedUrl.isEmpty || normalizedUrl.contains("default_avatar")) {
+      return _buildInitialsAvatar(name);
     }
-
-    return Image.network(
-      url,
+    return PremiumImage(
+      imageUrl: normalizedUrl,
+      width: 44,
+      height: 44,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) =>
-      const Icon(Icons.person, color: Colors.grey),
+      borderRadius: 22,
+      errorWidget: _buildInitialsAvatar(name),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String name) {
+    final initials = StringUtils.getInitials(name);
+    return Container(
+      alignment: Alignment.center,
+      color: AppColors.primary,
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          fontFamily: 'QuickSand',
+        ),
+      ),
     );
   }
 

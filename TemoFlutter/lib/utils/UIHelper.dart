@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
@@ -117,7 +118,7 @@ class UIHelper {
                     ),
                   ),
                   Text(
-                    isVideo ? "Thêm Video" : (allowMultiple ? "Thêm Ảnh (Nhiều)" : "Thêm Ảnh"),
+                    isVideo ? "Thêm Video" : "Thêm Ảnh",
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 24),
@@ -138,9 +139,9 @@ class UIHelper {
                           } else {
                             final XFile? media = await _picker.pickImage(
                               source: ImageSource.camera, 
-                              maxWidth: 1200, // Increased for better AI analysis
-                              maxHeight: 1200, 
-                              imageQuality: 85
+                              maxWidth: kIsWeb ? 1920 : 1200, 
+                              maxHeight: kIsWeb ? 1920 : 1200, 
+                              imageQuality: kIsWeb ? 100 : 85
                             );
                             onPicked(media != null ? [media] : null);
                           }
@@ -148,7 +149,7 @@ class UIHelper {
                           _handlePickerError(context, e);
                         }
                       } else {
-                        _showPermissionDialog(context);
+                        showPermissionDialog(context);
                       }
                     },
                   ),
@@ -176,9 +177,9 @@ class UIHelper {
                           } else {
                             final XFile? media = await _picker.pickImage(
                               source: ImageSource.gallery, 
-                              maxWidth: 1200, 
-                              maxHeight: 1200, 
-                              imageQuality: 85
+                              maxWidth: kIsWeb ? 1920 : 1200, 
+                              maxHeight: kIsWeb ? 1920 : 1200, 
+                              imageQuality: kIsWeb ? 100 : 85
                             );
                             onPicked(media != null ? [media] : null);
                           }
@@ -205,7 +206,7 @@ class UIHelper {
     UIHelpers.showErrorDialog(context, title: "Lỗi thư viện", message: message);
   }
 
-  static void _showPermissionDialog(BuildContext context) {
+  static void showPermissionDialog(BuildContext context) {
     UIHelpers.showModernDialog(
       context,
       icon: HeroiconsOutline.lockClosed,

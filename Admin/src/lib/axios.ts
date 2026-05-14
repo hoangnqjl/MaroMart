@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://192.168.16.7:5100';
+const API_BASE_URL = 'https://andrew.zapto.org/temo';
 
 // Create axios instance
 export const axiosInstance = axios.create({

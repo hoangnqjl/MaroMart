@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -51,7 +52,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatService _chatService = ChatService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ImagePicker _picker = ImagePicker();
 
   List<Message> _messages = [];
   List<XFile> _selectedImages = [];
@@ -131,11 +131,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: Center(
                             child: Hero(
                               tag: m.url,
-                              child: CachedNetworkImage(
+                              child: PremiumImage(
                                 imageUrl: StringUtils.normalizeUrl(m.url),
                                 fit: BoxFit.contain,
-                                placeholder: (_, __) => const ModernLoader(size: 30),
-                                errorWidget: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 50),
+                                placeholder: const ModernLoader(size: 30),
+                                errorWidget: const Icon(Icons.broken_image, color: Colors.white, size: 50),
                               ),
                             ),
                           ),
@@ -662,87 +662,23 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickImages() async {
-    _showImageSourceActionSheet(context, isVideo: false, onPicked: (media) {
-       if (media is List<XFile>) {
+    UIHelper.showImageSourceSheet(context, isVideo: false, allowMultiple: true, onPicked: (media) {
+       if (media != null) {
           setState(() => _selectedImages.addAll(media));
-       } else if (media is XFile) {
-          setState(() => _selectedImages.add(media));
        }
     });
   }
 
   Future<void> _pickVideo() async {
-    _showImageSourceActionSheet(context, isVideo: true, onPicked: (media) {
-       if (media is XFile) {
-          setState(() => _selectedVideos.add(media));
+    UIHelper.showImageSourceSheet(context, isVideo: true, onPicked: (media) {
+       if (media != null && media.isNotEmpty) {
+          setState(() => _selectedVideos.add(media.first));
        }
     });
   }
 
-  void _showImageSourceActionSheet(BuildContext context, {required bool isVideo, required Function(dynamic) onPicked}) {
-    _showStyledBottomSheet(
-      title: isVideo ? "Thêm Video" : "Thêm Hình ảnh",
-      content: Column(
-        children: [
-          _buildAttachmentOption(
-            icon: HeroiconsOutline.camera,
-            label: isVideo ? "Quay Video" : "Chụp ảnh",
-            iconColor: AppColors.primary,
-            onTap: () async {
-                Navigator.pop(context);
-                final status = await Permission.camera.request();
-                if (status.isGranted) {
-                  try {
-                    final XFile? media = isVideo 
-                      ? await _picker.pickVideo(source: ImageSource.camera)
-                      : await _picker.pickImage(source: ImageSource.camera, maxWidth: 1920, maxHeight: 1080);
-                    onPicked(media);
-                  } catch (e) {
-                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e"), backgroundColor: Colors.red));
-                  }
-                } else {
-                  _showPermissionDialog();
-                }
-            },
-          ),
-          const SizedBox(height: 12),
-          _buildAttachmentOption(
-            icon: HeroiconsOutline.photo,
-            label: isVideo ? "Chọn Video từ máy" : "Chọn Ảnh từ máy",
-            iconColor: Colors.blueAccent,
-            onTap: () async {
-                Navigator.pop(context);
-                try {
-                  if (isVideo) {
-                    final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
-                    onPicked(video);
-                    } else {
-                      final List<XFile> images = await _picker.pickMultiImage(maxWidth: 1920, maxHeight: 1080);
-                      onPicked(images);
-                    }
-                } catch (e) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gallery Error: $e"), backgroundColor: Colors.red));
-                }
-            },
-          ),
-          const SizedBox(height: 10),
-        ],
-      ),
-    );
-  }
-
   void _showPermissionDialog() {
-      showDialog(
-        context: context, 
-        builder: (ctx) => AlertDialog(
-          title: const Text("Permission Required"),
-          content: const Text("Please grant camera access in Settings to use this feature."),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-            TextButton(onPressed: () { Navigator.pop(ctx); openAppSettings(); }, child: const Text("Open Settings")),
-          ],
-        )
-      );
+    UIHelper.showPermissionDialog(context);
   }
 
   Future<void> _pickAudio() async {
@@ -951,25 +887,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: 32, height: 32,
-                          color: Colors.grey[100],
-                          child: Center(
-                            child: (widget.partnerUser.avatarUrl != null && widget.partnerUser.avatarUrl!.isNotEmpty)
-                                ? widget.partnerUser.avatarUrl!.startsWith('assets/')
-                                    ? Image.asset(widget.partnerUser.avatarUrl!, fit: BoxFit.cover, width: 32, height: 32)
-                                    : CachedNetworkImage(
-                                        imageUrl: StringUtils.normalizeUrl(widget.partnerUser.avatarUrl),
-                                        fit: BoxFit.cover,
-                                        width: 32, height: 32,
-                                        errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.grey, size: 16),
-                                      )
-                                : const Icon(Icons.person, color: Colors.grey, size: 16),
-                          ),
-                        ),
-                      ),
+                      _buildUserAvatar(widget.partnerUser.avatarUrl, widget.partnerUser.fullName, size: 32),
                       const SizedBox(width: 10),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1051,7 +969,12 @@ class _ChatScreenState extends State<ChatScreen> {
             borderRadius: BorderRadius.circular(8),
             color: Colors.black12,
             image: type == 'image'
-                ? DecorationImage(image: FileImage(File(file.path)), fit: BoxFit.cover)
+                ? DecorationImage(
+                    image: kIsWeb 
+                        ? NetworkImage(file.path) 
+                        : FileImage(File(file.path)) as ImageProvider, 
+                    fit: BoxFit.cover
+                  )
                 : null,
           ),
           child: type != 'image' ? Center(child: Icon(icon, color: color, size: 30)) : null,
@@ -1086,22 +1009,7 @@ class _ChatScreenState extends State<ChatScreen> {
               alignment: Alignment.bottomLeft,
               child: GestureDetector(
                 onTap: () => smoothPush(context, UserProfileScreen(userId: widget.partnerUser.userId)),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    width: 28, height: 28,
-                    color: Colors.grey[100],
-                    child: (widget.partnerUser.avatarUrl != null && widget.partnerUser.avatarUrl!.isNotEmpty)
-                        ? widget.partnerUser.avatarUrl!.startsWith('assets/')
-                            ? Image.asset(widget.partnerUser.avatarUrl!, fit: BoxFit.cover)
-                            : CachedNetworkImage(
-                                imageUrl: StringUtils.normalizeUrl(widget.partnerUser.avatarUrl),
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => const Icon(Icons.person, size: 16, color: Colors.grey),
-                              )
-                        : const Icon(Icons.person, size: 16, color: Colors.grey),
-                  ),
-                ),
+                child: _buildUserAvatar(widget.partnerUser.avatarUrl, widget.partnerUser.fullName, size: 28),
               ),
             ),
             const SizedBox(width: 8),
@@ -1294,10 +1202,10 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: CachedNetworkImage(
+            child: PremiumImage(
               imageUrl: StringUtils.normalizeUrl(data['image']),
               height: 120, width: double.infinity, fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => Container(color: Colors.grey[100], child: const Icon(Icons.image, color: Colors.grey)),
+              errorWidget: Container(color: Colors.grey[100], child: const Icon(Icons.image, color: Colors.grey)),
             ),
           ),
           const SizedBox(height: 10),
@@ -1536,7 +1444,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
+                  child: PremiumImage(
                     imageUrl: StringUtils.normalizeUrl(firstImage),
                     width: 48, height: 48, fit: BoxFit.cover,
                   ),
@@ -1753,7 +1661,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: p.productMedia.isNotEmpty
-                          ? CachedNetworkImage(
+                          ? PremiumImage(
                               imageUrl: StringUtils.normalizeUrl(p.productMedia[0]),
                               width: 50, height: 50, fit: BoxFit.cover,
                             )
@@ -1772,6 +1680,45 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ),
+    );
+  }
+
+  Widget _buildUserAvatar(String? url, String name, {double size = 32}) {
+    final String normalizedUrl = StringUtils.normalizeUrl(url);
+    if (normalizedUrl.isEmpty || normalizedUrl.contains("default_avatar")) {
+      return _buildInitialsAvatar(name, size: size);
+    }
+    return PremiumImage(
+      imageUrl: normalizedUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      borderRadius: size / 2,
+      errorWidget: _buildInitialsAvatar(name, size: size),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String name, {double size = 32}) {
+    final initials = StringUtils.getInitials(name);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: GoogleFonts.quicksand(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.45,
+          ),
+        ),
+      ),
     );
   }
 }

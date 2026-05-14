@@ -8,6 +8,7 @@ import 'package:temo/utils/ui_helpers.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:temo/components/ModernLoader.dart';
+import 'package:temo/components/PremiumImage.dart';
 
 class BankTransferScreen extends StatefulWidget {
   final Map<String, dynamic> bank;
@@ -125,12 +126,12 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
               ),
               child: Column(
                 children: [
-                   CachedNetworkImage(
+                   PremiumImage(
                     imageUrl: _qrUrl,
                     width: 250,
                     height: 250,
-                    placeholder: (context, url) => const SizedBox(height: 250, child: Center(child: ModernLoader())),
-                    errorWidget: (context, url, error) => const Icon(Icons.error),
+                    placeholder: const SizedBox(height: 250, child: Center(child: ModernLoader())),
+                    errorWidget: const Icon(Icons.error),
                   ),
                   const SizedBox(height: 16),
                   Text("Quét mã QR để thanh toán", style: GoogleFonts.roboto(color: Colors.grey, fontSize: 14)),

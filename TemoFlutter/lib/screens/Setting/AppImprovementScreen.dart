@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
@@ -21,7 +22,7 @@ class _AppImprovementScreenState extends State<AppImprovementScreen> {
   final TextEditingController _contentController = TextEditingController();
   String _selectedCategory = 'Đề xuất mới';
   bool _isSubmitting = false;
-  List<File> _images = [];
+  List<XFile> _images = [];
   String _selectedBugType = 'Giao diện';
 
   final List<String> _bugTypes = ['Giao diện', 'Tính năng', 'Hiệu năng', 'Khác'];
@@ -34,18 +35,17 @@ class _AppImprovementScreenState extends State<AppImprovementScreen> {
   ];
 
   Future<void> _pickImages() async {
-    final ImagePicker picker = ImagePicker();
-    final List<XFile>? pickedFiles = await picker.pickMultiImage();
-    if (pickedFiles != null) {
-      if (_images.length + pickedFiles.length > 5) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tối đa 5 ảnh')));
-        return;
+    UIHelper.showImageSourceSheet(context, allowMultiple: true, onPicked: (pickedFiles) {
+      if (pickedFiles != null) {
+        if (_images.length + pickedFiles.length > 5) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tối đa 5 ảnh')));
+          return;
+        }
+        setState(() {
+          _images.addAll(pickedFiles);
+        });
       }
-      setState(() {
-        _images.addAll(pickedFiles.map((file) => File(file.path)));
-      });
-    }
+    });
   }
 
   void _submitImprovement() async {
@@ -211,8 +211,13 @@ class _AppImprovementScreenState extends State<AppImprovementScreen> {
                               width: 85, height: 85,
                               margin: const EdgeInsets.only(right: 12),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(45),
-                                image: DecorationImage(image: FileImage(entry.value), fit: BoxFit.cover),
+                                borderRadius: BorderRadius.circular(16),
+                                image: DecorationImage(
+                                  image: kIsWeb 
+                                    ? NetworkImage(entry.value.path) 
+                                    : FileImage(File(entry.value.path)) as ImageProvider, 
+                                  fit: BoxFit.cover
+                                ),
                                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
                               ),
                             ),

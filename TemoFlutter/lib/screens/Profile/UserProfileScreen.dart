@@ -244,26 +244,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                           opacity: opacity,
                           child: Align(
                             alignment: Alignment.bottomCenter,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                              child: Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4))
-                                  ],
-                                  image: DecorationImage(
-                                    image: (_user?.avatarUrl != null && _user!.avatarUrl!.isNotEmpty)
-                                        ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(_user!.avatarUrl!)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(_user!.avatarUrl!)) as ImageProvider)
-                                        : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ),
+                              child: _buildUserAvatar(_user?.avatarUrl, _user?.fullName ?? "Người dùng", size: 100),
                           ),
                         ),
                       ],
@@ -632,11 +613,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 24, backgroundColor: Colors.grey[100],
-                backgroundImage: (reviewerAvatar != null) ? (kIsWeb ? NetworkImage(StringUtils.normalizeUrl(reviewerAvatar)) : CachedNetworkImageProvider(StringUtils.normalizeUrl(reviewerAvatar)) as ImageProvider) : null,
-                child: (reviewerAvatar == null) ? const Icon(Icons.person, size: 24, color: Colors.grey) : null,
-              ),
+              _buildUserAvatar(reviewerAvatar, reviewerName, size: 48),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -692,6 +669,45 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar(String? url, String name, {double size = 32}) {
+    final String normalizedUrl = StringUtils.normalizeUrl(url);
+    if (normalizedUrl.isEmpty || normalizedUrl.contains("default_avatar")) {
+      return _buildInitialsAvatar(name, size: size);
+    }
+    return PremiumImage(
+      imageUrl: normalizedUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      borderRadius: size / 2,
+      errorWidget: _buildInitialsAvatar(name, size: size),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String name, {double size = 32}) {
+    final initials = StringUtils.getInitials(name);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: GoogleFonts.quicksand(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.45,
+          ),
+        ),
       ),
     );
   }

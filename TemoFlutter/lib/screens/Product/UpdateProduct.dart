@@ -580,7 +580,19 @@ class _UpdateProductState extends State<UpdateProduct> {
 
   Widget _buildMediaThumb(String path, VoidCallback onRemove, {bool isRemote = false}) {
     return Stack(children: [
-      Container(width: 100, margin: const EdgeInsets.only(right: 12), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: isRemote ? NetworkImage(path.startsWith('http') ? path : "${ApiConstants.baseUrl}$path") : FileImage(File(path)) as ImageProvider, fit: BoxFit.cover))),
+      Container(
+        width: 100, 
+        margin: const EdgeInsets.only(right: 12), 
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16), 
+          image: DecorationImage(
+            image: isRemote 
+              ? NetworkImage(path.startsWith('http') ? path : "${ApiConstants.baseUrl}$path") 
+              : (kIsWeb ? NetworkImage(path) : FileImage(File(path)) as ImageProvider), 
+            fit: BoxFit.cover
+          )
+        )
+      ),
       Positioned(top: 4, right: 16, child: GestureDetector(onTap: onRemove, child: Container(padding: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white)))),
     ]);
   }
